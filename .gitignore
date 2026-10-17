@@ -12,8 +12,8 @@ out/
 _assemble_tmp/
 .pytest_cache/
 
-# Explicitly track committed sample outputs
-!docs/sample/**
-!docs/sample/*.mp4
-!docs/sample/*.json
-
+# Explicitly track committed sample deliverables only
+!docs/sample/video.mp4
+!docs/sample/eval_report.json
+!docs/sample/manifest.json
+!docs/sample/scenes.json
