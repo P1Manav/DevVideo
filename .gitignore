@@ -5,3 +5,9 @@ venv/
 .env
 node_modules/
 .DS_Store
+out/
+*.mp4
+*.wav
+*.png
+_assemble_tmp/
+.pytest_cache/

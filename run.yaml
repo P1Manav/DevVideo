@@ -1,19 +1,20 @@
-# Fill this in before you submit -- our evaluator runs these commands
-# EXACTLY as written, in this order, from a fresh checkout of your fork.
-# Keep every command non-interactive (no prompts) and idempotent.
+# Commands for the AIntropy evaluator to run.
+# These are run exactly as written, in order, from a fresh checkout.
 
 setup_commands:
   - "pip install -r requirements.txt"
-  # - add every other setup step here, in order (env vars, downloads, etc.)
+  - "playwright install chromium --with-deps || echo 'Playwright optional, fallback rendering available'"
 
 run_commands:
   - "python src/main.py --help"
-  # - the real command(s) that actually run your solution
+  - "python src/main.py generate tests/fixture_repo --out out/ --llm mock --tts silent --no-playwright"
 
-test_commands: []
-  # optional -- commands that run your own tests/checks, if you have any
+test_commands:
+  - "pytest tests/ -v --tb=short"
 
-notes: ""
-  # anything we should know before running this (e.g. "needs a GPU",
-  # "takes about 10 minutes", "expects a sample dataset already present
-  # under data/, see docs/ for where to get it")
+notes: >
+  The default run uses mock LLM + silent TTS + ffmpeg fallback rendering, so it
+  needs NO API keys and NO internet. ffmpeg must be installed (apt-get install ffmpeg).
+  For real TTS, set TTS_BACKEND=edge (needs internet) or TTS_BACKEND=espeak (needs espeak-ng).
+  For real LLM, set LLM_BACKEND=claude and ensure the claude CLI is on PATH with CLAUDE_KEY set.
+  The Docker image includes all dependencies: docker build -t devvideo . && docker run devvideo generate <url>
