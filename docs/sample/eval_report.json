@@ -1,0 +1,59 @@
+{
+  "all_gates_passed": true,
+  "gates": [
+    {
+      "name": "duration",
+      "passed": true,
+      "value": "30.4s",
+      "threshold": "<= 60.0s",
+      "details": ""
+    },
+    {
+      "name": "secret_leaks",
+      "passed": true,
+      "value": "0",
+      "threshold": "0",
+      "details": "No secrets detected"
+    },
+    {
+      "name": "groundedness",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "4/4 scenes grounded"
+    },
+    {
+      "name": "command_validity",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "1/1 commands verified verbatim in repo"
+    },
+    {
+      "name": "no_text_overflow",
+      "passed": true,
+      "value": "0 overflowing scenes",
+      "threshold": "0",
+      "details": "All scene frames fit within bounds"
+    },
+    {
+      "name": "audio_scene_drift",
+      "passed": true,
+      "value": "0.00s",
+      "threshold": "<= 0.5s",
+      "details": "Max drift: 0.00s (tolerance: 0.5s)"
+    }
+  ],
+  "metrics": {
+    "domain_relevance": 1.0,
+    "scene_count": 4,
+    "estimated_narration_seconds": 30.4,
+    "video_duration_seconds": 30.4,
+    "clarity": "clarity: skipped (no LLM)"
+  },
+  "backend_requested": "offline",
+  "backend_used": "offline",
+  "fallback_reason": "",
+  "renderer_used": "playwright",
+  "renderer_fallback_reason": ""
+}

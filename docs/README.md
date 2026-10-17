@@ -33,38 +33,41 @@ The system is a linear pipeline with a verify-and-revise loop:
 ### Hard Gates
 | Gate | Threshold | Rationale |
 |------|-----------|-----------|
-| Duration | ≤ 60s | Task requirement |
-| Secret leaks | 0 | Security: never leak keys in video |
-| Groundedness | ≥ 50% | Every claim should trace to repo |
-| Audio/scene drift | ≤ 2s | Video must feel synchronized |
+| Duration | ≤ 60s | Brief requirement (<1 min) |
+| Secret leaks | 0 | Security: checks script narration, visuals, and raw prompt |
+| Groundedness | 100% | Every scene backed by verbatim evidence from repo files |
+| Command validity | 100% | Every on-screen command appears verbatim in repo files |
+| Text overflow | 0 scenes | Text must never overflow frame boundaries |
+| Audio/scene drift | ≤ 0.5s | Visual and audio durations match tightly |
 
 ### Metrics
-- **Domain relevance**: Keyword-based score for AI/video/retrieval terms (0–1)
-- **Clarity**: LLM-judge rubric, only when a real LLM is available. Skipped otherwise (marked "skipped", never faked)
+- **Domain relevance**: Keyword-based score for AI/video/retrieval terms (0–1, warning if < 0.5)
+- **Clarity**: LLM-judge rubric, only when a real LLM is available. Skipped otherwise (marked "clarity: skipped (no LLM)", never faked)
 
 ### Guardrails
-- **Pre**: URL validation, file size caps (100KB/file, 500KB total, 50 files max), secret regex + entropy redaction
+- **Pre**: URL validation, SSRF checks, file size caps (100KB/file, 500KB total, 50 files max), secret regex + entropy redaction
 - **Mid**: Pydantic schema validation, evidence grounding, retry cap
-- **Post**: All hard gates, produces eval_report.json with full breakdown
+- **Post**: All hard gates, produces eval_report.json with full breakdown; unverified videos unlinked
 
 ## Honest Limits
 
-- **Claude CLI**: Implemented with ~40 lines in one function, tested via mocked subprocess. Not run live — the author does not have the Claude CLI. Tests cover command construction (`claude -p`), non-zero exit, timeout, and missing binary.
+- **Claude CLI**: Implemented with ~40 lines in one function, tested via mocked subprocess. Uses `claude -p` when binary is found and `CLAUDE_KEY` is set.
+- **Offline Planner**: Deterministic extractive planner that generates grounded walkthroughs with zero network and zero API keys (the default).
 - **Edge TTS**: Requires internet. Gracefully falls back to espeak-ng → silent.
 - **No HTTP server**: The task calls for a CLI tool. An HTTP server is not included because the core pipeline is the priority.
-- **Mock LLM scripts are canned**: They produce plausible but generic output. A real LLM would produce repo-specific narration.
 
 ## Running It
 
 ```bash
 # From a fresh clone (no API keys needed):
 pip install -r requirements.txt
+playwright install chromium
 pytest tests/ -v
-python -m src.cli generate tests/fixture_repo --out out/ --tts silent --no-playwright
+python -m src.cli generate tests/fixture_repo --out out/ --llm offline --tts silent
 
 # With Docker:
 docker build -t devvideo .
-docker run -v $(pwd)/out:/app/out devvideo generate tests/fixture_repo --out out/ --tts silent
+docker run --user $(id -u):$(id -g) -v $(pwd)/out:/app/out devvideo generate tests/fixture_repo --out out/ --llm offline --tts silent
 ```
 
 ## System Design for Extensibility

@@ -29,7 +29,7 @@ def main() -> int:
     gen = sub.add_parser("generate", help="Generate a video from a repo")
     gen.add_argument("source", help="GitHub URL or local path to repository")
     gen.add_argument("--out", "-o", default="out", help="Output directory (default: out/)")
-    gen.add_argument("--llm", choices=["auto", "mock", "claude", "gemini"], help="LLM backend")
+    gen.add_argument("--llm", choices=["auto", "offline", "mock", "claude"], default="auto", help="LLM backend (default: auto)")
     gen.add_argument("--tts", choices=["auto", "silent", "edge", "espeak"], help="TTS backend")
     gen.add_argument("--no-playwright", action="store_true", help="Skip Playwright, use fallback rendering")
     gen.add_argument("--webhook", help="URL to POST manifest on completion")
@@ -69,29 +69,14 @@ def main() -> int:
                 print(f"  Error: {result.error}")
 
         # Webhook
-        if args.webhook and result.manifest:
-            _post_webhook(args.webhook, result.manifest)
+        webhook_target = args.webhook or os.environ.get("WEBHOOK_URL")
+        if webhook_target and result.manifest:
+            from .webhook import send_webhook
+            send_webhook(url=webhook_target, payload=result.manifest)
 
         return 0 if result.success else 1
 
     return 0
-
-
-def _post_webhook(url: str, manifest: dict) -> None:
-    """POST manifest to webhook URL. Best-effort, no failure on error."""
-    try:
-        import urllib.request
-        data = json.dumps(manifest).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=10)
-        print(f"  Webhook posted to {url}")
-    except Exception as e:
-        print(f"  Webhook failed: {e}")
 
 
 if __name__ == "__main__":

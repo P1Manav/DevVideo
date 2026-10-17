@@ -1,0 +1,53 @@
+{
+  "repo_name": "fixture_repo",
+  "scenes": [
+    {
+      "id": "intro",
+      "narration": "Welcome to this walkthrough of Fixture Repo. This is a sample project for testing the developer video generator. Built for developers integrating video understanding and retrieval engines.",
+      "on_screen": {
+        "type": "text",
+        "content": "Fixture Repo\nDeveloper Walkthrough"
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "This is a sample project for testing the developer video generator."
+      }
+    },
+    {
+      "id": "installation",
+      "narration": "To install and configure fixture_repo, run the project installation command in your local environment.",
+      "on_screen": {
+        "type": "code",
+        "content": "pip install -r requirements.txt"
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "pip install -r requirements.txt"
+      }
+    },
+    {
+      "id": "architecture",
+      "narration": "The core implementation in sample.py is modular, readable, and structured for straightforward extension.",
+      "on_screen": {
+        "type": "code",
+        "content": "# sample.py\ndef hello() -> str:"
+      },
+      "evidence": {
+        "file": "sample.py",
+        "quote": "def hello() -> str:"
+      }
+    },
+    {
+      "id": "pipeline_integration",
+      "narration": "In an AI video understanding or retrieval engine pipeline, this repository provides critical processing components for indexing, query processing, and metadata extraction.",
+      "on_screen": {
+        "type": "diagram",
+        "content": "Video Understanding Pipeline\nIngest -> Neural Index -> Retrieval Engine"
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "This is a sample project for testing the developer video generator"
+      }
+    }
+  ]
+}

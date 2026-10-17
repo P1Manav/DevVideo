@@ -1,0 +1,47 @@
+name: Release - Build & Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build Python wheel and sdist
+        run: python -m build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t devvideo:${{ github.ref_name || 'latest' }} .
+
+      - name: Verify Docker container generates video
+        run: |
+          mkdir -p out
+          docker run --rm -v $(pwd)/out:/app/out devvideo:${{ github.ref_name || 'latest' }} generate tests/fixture_repo --out out/ --llm offline --tts silent
+          test -s out/video.mp4 || { echo "Docker container failed to generate video"; exit 1; }
+
+      - name: Upload dist to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

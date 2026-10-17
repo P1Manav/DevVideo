@@ -1,16 +1,16 @@
 """
-Main entry point (for run.yaml compatibility).
-Delegates to the CLI module.
-
-Usage: python -m src.cli generate <url-or-path> --out out/
-   or: python src/main.py --help  (adds parent dir to sys.path)
+Main entry point shim (for run.yaml compatibility).
+Delegates to src.cli.main().
 """
 
-import sys
 import os
+import sys
 
-# When run as `python src/main.py`, the parent dir isn't on sys.path
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from src.cli import main
+
 if __name__ == "__main__":
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from src.cli import main
     sys.exit(main())

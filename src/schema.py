@@ -42,6 +42,11 @@ class Scene(BaseModel):
             raise ValueError("narration must contain non-whitespace text")
         return v
 
+    def estimated_duration(self, wpm: float = 150.0) -> float:
+        """Estimate narration duration in seconds (~150 words per minute)."""
+        words = len(self.narration.split())
+        return max(2.0, (words / wpm) * 60.0)
+
 
 class ScriptPlan(BaseModel):
     """The full script: an ordered list of scenes."""

@@ -57,8 +57,8 @@ External Dependencies:
 
 ### 4. LLM Adapter (llm.py)
 - **Protocol**: LLMBackend.complete(prompt) -> str
-- **Backends**: mock (default), claude (subprocess), gemini (stub)
-- **Auto logic**: claude if on PATH + CLAUDE_KEY, else mock
+- **Backends**: auto (default), offline (deterministic extractive planner), mock (test only), claude (subprocess)
+- **Auto logic**: claude if on PATH + CLAUDE_KEY, else offline planner
 - **Prompt**: Repo text in UNTRUSTED DATA block
 
 ### 5. Verify (verify.py)
@@ -74,7 +74,7 @@ External Dependencies:
 ### 7. Render (render.py)
 - **Input**: Scene data (id, type, content, narration)
 - **Process**: HTML card → Playwright screenshot (JS disabled)
-- **Fallback**: ffmpeg solid-color frames
+- **Fallback**: Pillow structured rendering with real scene text and badges
 - **Security**: All text HTML-escaped
 
 ### 8. Assemble (assemble.py)
@@ -83,8 +83,8 @@ External Dependencies:
 - **Duration**: scene_duration = audio_length + 0.3s padding
 
 ### 9. Eval (evals.py)
-- **Hard gates**: duration ≤ 60s, secrets = 0, groundedness ≥ 50%, drift ≤ 2s
-- **Metrics**: domain_relevance, clarity (skipped without real LLM)
+- **Hard gates**: duration ≤ 60s, secrets = 0 (script + raw input), groundedness = 100%, command validity = 100%, no text overflow, drift ≤ 0.5s
+- **Metrics**: domain_relevance, clarity (LLM judge or skipped)
 - **Output**: eval_report.json
 
 ## Data Flow

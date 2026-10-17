@@ -104,6 +104,55 @@ class TestClaudeLLM:
 
 
 
+class TestOfflinePlanner:
+    """Tests for deterministic extractive OfflinePlanner."""
+
+    def test_offline_planner_fixture_repos(self):
+        """Offline planner extracts real content and differentiates two repos."""
+        from pathlib import Path
+        from src.ingest import ingest_local
+        from src.pipeline import _build_prompt
+        from src.llm import OfflinePlanner
+        from src.verify import verify_script
+
+        repo1 = ingest_local("tests/fixture_repo")
+        repo2 = ingest_local("tests/fixture_repo_2")
+
+        planner = OfflinePlanner()
+
+        prompt1 = _build_prompt(repo1)
+        resp1 = planner.complete(prompt1)
+        plan1 = ScriptPlan.model_validate_json(resp1)
+
+        prompt2 = _build_prompt(repo2)
+        resp2 = planner.complete(prompt2)
+        plan2 = ScriptPlan.model_validate_json(resp2)
+
+        # 1. Differentiation
+        assert plan1.repo_name != plan2.repo_name
+        assert plan1.scenes[0].narration != plan2.scenes[0].narration
+
+        # 2. Both scripts pass verify_script
+        res1 = verify_script(plan1, repo1.files)
+        assert res1.ok, f"Plan 1 verification failed: {res1.errors}"
+
+        res2 = verify_script(plan2, repo2.files)
+        assert res2.ok, f"Plan 2 verification failed: {res2.errors}"
+
+        # 3. Grounded evidence check
+        for scene in plan1.scenes:
+            assert scene.evidence.file in repo1.files
+            assert scene.evidence.quote in repo1.files[scene.evidence.file]
+
+        for scene in plan2.scenes:
+            assert scene.evidence.file in repo2.files
+            assert scene.evidence.quote in repo2.files[scene.evidence.file]
+
+        # 4. Scene count between 4 and 6
+        assert 3 <= len(plan1.scenes) <= 6
+        assert 3 <= len(plan2.scenes) <= 6
+
+
 class TestAutoBackend:
     @patch.dict(os.environ, {"LLM_BACKEND": "mock"})
     def test_explicit_mock(self):
@@ -114,19 +163,32 @@ class TestAutoBackend:
         llm = get_llm_backend("mock")
         assert llm.name == "mock"
 
+    def test_explicit_offline_arg(self):
+        llm = get_llm_backend("offline")
+        assert llm.name == "offline"
+
     @patch("shutil.which", return_value=None)
     @patch.dict(os.environ, {"LLM_BACKEND": "auto"}, clear=False)
     def test_auto_no_claude(self, mock_which):
-        """Auto falls back to mock when claude not available."""
+        """Auto falls back to offline when claude not available."""
         llm = get_llm_backend("auto")
-        assert llm.name == "mock"
+        assert llm.name == "offline"
 
     @patch("shutil.which", return_value="/usr/bin/claude")
     @patch.dict(os.environ, {"LLM_BACKEND": "auto", "CLAUDE_KEY": "test-key"}, clear=False)
     def test_auto_with_claude(self, mock_which):
-        """Auto selects claude when available."""
+        """Auto selects claude when binary and key are available."""
         llm = get_llm_backend("auto")
         assert llm.name == "claude"
+
+    @patch("shutil.which", return_value="/usr/bin/claude")
+    @patch.dict(os.environ, {"LLM_BACKEND": "auto"}, clear=False)
+    def test_auto_claude_binary_without_key(self, mock_which):
+        """Auto falls back to offline if claude binary exists but no CLAUDE_KEY."""
+        if "CLAUDE_KEY" in os.environ:
+            del os.environ["CLAUDE_KEY"]
+        llm = get_llm_backend("auto")
+        assert llm.name == "offline"
 
     def test_invalid_backend(self):
         with pytest.raises(ValueError, match="Unknown LLM backend"):

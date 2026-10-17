@@ -3,18 +3,17 @@
 
 setup_commands:
   - "pip install -r requirements.txt"
-  - "playwright install chromium --with-deps || echo 'Playwright optional, fallback rendering available'"
+  - "playwright install chromium --with-deps"
 
 run_commands:
   - "python src/main.py --help"
-  - "python src/main.py generate tests/fixture_repo --out out/ --llm mock --tts silent --no-playwright"
+  - "python src/main.py generate tests/fixture_repo --out out/ --llm offline --tts silent"
 
 test_commands:
   - "pytest tests/ -v --tb=short"
 
 notes: >
-  The default run uses mock LLM + silent TTS + ffmpeg fallback rendering, so it
-  needs NO API keys and NO internet. ffmpeg must be installed (apt-get install ffmpeg).
+  The default run uses mock/offline LLM + silent TTS + Playwright rendering (with Pillow
+  fallback), so it needs NO API keys and NO internet beyond setup. ffmpeg must be installed.
   For real TTS, set TTS_BACKEND=edge (needs internet) or TTS_BACKEND=espeak (needs espeak-ng).
   For real LLM, set LLM_BACKEND=claude and ensure the claude CLI is on PATH with CLAUDE_KEY set.
-  The Docker image includes all dependencies: docker build -t devvideo . && docker run devvideo generate <url>

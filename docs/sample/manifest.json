@@ -1,0 +1,22 @@
+{
+  "repo": "tests/fixture_repo",
+  "repo_name": "fixture_repo",
+  "video": "docs\\sample\\video.mp4",
+  "video_published": true,
+  "script": "docs\\sample\\scenes.json",
+  "eval_report": "docs\\sample\\eval_report.json",
+  "video_duration_seconds": 30.4,
+  "scene_count": 4,
+  "backend_requested": "offline",
+  "backend_used": "offline",
+  "tts_backend": "silent",
+  "renderer_used": "playwright",
+  "renderer_fallback_reason": "",
+  "overflow_scenes": [],
+  "revision_history": [
+    "attempt_1: got response",
+    "attempt_1: verification passed"
+  ],
+  "elapsed_seconds": 14.7,
+  "all_gates_passed": true
+}

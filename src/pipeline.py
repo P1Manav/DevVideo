@@ -6,9 +6,9 @@ Steps:
 2. Generate script (LLM adapter)
 3. Verify + revise loop (max 2 retries)
 4. TTS (generate audio per scene)
-5. Render (HTML -> PNG per scene)
+5. Render (HTML -> PNG per scene via Playwright or Pillow fallback)
 6. Assemble (ffmpeg concat -> MP4)
-7. Eval gates -> eval_report.json + manifest.json
+7. Eval gates -> eval_report.json + manifest.json (video published only if all gates pass)
 """
 
 from __future__ import annotations
@@ -52,7 +52,6 @@ def _build_prompt(repo: RepoContent) -> str:
     """
     file_contents = ""
     for path, content in list(repo.files.items())[:30]:
-        # Truncate large files in the prompt
         truncated = content[:3000]
         if len(content) > 3000:
             truncated += "\n... [truncated]"
@@ -96,10 +95,7 @@ Respond with ONLY the JSON object, no markdown, no explanation."""
 
 def _parse_llm_response(response: str) -> ScriptPlan:
     """Parse LLM response into a ScriptPlan. Handles JSON extraction."""
-    # Try to extract JSON from the response
     text = response.strip()
-
-    # Remove markdown code fences if present
     if text.startswith("```"):
         lines = text.split("\n")
         text = "\n".join(lines[1:])
@@ -135,23 +131,18 @@ def generate_script(
         except (json.JSONDecodeError, Exception) as e:
             msg = f"attempt_{attempt + 1}: parse error: {e}"
             revision_history.append(msg)
-            # Retry with the error appended to prompt
             prompt += f"\n\nYour previous response had an error: {e}\nPlease fix and respond with valid JSON only."
             continue
 
-        # Verify the script
         result = verify_script(script, repo.files)
-
         if result.ok:
             revision_history.append(f"attempt_{attempt + 1}: verification passed")
             return script, revision_history
 
-        # Verification failed: feed errors back for retry
         error_msg = "; ".join(result.errors)
         revision_history.append(f"attempt_{attempt + 1}: verification failed: {error_msg}")
         prompt += f"\n\nYour script had these errors: {error_msg}\nPlease fix and respond with valid JSON only."
 
-    # All retries exhausted, return last script anyway with warnings
     logger.warning("Script verification failed after all retries, using last version")
     revision_history.append("all retries exhausted, using last script")
     return script, revision_history
@@ -172,7 +163,7 @@ def run_pipeline(
         output_dir: Directory to write outputs
         llm_backend: Override LLM backend selection
         tts_backend: Override TTS backend selection
-        use_playwright: Whether to use Playwright for rendering
+        use_playwright: Whether to use Playwright for rendering (fallback to Pillow on failure)
     """
     start_time = time.time()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -193,7 +184,6 @@ def run_pipeline(
         # --- 2+3. Generate script with verify-revise loop ---
         logger.info("Step 2: Generating script")
         llm = get_llm_backend(llm_backend)
-        # For mock, force valid output to skip deliberate-failure test path
         if isinstance(llm, MockLLM):
             llm.force_valid()
 
@@ -217,7 +207,7 @@ def run_pipeline(
             tts.synthesize(scene.narration, audio_path)
             scene_assets.append(SceneAsset(
                 scene_id=scene.id,
-                png_path=Path(""),  # set in render step
+                png_path=Path(""),
                 audio_path=audio_path,
             ))
 
@@ -226,9 +216,13 @@ def run_pipeline(
         frames_dir = output_dir / "frames"
         frames_dir.mkdir(exist_ok=True)
 
+        renderer_used = "playwright"
+        renderer_fallback_reason = ""
+        overflow_scenes: list[str] = []
+
         for i, scene in enumerate(script.scenes):
             png_path = frames_dir / f"{scene.id}.png"
-            render_scene_to_png(
+            render_res = render_scene_to_png(
                 scene_id=scene.id,
                 content_type=scene.on_screen.type,
                 content=scene.on_screen.content,
@@ -238,6 +232,12 @@ def run_pipeline(
                 use_playwright=use_playwright,
             )
             scene_assets[i].png_path = png_path
+            if render_res.renderer_used != "playwright":
+                renderer_used = render_res.renderer_used
+                if render_res.fallback_reason:
+                    renderer_fallback_reason = render_res.fallback_reason
+            if render_res.has_overflow:
+                overflow_scenes.append(scene.id)
 
         # --- 6. Assemble ---
         logger.info("Step 6: Assembling video")
@@ -246,36 +246,52 @@ def run_pipeline(
 
         video_path = output_dir / "video.mp4"
         video_duration = assemble_video(scene_assets, video_path)
-        result.video_path = video_path
 
-        # If ffprobe couldn't measure, use sum of scene durations
         if video_duration == 0.0:
             video_duration = total_dur
 
         # --- 7. Eval ---
-        logger.info("Step 7: Running evaluation")
-        scene_durs = [sa.duration for sa in scene_assets]
+        planned_durs = [s.estimated_duration() for s in script.scenes]
         audio_durs = [get_audio_duration(sa.audio_path) for sa in scene_assets]
+        raw_prompt = _build_prompt(repo)
 
         eval_report = run_eval(
             script=script,
             repo_files=repo.files,
             video_duration=video_duration,
-            scene_durations=scene_durs,
+            planned_durations=planned_durs,
             audio_durations=audio_durs,
+            raw_input=raw_prompt,
             backend_requested=backend_requested,
             backend_used=llm.name,
             fallback_reason="" if llm.name == backend_requested else f"fell back from {backend_requested} to {llm.name}",
+            renderer_used=renderer_used,
+            renderer_fallback_reason=renderer_fallback_reason,
+            overflow_scenes=overflow_scenes,
         )
         result.eval_report = eval_report
         eval_report.save(output_dir / "eval_report.json")
 
-        # --- Manifest ---
+        # Hard gate enforcement: video is published ONLY if all gates pass
         elapsed = time.time() - start_time
+        video_published = eval_report.all_gates_passed
+
+        if not video_published and video_path.exists():
+            # Delete unpublished video file so bad artifacts are never published
+            try:
+                video_path.unlink()
+            except Exception as e:
+                logger.warning(f"Failed to remove unverified video: {e}")
+
+        final_video_path = str(video_path) if video_published else None
+        if video_published:
+            result.video_path = video_path
+
         manifest = {
             "repo": source,
             "repo_name": repo.repo_name,
-            "video": str(video_path),
+            "video": final_video_path,
+            "video_published": video_published,
             "script": str(script_path),
             "eval_report": str(output_dir / "eval_report.json"),
             "video_duration_seconds": round(video_duration, 1),
@@ -283,6 +299,9 @@ def run_pipeline(
             "backend_requested": backend_requested,
             "backend_used": llm.name,
             "tts_backend": tts.name,
+            "renderer_used": renderer_used,
+            "renderer_fallback_reason": renderer_fallback_reason,
+            "overflow_scenes": overflow_scenes,
             "revision_history": revision_history,
             "elapsed_seconds": round(elapsed, 1),
             "all_gates_passed": eval_report.all_gates_passed,
