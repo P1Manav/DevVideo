@@ -46,6 +46,7 @@ from .reason import reason_and_plan
 from .render import PlaywrightRenderer, render_scene_to_png
 from .repair import RepairManager
 from .schema import ScriptPlan
+from .timeline import expand_script_to_timeline
 from .tts import get_audio_duration, synthesize_scenes_chain
 from .webhook import send_webhook
 
@@ -229,55 +230,43 @@ def run_pipeline(
                 renderer_used = "fallback_pillow"
                 renderer_fallback_reason = str(e)
 
+        audio_durs = [get_audio_duration(p) for p in wav_paths]
+        frame_states = expand_script_to_timeline(script, facts, scene_audio_durations=audio_durs)
+
         timeline: list[tuple[Path, float]] = []
         frame_paths: list[Path] = []
         overflow_scenes: list[str] = []
-        titles = [s.title or s.id.capitalize() for s in script.scenes]
 
-        for idx, scene in enumerate(script.scenes):
-            pct = round(idx / max(1, len(script.scenes) - 1), 2)
-            if not scene.beats:
-                scene_frame = frames_dir / f"{scene.id}.png"
-                res = render_scene_to_png(
-                    scene_id=scene.id,
-                    content_type=scene.kind,
-                    content=scene.on_screen.content,
-                    narration=scene.narration,
-                    repo_name=script.repo_name,
-                    output_path=scene_frame,
-                    use_playwright=use_pw,
-                    playwright_renderer=playwright_instance,
-                    all_scene_titles=titles,
-                    current_scene_idx=idx,
-                    progress_pct=pct,
-                    active_focus=scene.on_screen.metadata.get("active_node"),
-                )
-                if res.has_overflow:
-                    overflow_scenes.append(scene.id)
-                timeline.append((scene_frame, scene.duration_seconds))
-                frame_paths.append(scene_frame)
-            else:
-                for b_idx, beat in enumerate(scene.beats):
-                    b_dur = max(0.5, beat.end_seconds - beat.start_seconds)
-                    beat_frame = frames_dir / f"{scene.id}_b{b_idx}.png"
-                    res = render_scene_to_png(
-                        scene_id=scene.id,
-                        content_type=scene.kind,
-                        content=scene.on_screen.content,
-                        narration=beat.caption or beat.say,
-                        repo_name=script.repo_name,
-                        output_path=beat_frame,
-                        use_playwright=use_pw,
-                        playwright_renderer=playwright_instance,
-                        all_scene_titles=titles,
-                        current_scene_idx=idx,
-                        progress_pct=pct,
-                        active_focus=beat.focus,
-                    )
-                    if res.has_overflow:
-                        overflow_scenes.append(scene.id)
-                    timeline.append((beat_frame, b_dur))
-                    frame_paths.append(beat_frame)
+        for f_idx, state in enumerate(frame_states):
+            scene_obj = next((s for s in script.scenes if s.id == state.scene_id), script.scenes[0])
+            content_val = scene_obj.on_screen.content if (scene_obj.on_screen and scene_obj.on_screen.content) else ""
+            meta_val = scene_obj.on_screen.metadata if (scene_obj.on_screen and scene_obj.on_screen.metadata) else {}
+
+            frame_file = frames_dir / f"frame_{f_idx:03d}_{state.scene_id}_{state.state_kind}.png"
+            res = render_scene_to_png(
+                scene_id=state.scene_id,
+                content_type=state.scene_kind,
+                content=content_val,
+                narration=state.caption,
+                repo_name=script.repo_name,
+                output_path=frame_file,
+                use_playwright=use_pw,
+                playwright_renderer=playwright_instance,
+                all_scene_titles=state.all_scene_titles,
+                current_scene_idx=state.current_scene_idx,
+                progress_pct=state.progress_pct,
+                metadata=meta_val,
+                active_focus=state.active_focus,
+                state_kind=state.state_kind,
+                state_data=state.state_data,
+            )
+            if res.has_overflow:
+                overflow_scenes.append(state.scene_id)
+            timeline.append((frame_file, state.duration_seconds))
+            frame_paths.append(frame_file)
+
+        if playwright_instance:
+            playwright_instance.close()
 
         timings["render"] = round(time.time() - t0, 2)
 

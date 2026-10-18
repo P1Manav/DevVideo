@@ -114,3 +114,17 @@ class TestRenderer:
         assert "src/main.py" in svg or "main.py" in svg
         assert "embed.py" in svg
         assert 'filter="url(#glow)"' in svg  # Focused node glow
+
+    def test_no_placeholder_strings_in_render_code(self):
+        """Acceptance test A7: No placeholder strings anywhere in render code."""
+        render_files = [
+            Path("src/render.py"),
+            Path("src/render_html.py"),
+            Path("src/visuals.py"),
+            Path("src/timeline.py"),
+        ]
+        forbidden = ["src/main.py", "core.py", "developer"]
+        for rf in render_files:
+            text = rf.read_text(encoding="utf-8")
+            for term in forbidden:
+                assert term not in text, f"Found forbidden placeholder '{term}' in {rf}"

@@ -163,8 +163,11 @@ class PillowRenderer:
         progress_pct: float,
         output_path: Path,
         fallback_reason: str = "Playwright disabled or unavailable",
+        state_kind: str = "default",
+        state_data: dict[str, Any] | None = None,
     ) -> RenderResult:
         """Draw complete frame with chapter ribbon, content card, caption bar, and progress."""
+        sdata = state_data or {}
         width, height = 1280, 720
         img = Image.new("RGB", (width, height), color=(11, 15, 25))
         draw = ImageDraw.Draw(img)
@@ -191,17 +194,26 @@ class PillowRenderer:
         font_to_use = self.font_mono if scene_kind in ("code", "terminal", "diagram") else self.font_body
         text_color = (56, 189, 248) if scene_kind == "code" else ((16, 185, 129) if scene_kind == "terminal" else (248, 250, 252))
 
-        for idx, line in enumerate(lines[:15], start=1):
-            if scene_kind == "code":
-                draw.text((70, y), f"{idx:2d}  {line}", fill=text_color, font=font_to_use)
-            elif scene_kind == "terminal":
-                draw.text((70, y), f"$ {line.lstrip('$ ')}", fill=text_color, font=font_to_use)
-            else:
-                wrapped = textwrap.wrap(line, width=76)
-                for w in wrapped:
-                    draw.text((70, y), w, fill=text_color, font=font_to_use)
-                    y += 24
-            y += 26
+        focus_range = sdata.get("focus_range")
+        cmd_display = sdata.get("command_display")
+
+        if scene_kind == "terminal" and cmd_display:
+            draw.text((70, y), f"$ {cmd_display}_", fill=(16, 185, 129), font=self.font_mono)
+            y += 30
+        else:
+            for idx, line in enumerate(lines[:15], start=1):
+                if scene_kind == "code":
+                    is_foc = (focus_range is None) or (focus_range[0] <= idx <= focus_range[1])
+                    line_col = (56, 189, 248) if is_foc else (100, 116, 139)
+                    draw.text((70, y), f"{idx:2d}  {line}", fill=line_col, font=font_to_use)
+                elif scene_kind == "terminal":
+                    draw.text((70, y), f"$ {line.lstrip('$ ')}", fill=text_color, font=font_to_use)
+                else:
+                    wrapped = textwrap.wrap(line, width=76)
+                    for w in wrapped:
+                        draw.text((70, y), w, fill=text_color, font=font_to_use)
+                        y += 24
+                y += 26
 
         if y > 570:
             has_overflow = True
@@ -242,6 +254,8 @@ def render_scene_to_png(
     progress_pct: float = 0.0,
     metadata: dict[str, Any] | None = None,
     active_focus: str | None = None,
+    state_kind: str = "default",
+    state_data: dict[str, Any] | None = None,
 ) -> RenderResult:
     """
     Render a single scene or beat frame to PNG using Playwright with Pillow fallback.
@@ -264,6 +278,8 @@ def render_scene_to_png(
                 progress_pct=progress_pct,
                 metadata=metadata,
                 active_focus=active_focus,
+                state_kind=state_kind,
+                state_data=state_data,
             )
             res = renderer.render_frame(html_content, output_path)
             # If standalone renderer created locally, close it
@@ -283,6 +299,8 @@ def render_scene_to_png(
                 progress_pct=progress_pct,
                 output_path=output_path,
                 fallback_reason=str(e),
+                state_kind=state_kind,
+                state_data=state_data,
             )
     else:
         pillow = PillowRenderer()
@@ -296,4 +314,6 @@ def render_scene_to_png(
             progress_pct=progress_pct,
             output_path=output_path,
             fallback_reason="Playwright disabled by user",
+            state_kind=state_kind,
+            state_data=state_data,
         )
