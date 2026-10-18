@@ -1,0 +1,14 @@
+{
+  "name": "js-video-tagger",
+  "version": "1.0.0",
+  "description": "CLI tool to tag video frames and organize clips",
+  "bin": {
+    "jstool": "./bin/main.js"
+  },
+  "scripts": {
+    "start": "node ./bin/main.js"
+  },
+  "dependencies": {
+    "commander": "^11.0.0"
+  }
+}
