@@ -22,6 +22,7 @@ from src.evals.gates import (
     check_motion_gate,
     check_narration_quality_gate,
     check_specificity_gate,
+    check_onscreen_text_integrity_gate,
 )
 from src.schema import Beat, Evidence, OnScreen, Scene, ScriptPlan, SourceSpan
 
@@ -347,3 +348,62 @@ class TestAdversarialCases:
 
         gate = check_audio_audible_gate(silent_wav, tts_used="edge", min_volume_db=-50.0)
         assert not gate.passed
+
+
+class TestOnscreenTextIntegrityGate:
+    def test_clean_onscreen_text_passes(self):
+        b1 = Beat(
+            say="VidSearch indexes videos with CLIP.",
+            caption="VidSearch: Index videos with CLIP",
+            sources=[SourceSpan(file="README.md", start_line=2, end_line=2, text="VidSearch indexes videos with CLIP")],
+        )
+        s1 = Scene(id="overview", kind="overview", beats=[b1], on_screen=OnScreen(type="overview", content="VidSearch core codebase"))
+        script = ScriptPlan(repo_name="vidsearch", scenes=[s1, _dummy_recap()])
+
+        gate = check_onscreen_text_integrity_gate(script, facts=DummyFacts())
+        assert gate.passed
+        assert gate.value == "0 violations"
+
+    def test_dangling_stopword_caption_fails(self):
+        b1 = Beat(
+            say="VidSearch indexes videos with CLIP.",
+            caption="VidSearch indexes videos with",
+            sources=[SourceSpan(file="README.md", start_line=2, end_line=2, text="VidSearch indexes videos with CLIP")],
+        )
+        s1 = Scene(id="overview", kind="overview", beats=[b1])
+        script = ScriptPlan(repo_name="vidsearch", scenes=[s1, _dummy_recap()])
+
+        gate = check_onscreen_text_integrity_gate(script, facts=DummyFacts())
+        assert not gate.passed
+        assert "dangling stopword" in gate.details
+
+    def test_truncation_ellipsis_fails(self):
+        b1 = Beat(
+            say="VidSearch indexes videos with CLIP.",
+            caption="VidSearch indexes videos...",
+            sources=[SourceSpan(file="README.md", start_line=2, end_line=2, text="VidSearch indexes videos with CLIP")],
+        )
+        s1 = Scene(id="overview", kind="overview", beats=[b1])
+        script = ScriptPlan(repo_name="vidsearch", scenes=[s1, _dummy_recap()])
+
+        gate = check_onscreen_text_integrity_gate(script, facts=DummyFacts())
+        assert not gate.passed
+        assert "truncation ellipsis" in gate.details
+
+    def test_dangling_stopword_on_screen_line_fails(self):
+        b1 = Beat(
+            say="VidSearch indexes videos with CLIP.",
+            caption="VidSearch: Index videos with CLIP",
+            sources=[SourceSpan(file="README.md", start_line=2, end_line=2, text="VidSearch indexes videos with CLIP")],
+        )
+        s1 = Scene(
+            id="overview",
+            kind="overview",
+            beats=[b1],
+            on_screen=OnScreen(type="overview", content="1. VidSearch core capabilities for\n2. Next line"),
+        )
+        script = ScriptPlan(repo_name="vidsearch", scenes=[s1, _dummy_recap()])
+
+        gate = check_onscreen_text_integrity_gate(script, facts=DummyFacts())
+        assert not gate.passed
+        assert "dangling stopword" in gate.details

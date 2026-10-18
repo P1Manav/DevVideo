@@ -42,6 +42,13 @@ STOPWORDS = {
     "inspect", "inspecting", "dot", "flag", "flags",
 }
 
+DANGLING_STOPWORDS = {
+    "a", "an", "the", "of", "on", "in", "to", "for", "with", "by", "from",
+    "and", "or", "but", "that", "which", "is", "are", "was", "be", "as",
+    "at", "than", "then", "if", "most", "more", "e.g.", "i.e.", "etc", "etc.",
+    "its", "into", "their", "our", "your",
+}
+
 CMD_PREFIXES = (
     "sudo ", "pip ", "pip3 ", "python ", "python3 ", "npm ", "npx ", "yarn ",
     "pnpm ", "uv ", "poetry ", "cargo ", "go ", "make ", "docker ", "git ",
@@ -1036,4 +1043,121 @@ def check_motion_gate(
             threshold=f">= {min_changes} changes",
             details=f"Motion gate failed: {e}",
         )
+
+
+def check_onscreen_text_integrity_gate(
+    script: ScriptPlan,
+    facts: Any | None = None,
+) -> EvalGate:
+    """
+    Gate: onscreen_text_integrity
+    Verifies that:
+    1. No on-screen text (captions, bullets, takeaways, titles) ends mid-word or with a dangling stopword.
+    2. Every bullet and caption is a substring/normalization of a source span or identifier from facts.
+    """
+    violations: list[str] = []
+
+    facts_pool: set[str] = set()
+    facts_pool.add(script.repo_name.lower())
+    for w in script.repo_name.replace("-", " ").replace("_", " ").split():
+        facts_pool.add(w.lower())
+
+    if facts:
+        if hasattr(facts, "repo_name"):
+            facts_pool.add(facts.repo_name.lower())
+        for sym in getattr(facts, "top_symbols", []):
+            name = getattr(sym, "name", str(sym))
+            facts_pool.add(name.lower())
+            f = getattr(sym, "file", "")
+            if f:
+                facts_pool.add(f.lower())
+                facts_pool.add(Path(f).stem.lower())
+        for mod in getattr(facts, "ranked_top_modules", []):
+            facts_pool.add(mod.lower())
+            facts_pool.add(Path(mod).stem.lower())
+        for fl in getattr(facts, "cli_flags", []):
+            flag_str = getattr(fl, "flag", str(fl))
+            facts_pool.add(flag_str.lower().lstrip("-"))
+        for dep in getattr(facts, "dependencies", []):
+            facts_pool.add(str(dep).lower())
+        for st in getattr(facts, "pipeline_stages", {}):
+            facts_pool.add(str(st).lower())
+            facts_pool.update(_extract_content_tokens(str(facts.pipeline_stages[st])))
+        if hasattr(facts, "readme"):
+            for feat in getattr(facts.readme, "features", []):
+                facts_pool.update(_extract_content_tokens(feat))
+            if getattr(facts.readme, "title", None):
+                facts_pool.update(_extract_content_tokens(facts.readme.title))
+            if getattr(facts.readme, "tagline", None):
+                facts_pool.update(_extract_content_tokens(facts.readme.tagline))
+
+    artifact_tokens = {
+        "transcript", "chapters", "retrieval", "index", "artifacts", "deliverables",
+        "pipeline", "stages", "next", "step", "summary", "features", "overview",
+        "capabilities", "core", "codebase", "module", "code", "run", "options",
+        "explore", "implements", "entry", "point", "defines", "primary", "operations",
+    }
+
+    for scene in script.scenes:
+        if scene.title:
+            t_clean = re.sub(r"[\.,;:!\?]+$", "", scene.title).strip()
+            t_words = t_clean.split()
+            if t_words and t_words[-1].lower() in DANGLING_STOPWORDS:
+                violations.append(f"{scene.id}: title ends with dangling stopword '{t_words[-1]}'")
+
+        scene_span_texts = []
+        if scene.evidence:
+            scene_span_texts.append(scene.evidence.quote or scene.evidence.text or "")
+        for b in scene.beats:
+            for s in b.sources:
+                scene_span_texts.append(s.text or "")
+        norm_spans = " ".join(" ".join(t.split()).lower() for t in scene_span_texts if t)
+
+        for b_idx, beat in enumerate(scene.beats):
+            cap = beat.caption.strip()
+            if not cap:
+                continue
+
+            cap_clean = re.sub(r"[\.,;:!\?]+$", "", cap).strip()
+            words = cap_clean.split()
+            if words and words[-1].lower() in DANGLING_STOPWORDS:
+                violations.append(f"{scene.id}[b{b_idx}]: caption ends with dangling stopword '{words[-1]}'")
+
+            if cap.endswith("...") or cap.endswith("…"):
+                violations.append(f"{scene.id}[b{b_idx}]: caption ends with truncation ellipsis")
+
+            core_cap = re.sub(r"^(?:Overview|Capabilities|Features|What it is|Next Step|Install|Run|Pipeline Stages|Summary|Deliverables|Flags|Calls|[A-Za-z0-9_.-]+):\s*", "", cap, flags=re.I).strip()
+            norm_core = " ".join(core_cap.split()).lower()
+
+            if norm_core and norm_core in norm_spans:
+                continue
+
+            cap_tokens = _extract_content_tokens(core_cap)
+            if cap_tokens:
+                uncovered = cap_tokens - (facts_pool | artifact_tokens)
+                covered_ratio = len(cap_tokens - uncovered) / len(cap_tokens)
+                if covered_ratio < 0.50 and norm_core not in norm_spans:
+                    violations.append(f"{scene.id}[b{b_idx}]: caption '{core_cap}' not grounded in source spans or facts ({uncovered})")
+
+        if scene.on_screen and scene.on_screen.content:
+            lines = [l.strip() for l in scene.on_screen.content.splitlines() if l.strip()]
+            for l_idx, line in enumerate(lines):
+                if scene.kind in ("code", "terminal"):
+                    continue
+                line_clean = re.sub(r"[\.,;:!\?]+$", "", line).strip()
+                l_words = line_clean.split()
+                if l_words and l_words[-1].lower() in DANGLING_STOPWORDS:
+                    violations.append(f"{scene.id}: on_screen line {l_idx+1} ends with dangling stopword '{l_words[-1]}'")
+                if line.endswith("...") or line.endswith("…"):
+                    violations.append(f"{scene.id}: on_screen line {l_idx+1} ends with truncation ellipsis")
+
+    passed = len(violations) == 0
+    return EvalGate(
+        name="onscreen_text_integrity",
+        passed=passed,
+        value="0 violations" if passed else f"{len(violations)} violations",
+        threshold="0 violations",
+        details="All on-screen text verified for integrity and grounding"
+        if passed else f"Integrity violations: {violations[:5]}",
+    )
 

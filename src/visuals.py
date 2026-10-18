@@ -163,23 +163,39 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
             first = facts.readme.description_sentences[0]
             txt = first.text if hasattr(first, "text") else str(first)
             takeaways.append(f"1. {txt[:60]}")
+        elif getattr(facts.readme, "tagline", None):
+            takeaways.append(f"1. {facts.readme.tagline[:60]}")
         else:
             takeaways.append(f"1. {facts.repo_name} core capabilities")
 
         entry_mod = getattr(facts, "entry_module", "")
         if entry_mod:
-            takeaways.append(f"2. Architecture centered on {entry_mod}")
+            takeaways.append(f"2. Entry point {entry_mod}")
+        elif hasattr(facts, "ranked_top_modules") and facts.ranked_top_modules:
+            takeaways.append(f"2. Primary module {facts.ranked_top_modules[0]}")
+        elif hasattr(facts, "top_symbols") and facts.top_symbols:
+            takeaways.append(f"2. Defines {facts.top_symbols[0].name}")
         else:
-            takeaways.append("2. Modular package structure")
+            takeaways.append(f"2. Implements {facts.repo_name}")
 
-        takeaways.append("3. Quickstart and production deployment")
+        fences = getattr(facts.readme, "install_commands", []) or getattr(facts.readme, "usage_commands", []) if hasattr(facts, "readme") else []
+        if fences:
+            takeaways.append(f"3. Run {fences[0][:45]}")
+        elif hasattr(facts, "readme") and getattr(facts.readme, "features", None):
+            takeaways.append(f"3. {facts.readme.features[0][:50]}")
+        elif getattr(facts, "cli_flags", None):
+            takeaways.append(f"3. Options {', '.join(facts.cli_flags[:2])}")
+        else:
+            takeaways.append(f"3. Explore {facts.repo_name}")
 
-        # Start with entry_module, never LICENSE or README
+        # Start with entry_module, top module, top symbol, or readme
         next_file = entry_mod
+        if not next_file and hasattr(facts, "ranked_top_modules") and facts.ranked_top_modules:
+            next_file = facts.ranked_top_modules[0]
         if not next_file and hasattr(facts, "top_symbols") and facts.top_symbols:
             next_file = facts.top_symbols[0].file
         if not next_file:
-            next_file = "main.py"
+            next_file = getattr(facts, "readme_file", "README.md") or "README.md"
 
         content = "\n".join(takeaways)
         return OnScreen(

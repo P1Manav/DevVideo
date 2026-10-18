@@ -28,6 +28,7 @@ from .gates import (
     check_secret_leaks_gate,
     check_specificity_gate,
     check_voice_present_gate,
+    check_onscreen_text_integrity_gate,
 )
 from .metrics import (
     check_coverage,
@@ -60,6 +61,7 @@ __all__ = [
     "check_narration_quality_gate",
     "check_specificity_gate",
     "check_motion_gate",
+    "check_onscreen_text_integrity_gate",
     "compute_domain_relevance",
     "compute_readme_coverage",
     "compute_repo_specific_terms_count",

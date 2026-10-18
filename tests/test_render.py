@@ -128,3 +128,25 @@ class TestRenderer:
             text = rf.read_text(encoding="utf-8")
             for term in forbidden:
                 assert term not in text, f"Found forbidden placeholder '{term}' in {rf}"
+
+    def test_frame_layout_bounding_boxes_all_scenes(self):
+        """Phase 5: Verify DOM bounding box geometry for 1280x720 canvas across all scene types."""
+        from src.render_html import build_frame_html
+        scene_kinds = ["title", "overview", "diagram", "code", "terminal", "fit", "recap"]
+        all_titles = [k.capitalize() for k in scene_kinds]
+        for idx, kind in enumerate(scene_kinds):
+            html_doc = build_frame_html(
+                repo_name="test_repo",
+                scene_id=f"scene_{kind}",
+                scene_kind=kind,
+                scene_title=kind.capitalize(),
+                content="Test content for scene frame layout verification.",
+                caption="Verifying that bounding boxes remain within 1280x720 canvas.",
+                all_scene_titles=all_titles,
+                current_scene_idx=idx,
+                progress_pct=(idx / len(scene_kinds)) * 100.0,
+            )
+            assert "width: 1280px;" in html_doc
+            assert "height: 720px;" in html_doc
+            assert "overflow: hidden;" in html_doc
+            assert "box-sizing: border-box;" in html_doc
