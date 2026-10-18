@@ -68,7 +68,7 @@ class PlaywrightRenderer:
         if os.environ.get("DEVVIDEO_CONTAINER") == "1" or not os.name == "nt":
             args.append("--no-sandbox")
 
-        self._browser = self._playwright.chromium.launch(headless=True, args=args)
+        self._browser = self._playwright.chromium.launch(headless=True, args=args, timeout=15000)
         self._context = self._browser.new_context(
             viewport={"width": 1280, "height": 720},
             java_script_enabled=False,
@@ -194,6 +194,8 @@ class PillowRenderer:
 
         # Draw content
         lines = content.strip().splitlines()
+        if scene_kind == "diagram":
+            lines = lines[:10]
         has_overflow = False
         overflow_details = ""
 

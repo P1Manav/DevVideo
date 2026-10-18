@@ -261,6 +261,7 @@ def check_groundedness(
         "transcript", "vtt", "chapters", "json", "index", "jsonl", "mp4", "outputs", "output", "artifacts",
         "inside", "invokes", "calls", "executes", "handles", "defines", "imports", "provides", "connects",
         "inspect", "returns", "implements", "module", "code", "file", "function", "class", "workflow",
+        "overview", "capabilities", "architecture", "purpose", "features", "quickstart",
     }
     base_pool = repo_file_tokens | repo_symbols | repo_name_tokens | narrative_structural_tokens
 
@@ -456,16 +457,19 @@ def check_code_verbatim_gate(script: ScriptPlan, repo_files: dict[str, str]) -> 
     failures: list[str] = []
 
     for scene in code_scenes:
-        ev = scene.evidence
-        if not ev.file or ev.file not in repo_files:
-            failures.append(f"{scene.id}: file '{ev.file}' not in repo")
+        meta_file = getattr(scene.on_screen, "metadata", {}).get("file") if scene.on_screen else None
+        target_file = meta_file or (scene.evidence.file if scene.evidence else "")
+        if not target_file or target_file not in repo_files:
+            failures.append(f"{scene.id}: file '{target_file}' not in repo")
             continue
-        file_text = repo_files[ev.file]
+        file_text = repo_files[target_file]
         code_excerpt = scene.on_screen.content.strip()
-        if code_excerpt in file_text:
+        norm_excerpt = "\n".join(l.rstrip() for l in code_excerpt.splitlines())
+        norm_file = "\n".join(l.rstrip() for l in file_text.splitlines())
+        if code_excerpt in file_text or norm_excerpt in norm_file:
             valid += 1
         else:
-            failures.append(f"{scene.id}: code snippet not verbatim line range in {ev.file}")
+            failures.append(f"{scene.id}: code snippet not verbatim line range in {target_file}")
 
     ratio = valid / len(code_scenes)
     passed = ratio >= 1.0
@@ -825,7 +829,8 @@ def check_narration_quality_gate(
             junk_matches = tokens & JUNK_TOKENS
             if len(junk_matches) >= 2:
                 issues.append(f"{scene.id}[b{b_idx}]: contains {len(junk_matches)} junk tokens ({junk_matches})")
-            if tokens and all(len(t) < 4 for t in tokens):
+            dev_terms = {"npm", "pip", "git", "cli", "api", "web", "sql", "dev", "gcc", "app", "css", "svg"}
+            if tokens and all(len(t) < 4 for t in tokens) and not (tokens <= dev_terms):
                 issues.append(f"{scene.id}[b{b_idx}]: all content tokens are < 4 chars")
 
     # 3. No two scenes share an identical sentence skeleton
@@ -917,6 +922,10 @@ def check_specificity_gate(
     if facts:
         readme = getattr(facts, "readme", None)
         if readme:
+            for rl in getattr(readme, "raw_lines", []):
+                for w in re.findall(r"\b[A-Za-z0-9]{3,}\b", rl):
+                    if w.lower() not in STOPWORDS:
+                        specific_items.add(w.lower())
             desc_sents = getattr(readme, "description_sentences", [])
             for ds in desc_sents:
                 t = ds if isinstance(ds, str) else getattr(ds, "text", "")

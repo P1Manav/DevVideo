@@ -26,6 +26,31 @@ def clean_takeaway_line(text: str, max_words: int = 8) -> str:
     return " ".join(words).rstrip(".,;:!?")
 
 
+def select_primary_code_symbol(facts: Any) -> Any:
+    """Select the primary symbol for the code scene deterministically."""
+    if not hasattr(facts, "top_symbols") or not facts.top_symbols:
+        return None
+    entry_mod = getattr(facts, "entry_module", "")
+    if entry_mod:
+        for s in facts.top_symbols:
+            if s.file == entry_mod and getattr(s, "kind", "") in ("function", "class") and not s.name.startswith("_"):
+                return s
+        for s in facts.top_symbols:
+            if s.file == entry_mod and not s.name.startswith("_"):
+                return s
+
+    core_symbols = [
+        s for s in facts.top_symbols
+        if not s.name.startswith("_") and "test" not in s.file.lower()
+    ]
+    if core_symbols:
+        for s in core_symbols:
+            if getattr(s, "kind", "") in ("function", "class"):
+                return s
+        return core_symbols[0]
+    return facts.top_symbols[0]
+
+
 def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
     """Build grounded OnScreen object for a scene based on RepoFacts."""
     # Primary language
@@ -98,24 +123,8 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
         return OnScreen(type="diagram", content=content, metadata={"nodes": nodes, "edges": edges})
 
     elif scene_kind == "code":
-        sym = None
+        sym = select_primary_code_symbol(facts)
         entry_mod = getattr(facts, "entry_module", "")
-        if hasattr(facts, "top_symbols") and facts.top_symbols:
-            # First try entry_module function
-            if entry_mod:
-                for s in facts.top_symbols:
-                    if s.file == entry_mod and s.kind == "function":
-                        sym = s
-                        break
-            if not sym:
-                # Any function
-                for s in facts.top_symbols:
-                    if s.kind == "function":
-                        sym = s
-                        break
-            if not sym:
-                sym = facts.top_symbols[0]
-
         if sym:
             content = sym.code_excerpt or sym.def_line or f"def {sym.name}(): pass"
             code_file = sym.file
@@ -228,6 +237,12 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
 
 def attach_visuals_to_script(script: ScriptPlan, facts: Any) -> ScriptPlan:
     """Populate each scene's on_screen specification strictly from RepoFacts."""
+    from .schema import Evidence
     for scene in script.scenes:
         scene.on_screen = build_scene_visuals(scene.kind, facts)
+        if scene.kind == "code" and scene.on_screen and scene.on_screen.metadata:
+            target_f = scene.on_screen.metadata.get("file")
+            if target_f:
+                first_line = scene.on_screen.content.strip().splitlines()[0] if scene.on_screen.content else ""
+                scene.evidence = Evidence(file=target_f, quote=first_line)
     return script

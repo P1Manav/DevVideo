@@ -163,15 +163,30 @@ class EdgeTTS:
 
         async def _run():
             comm = edge_tts.Communicate(text, self.voice, rate=self.rate)
-            async for chunk in comm.stream():
-                if chunk["type"] == "audio":
-                    with open(raw_mp3, "ab") as f:
-                        f.write(chunk["data"])
-                elif chunk["type"] == "WordBoundary":
-                    word_boundaries.append(chunk)
+            try:
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        with open(raw_mp3, "ab") as f:
+                            f.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        word_boundaries.append(chunk)
+            except Exception:
+                if not raw_mp3.exists() or raw_mp3.stat().st_size == 0:
+                    await comm.save(str(raw_mp3))
 
         try:
-            asyncio.run(asyncio.wait_for(_run(), timeout=40.0))
+            last_err = None
+            for attempt in range(2):
+                try:
+                    if raw_mp3.exists():
+                        raw_mp3.unlink(missing_ok=True)
+                    asyncio.run(asyncio.wait_for(_run(), timeout=25.0))
+                    if raw_mp3.exists() and raw_mp3.stat().st_size > 0:
+                        break
+                except Exception as e:
+                    last_err = e
+            if not raw_mp3.exists() or raw_mp3.stat().st_size == 0:
+                raise RuntimeError(f"Edge TTS synthesis failed after retries: {last_err}")
             normalize_and_pad_audio(raw_mp3, output_path)
         finally:
             raw_mp3.unlink(missing_ok=True)

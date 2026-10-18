@@ -506,6 +506,7 @@ def expand_script_to_timeline(
                             "command_display": cmd,
                             "cursor_visible": False,
                             "flag_callout": flag_callout,
+                            "sub_phase": 1,
                         },
                     )
                 )
@@ -525,6 +526,7 @@ def expand_script_to_timeline(
                             "command_display": cmd,
                             "cursor_visible": True,
                             "flag_callout": flag_callout,
+                            "sub_phase": 2,
                         },
                     )
                 )

@@ -389,9 +389,9 @@ def build_frame_html(
         type_bg_map = {
             "setup": "#09101f",
             "flow": "#1e375c",
-            "focus": "#0c1524",
+            "focus": "#162842",
         }
-        c_win_bg = type_bg_map.get(c_type, code_bgs[sub_phase % len(code_bgs)])
+        c_win_bg = "#1e375c" if sub_phase % 2 == 1 else type_bg_map.get(c_type, code_bgs[sub_phase % len(code_bgs)])
         is_small = any(len(l) > 170 for l in code_body_text.strip().splitlines()[:14])
         small_cls = " small-code" if is_small else ""
         code_cls = f"code-window phase-{c_type} subphase-{sub_phase}{small_cls}"
@@ -449,7 +449,8 @@ def build_frame_html(
             </div>
             """
 
-        phase_idx = (typing_step % 6) if is_typing else (0 if state_kind == "terminal_cursor" else 3)
+        sub_phase = sdata.get("sub_phase", 0)
+        phase_idx = (typing_step % 6) if is_typing else (sub_phase if state_kind == "terminal_callout" else (0 if state_kind == "terminal_cursor" else 3))
         term_bgs = [
             "#0a101d",
             "#1c3454",

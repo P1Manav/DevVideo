@@ -148,18 +148,19 @@ class RepairManager:
             self.repairs_applied.append(f"Accelerated speech rate by +8% ({new_rate}x)")
             return RepairDurationResult("speed_increased", new_rate)
 
-        # Attempt 2: Drop recap bullets or entire recap
+        # Attempt 2: Drop recap bullets while preserving entry file takeaway
         recap_idx = next((i for i, s in enumerate(script.scenes) if s.kind == "recap"), None)
         if recap_idx is not None:
             recap_scene = script.scenes[recap_idx]
             if len(recap_scene.beats) > 1 and not tts_backend:
-                recap_scene.beats = recap_scene.beats[:1]
-                recap_scene.narration = recap_scene.beats[0].say
+                entry_beat = next((b for b in recap_scene.beats if "starting with" in b.say.lower() or "explore" in b.say.lower()), recap_scene.beats[-1])
+                recap_scene.beats = [entry_beat]
+                recap_scene.narration = entry_beat.say
                 if recap_scene.on_screen and recap_scene.on_screen.metadata:
                     t_list = recap_scene.on_screen.metadata.get("takeaways", [])
                     if len(t_list) > 1:
                         recap_scene.on_screen.metadata["takeaways"] = t_list[:1]
-                self.repairs_applied.append("Dropped recap bullets (trimmed to 1 takeaway)")
+                self.repairs_applied.append("Trimmed recap to entry file takeaway")
                 return RepairDurationResult("dropped_recap_bullets", rate_multiplier)
             else:
                 dropped = script.scenes.pop(recap_idx)

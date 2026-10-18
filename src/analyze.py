@@ -623,6 +623,9 @@ def extract_js_facts(
         if name not in ("require", "module", "exports", "import"):
             line_no = code[:m.start()].count("\n") + 1
             lines = code.splitlines()
+            s_idx = max(0, line_no - 1)
+            e_idx = min(s_idx + 10, len(lines))
+            excerpt = "\n".join(lines[s_idx:e_idx])
             full_line = lines[line_no - 1].strip() if line_no - 1 < len(lines) else ""
             symbols.append(
                 TopSymbol(
@@ -630,9 +633,9 @@ def extract_js_facts(
                     kind="function",
                     file=rel_path,
                     start_line=line_no,
-                    end_line=line_no,
+                    end_line=min(line_no + 9, len(lines)),
                     def_line=full_line,
-                    code_excerpt=full_line,
+                    code_excerpt=excerpt,
                     calls=[],
                 )
             )
@@ -731,6 +734,8 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
     for path, code in files.items():
         if path.endswith("__main__.py") or path.endswith("/cli.py") or path in ("cli.py", "main.py"):
             entry_points.append(path)
+        elif path in ("src/index.js", "src/App.js", "src/main.js", "src/index.ts", "src/App.tsx", "index.js", "app.js"):
+            entry_points.append(path)
         elif 'if __name__ == "__main__":' in code or "if __name__ == '__main__':" in code:
             if path not in entry_points:
                 entry_points.append(path)
@@ -824,8 +829,10 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
             ranked_top_modules.append(m)
 
     if not ranked_top_modules:
-        core_py = [p for p in py_files if not is_auxiliary_or_test_path(p)]
-        ranked_top_modules = sorted(core_py)[:8] if core_py else sorted(py_files)[:8]
+        code_exts = (".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".c", ".cpp")
+        all_code = [p for p in files if any(p.endswith(ext) for ext in code_exts)]
+        core_code = [p for p in all_code if not is_auxiliary_or_test_path(p)]
+        ranked_top_modules = sorted(core_code)[:8] if core_code else sorted(all_code)[:8]
     else:
         ranked_top_modules = ranked_top_modules[:8]
 

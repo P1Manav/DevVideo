@@ -179,6 +179,9 @@ def redact_secrets(text: str, recorded_secrets: set[str] | None = None) -> str:
             lower_token = token.lower()
             if any(lower_token.endswith(ext) for ext in _COMMON_FILE_EXTENSIONS):
                 return token
+            # Skip pure alphabetic / underscore identifiers (function names, variable names)
+            if re.match(r"^[a-zA-Z_]+$", token):
+                return token
 
             if _has_high_entropy(token):
                 if recorded_secrets is not None:
@@ -327,6 +330,18 @@ def collect_files(repo_dir: Path, recorded_secrets: set[str] | None = None) -> d
     return files
 
 
+def _force_rmtree(p_dir: Path) -> None:
+    import stat
+    def _on_err(func, path, exc_info):
+        try:
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except Exception:
+            pass
+    if p_dir.exists():
+        shutil.rmtree(p_dir, onerror=_on_err)
+
+
 def clone_repo(url: str, target_dir: Path) -> Path:
     """
     Shallow clone a GitHub repo with hooks disabled, symlinks disabled, and file protocol blocked.
@@ -338,16 +353,15 @@ def clone_repo(url: str, target_dir: Path) -> Path:
     # Create empty directory for core.hooksPath (Windows-safe, no /dev/null)
     empty_hooks_dir = target_dir / "_empty_hooks"
     empty_hooks_dir.mkdir(parents=True, exist_ok=True)
+    hooks_posix = empty_hooks_dir.resolve().as_posix()
 
     cmd = [
         "git",
-        "-c", f"core.hooksPath={empty_hooks_dir}",
+        "-c", f"core.hooksPath={hooks_posix}",
         "-c", "core.symlinks=false",
         "-c", "protocol.file.allow=never",
         "clone",
         "--depth", "1",
-        "--single-branch",
-        "--no-tags",
         url,
         str(clone_path),
     ]
@@ -356,18 +370,27 @@ def clone_repo(url: str, target_dir: Path) -> Path:
     env = os.environ.copy()
     env["GIT_TERMINAL_PROMPT"] = "0"
 
-    result = subprocess.run(
-        cmd,
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env=env,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"git clone failed (exit {result.returncode}): {result.stderr[:500]}"
-        )
+    last_err = None
+    for attempt in range(3):
+        if clone_path.exists():
+            _force_rmtree(clone_path)
+        try:
+            result = subprocess.run(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=90,
+                env=env,
+            )
+            if result.returncode == 0:
+                break
+            last_err = RuntimeError(f"git clone failed (exit {result.returncode}): {result.stderr[:500]}")
+        except subprocess.TimeoutExpired as e:
+            last_err = e
+            logger.warning(f"git clone attempt {attempt + 1} timed out, retrying...")
+    else:
+        raise RuntimeError(f"git clone failed after 3 attempts: {last_err}")
 
     # Size cap check: abort if checked-out size > 200 MB
     total_bytes = 0
@@ -423,7 +446,7 @@ def safe_clone_github(url: str) -> Iterator[RepoContent]:
             commit_sha=commit_sha,
         )
     finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+        _force_rmtree(Path(tmp_dir))
 
 
 def ingest_github(url: str) -> RepoContent:
