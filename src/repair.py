@@ -20,6 +20,18 @@ logger = logging.getLogger(__name__)
 MAX_REPAIR_ATTEMPTS = 2
 
 
+class RepairDurationResult(str):
+    """Result of repair_duration that behaves as both a string and a (action, rate) tuple."""
+    def __new__(cls, action: str, rate: float = 1.0):
+        obj = str.__new__(cls, action)
+        obj.action = action
+        obj.rate = rate
+        return obj
+
+    def __iter__(self):
+        return iter((self.action, self.rate))
+
+
 class RepairManager:
     """Coordinates up to 2 automatic repair attempts before final rejection."""
 
@@ -87,30 +99,80 @@ class RepairManager:
             self.attempts += 1
         return repaired
 
-    def repair_duration(self, script: ScriptPlan, tts_backend: Any = None) -> str:
+    def repair_overflow(self, scenes: list[Scene], overflow_scene_ids: list[str]) -> bool:
+        """Step down font and content lines for overflowing scenes."""
+        if not self.can_repair() or not overflow_scene_ids:
+            return False
+
+        repaired = False
+        for s in scenes:
+            if s.id in overflow_scene_ids:
+                if s.on_screen:
+                    # 1. Step down font size
+                    if s.on_screen.metadata is None:
+                        s.on_screen.metadata = {}
+                    s.on_screen.metadata["font_size"] = "13px"
+                    # 2. Step down lines if excessive
+                    lines = s.on_screen.content.splitlines()
+                    if len(lines) > 8:
+                        s.on_screen.content = "\n".join(lines[:8]) + "\n... [truncated]"
+                    self.repairs_applied.append(f"Reduced font and lines in {s.id} to resolve overflow")
+                    repaired = True
+
+        if repaired:
+            self.attempts += 1
+        return repaired
+
+    def repair_duration(
+        self,
+        script: ScriptPlan,
+        rate_multiplier: float = 1.0,
+        tts_backend: Any = None,
+    ) -> RepairDurationResult:
         """
-        Repair duration > 58s:
-        Attempt 1: speed up TTS by 8%.
-        Attempt 2: drop lowest-priority scene (recap).
+        Duration repair sequence:
+        1. +8% speech rate once.
+        2. Drop recap bullets (trim recap to 1 takeaway) or drop recap scene.
+        3. Drop lowest-priority scene.
         """
         if not self.can_repair():
-            return "max_attempts_exceeded"
+            return RepairDurationResult("max_attempts_exceeded", rate_multiplier)
 
         self.attempts += 1
-        # Attempt 1: Speed up speech
-        if self.attempts == 1 and tts_backend and hasattr(tts_backend, "speed"):
-            old_speed = tts_backend.speed
-            tts_backend.speed = int(old_speed * 1.08)
-            action = f"Increased TTS speed from {old_speed} to {tts_backend.speed}"
-            self.repairs_applied.append(action)
-            return "speed_increased"
 
-        # Attempt 2: Drop lowest priority scene (recap)
+        # Attempt 1: +8% speech rate once
+        if self.attempts == 1:
+            new_rate = round(rate_multiplier * 1.08, 3)
+            if tts_backend and hasattr(tts_backend, "speed"):
+                tts_backend.speed = int(tts_backend.speed * 1.08)
+            self.repairs_applied.append(f"Accelerated speech rate by +8% ({new_rate}x)")
+            return RepairDurationResult("speed_increased", new_rate)
+
+        # Attempt 2: Drop recap bullets or entire recap
         recap_idx = next((i for i, s in enumerate(script.scenes) if s.kind == "recap"), None)
         if recap_idx is not None:
-            dropped = script.scenes.pop(recap_idx)
-            action = f"Dropped lowest-priority scene '{dropped.id}'"
-            self.repairs_applied.append(action)
-            return "dropped_recap"
+            recap_scene = script.scenes[recap_idx]
+            if len(recap_scene.beats) > 1 and not tts_backend:
+                recap_scene.beats = recap_scene.beats[:1]
+                recap_scene.narration = recap_scene.beats[0].say
+                if recap_scene.on_screen and recap_scene.on_screen.metadata:
+                    t_list = recap_scene.on_screen.metadata.get("takeaways", [])
+                    if len(t_list) > 1:
+                        recap_scene.on_screen.metadata["takeaways"] = t_list[:1]
+                self.repairs_applied.append("Dropped recap bullets (trimmed to 1 takeaway)")
+                return RepairDurationResult("dropped_recap_bullets", rate_multiplier)
+            else:
+                dropped = script.scenes.pop(recap_idx)
+                self.repairs_applied.append(f"Dropped lowest-priority scene '{dropped.id}'")
+                return RepairDurationResult("dropped_recap", rate_multiplier)
 
-        return "no_action"
+        # Attempt 3: Drop lowest-priority scene
+        priority_order = ["terminal", "fit", "diagram", "overview", "recap"]
+        for p_kind in priority_order:
+            idx = next((i for i, s in enumerate(script.scenes) if s.kind == p_kind), None)
+            if idx is not None and len(script.scenes) > 3:
+                dropped = script.scenes.pop(idx)
+                self.repairs_applied.append(f"Dropped lowest-priority scene '{dropped.id}'")
+                return RepairDurationResult(f"dropped_{p_kind}", rate_multiplier)
+
+        return RepairDurationResult("no_action", rate_multiplier)

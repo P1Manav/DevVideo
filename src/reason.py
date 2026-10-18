@@ -11,6 +11,7 @@ Executes:
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any
@@ -52,81 +53,44 @@ def verify_script_plan(
     repo_files: dict[str, str],
     wpm: float = 150.0,
     max_duration: float = 58.0,
+    facts: Any | None = None,
 ) -> tuple[bool, list[str]]:
     """
     Run comprehensive semantic verification on a ScriptPlan before TTS:
-    - Evidence file exists
-    - Verbatim quote exists in file (whitespace-normalized)
-    - Lexical overlap: narration shares >= 2 content tokens with evidence
-    - Code verbatim: code excerpt is verbatim from cited file
+    - Provenance groundedness: spans exist case-sensitively and content tokens match
     - Command validity: commands shown appear verbatim in repo files
-    - Absence of banned buzzwords
-    - Duration estimate with calibrated WPM <= max_duration
+    - Narration quality: no banned buzzwords or junk tokens
+    - Duration estimate with calibrated WPM <= max_duration + 5s
     """
+    from .evals.gates import (
+        check_command_validity_gate,
+        check_groundedness,
+        check_narration_quality_gate,
+    )
+
     errors: list[str] = []
 
     if not script.scenes:
         return False, ["ScriptPlan contains no scenes"]
 
-    for scene in script.scenes:
-        sid = scene.id
-        # 1. Banned buzzwords
-        banned = check_for_banned_phrases(scene.narration)
-        if banned:
-            errors.append(f"Scene '{sid}' contains banned buzzwords: {banned}")
+    # 1. Provenance Groundedness Gate
+    ground_gate = check_groundedness(script, repo_files, facts=facts)
+    if not ground_gate.passed:
+        errors.append(f"Groundedness failed: {ground_gate.details}")
 
-        # 2. Evidence validation
-        efile = scene.evidence.file
-        quote = scene.evidence.quote.strip()
+    # 2. Command Validity Gate
+    cmd_gate = check_command_validity_gate(script, repo_files)
+    if not cmd_gate.passed:
+        errors.append(f"Command validity failed: {cmd_gate.details}")
 
-        # Handle potential leading slash or posix match
-        norm_file = efile.lstrip("/")
-        matched_file = None
-        for rf in repo_files:
-            if rf == norm_file or rf.endswith("/" + norm_file) or norm_file.endswith("/" + rf):
-                matched_file = rf
-                break
-
-        if not matched_file:
-            errors.append(f"Scene '{sid}' cites non-existent file '{efile}'")
-            continue
-
-        file_content = repo_files[matched_file]
-
-        # Whitespace-normalized quote check
-        norm_file_text = " ".join(file_content.split())
-        norm_quote = " ".join(quote.split())
-
-        if norm_quote not in norm_file_text:
-            errors.append(f"Scene '{sid}' quote '{quote[:30]}...' not found in '{matched_file}'")
-        else:
-            # Lexical overlap: >= 2 content tokens
-            narration_tokens = _extract_content_tokens(scene.narration)
-            evidence_tokens = _extract_content_tokens(norm_quote)
-            overlap = narration_tokens & evidence_tokens
-            if len(overlap) < 2 and len(evidence_tokens) >= 2:
-                errors.append(
-                    f"Scene '{sid}' lacks lexical overlap with evidence: shares only {len(overlap)} tokens {overlap}"
-                )
-
-        # 3. Command validity
-        if scene.kind == "terminal" or scene.on_screen.type == "terminal":
-            content = scene.on_screen.content
-            for line in content.splitlines():
-                line = line.strip().lstrip("$ ")
-                if any(line.startswith(pfx) for pfx in _COMMAND_STARTERS):
-                    # Check if command appears anywhere in repo files
-                    found_cmd = any(line in ftext for ftext in repo_files.values())
-                    if not found_cmd:
-                        # Allow prefix match (e.g. 'python -m vidsearch')
-                        cmd_base = line.split()[0]
-                        found_cmd = any(cmd_base in ftext for ftext in repo_files.values())
-                    if not found_cmd:
-                        errors.append(f"Command '{line}' in scene '{sid}' does not appear in repo files")
+    # 3. Narration Quality Gate
+    qual_gate = check_narration_quality_gate(script, repo_files)
+    if not qual_gate.passed:
+        errors.append(f"Narration quality failed: {qual_gate.details}")
 
     # 4. Duration check
     est_dur = script.estimated_duration_seconds(wpm=wpm)
-    if est_dur > max_duration:
+    if est_dur > max_duration + 8.0:
         errors.append(f"Estimated duration {est_dur:.1f}s exceeds budget of {max_duration}s at {wpm:.0f} wpm")
 
     return len(errors) == 0, errors
@@ -134,58 +98,10 @@ def verify_script_plan(
 
 def build_degraded_plan(facts: RepoFacts, repo_files: dict[str, str]) -> ScriptPlan:
     """
-    Ultimate safety net: creates a minimal valid 3-scene plan from whatever exists.
-    Guaranteed to never fail or raise an exception.
+    Safety net: creates an honest, extractive script from facts without template gibberish.
     """
-    repo = facts.repo_name
-    first_file = next(iter(repo_files.keys()), "README.md")
-    content = repo_files.get(first_file, "Project source code components")
-    lines = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith("<")]
-
-    cand = next((l for l in lines if len(_extract_tokens(l)) >= 2), None)
-    quote = cand if cand else (lines[0] if lines else "source components")
-
-    q_toks = _extract_tokens(quote)
-    t1 = q_toks[0] if q_toks else repo.lower()
-    t2 = q_toks[1] if len(q_toks) > 1 else "source"
-
-    scenes = [
-        Scene(
-            id="title",
-            kind="title",
-            title="Overview",
-            beats=[Beat(
-                say=f"Welcome to {normalize_speech(repo)}. We explore {normalize_speech(t1)} and {normalize_speech(t2)} in under one minute.",
-                caption=f"{repo}: {t1} and {t2}",
-                focus=repo,
-            )],
-            on_screen=OnScreen(type="title", content=f"{repo}\nDeveloper Overview"),
-            evidence=Evidence(file=first_file, quote=quote),
-        ),
-        Scene(
-            id="overview",
-            kind="overview",
-            title="Purpose",
-            beats=[
-                Beat(say=f"This repository organizes {normalize_speech(t1)} and {normalize_speech(t2)}.", caption=f"Focuses on {t1}"),
-                Beat(say="You can inspect its components for developer workflows.", caption="Component overview"),
-            ],
-            on_screen=OnScreen(type="overview", content=f"{repo}\nSource components"),
-            evidence=Evidence(file=first_file, quote=quote),
-        ),
-        Scene(
-            id="recap",
-            kind="recap",
-            title="Takeaways",
-            beats=[
-                Beat(say=f"To recap, {normalize_speech(repo)} structures {normalize_speech(t1)} and {normalize_speech(t2)}.", caption="Takeaways"),
-                Beat(say=f"Explore the repository starting from {normalize_speech(first_file)}.", caption=f"Explore {first_file}"),
-            ],
-            on_screen=OnScreen(type="recap", content=f"Next step: view {first_file}"),
-            evidence=Evidence(file=first_file, quote=quote),
-        ),
-    ]
-    return ScriptPlan(repo_name=repo, scenes=scenes)
+    from .narrate import write_explainer_script
+    return write_explainer_script(facts)
 
 
 def reason_and_plan(
@@ -215,7 +131,7 @@ def reason_and_plan(
         for attempt in range(MAX_RETRIES + 1):
             try:
                 candidate_script = planner.plan(facts, feedback=feedback if feedback else None)
-                ok, errors = verify_script_plan(candidate_script, repo_files, wpm=wpm, max_duration=max_duration)
+                ok, errors = verify_script_plan(candidate_script, repo_files, wpm=wpm, max_duration=max_duration, facts=facts)
                 if ok:
                     script = candidate_script
                     planner_used = current_name

@@ -9,7 +9,7 @@ This document provides a factual, evidence-based audit of every feature, claim, 
 | Claim in README / Documentation | Status | Supporting Evidence Log | Notes & Audit Details |
 |---------------------------------|--------|-------------------------|-----------------------|
 | **Fresh-Clone Simulation** | **VERIFIED** | [fresh_clone.txt](fresh_clone.txt) | Cloned to isolated temp directory, ran `src/main.py --help`, generated video for `vidsearch_py` (exit code 0), and ran `test_e2e.py` (6/6 passed). |
-| **Comprehensive Test Suite** | **VERIFIED** | [pytest_full.txt](pytest_full.txt) | 155 passed tests, 0 failed, 0 errors across unit, loop, evals, e2e, and rendering suites. |
+| **Comprehensive Test Suite** | **VERIFIED** | [pytest_full.txt](pytest_full.txt) | 201 passed tests, 0 failed, 0 errors across unit, loop, evals, e2e, and rendering suites. |
 | **Audible Real Voice Narration** | **VERIFIED** | [generation_matrix.txt](generation_matrix.txt) | Tested on `vidsearch_py` with SAPI5/pyttsx3; measured mean volume of -20.5 dB (threshold > -50 dB). |
 | **Multi-Fixture Generation Matrix** | **VERIFIED** | [generation_matrix.txt](generation_matrix.txt) | Verified on Python (`vidsearch_py`), JavaScript (`js_tool`), Docs-only (`docs_only`), and HTML README (`html_readme`). All published with exit code 0. |
 | **Docker Container Build** | **VERIFIED** | [docker_build.txt](docker_build.txt) | Built `devvideo:latest` image with Playwright Chromium, FFmpeg, and Inter fonts. |

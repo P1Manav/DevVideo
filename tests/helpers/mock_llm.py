@@ -102,7 +102,5 @@ class MockPlanner:
         limits: dict[str, Any] | None = None,
         feedback: list[str] | None = None,
     ) -> ScriptPlan:
-        from src.plan import extract_json_object
-        raw = self.mock_llm.complete("")
-        data = extract_json_object(raw)
-        return ScriptPlan(**data)
+        from src.narrate import write_explainer_script
+        return write_explainer_script(facts)

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
+from pathlib import Path
 from typing import Any
 
 from ..schema import ScriptPlan
@@ -78,3 +79,45 @@ def evaluate_clarity(script: ScriptPlan, llm_used: str = "offline") -> str:
         logger.debug(f"Clarity evaluation skipped due to LLM error: {e}")
 
     return "skipped"
+
+
+def compute_readme_coverage(script: ScriptPlan, facts: Any | None = None) -> float:
+    """Share of description-sentence content words mentioned in script narration."""
+    if not facts or not getattr(facts, "readme_description_sentences", []):
+        return 1.0
+    desc_words: set[str] = set()
+    for s in facts.readme_description_sentences:
+        text_val = s if isinstance(s, str) else getattr(s, "text", "")
+        for w in re.findall(r"\b[A-Za-z0-9]{4,}\b", text_val):
+            desc_words.add(w.lower())
+    if not desc_words:
+        return 1.0
+    all_narr = " ".join(s.narration for s in script.scenes).lower()
+    matches = sum(1 for w in desc_words if re.search(rf"\b{re.escape(w)}\b", all_narr))
+    return round(matches / len(desc_words), 2)
+
+
+def compute_repo_specific_terms_count(
+    script: ScriptPlan,
+    repo_files: dict[str, str],
+    facts: Any | None = None,
+) -> int:
+    """Count of unique repo-specific terms named in narration."""
+    terms: set[str] = set()
+    for f in repo_files:
+        terms.add(Path(f).name.lower())
+        terms.add(Path(f).stem.lower())
+    terms.add(script.repo_name.lower())
+    if facts:
+        for fl in getattr(facts, "cli_flags", []):
+            flag_name = getattr(fl, "flag", "").lstrip("-").lower()
+            if flag_name:
+                terms.add(flag_name)
+        for ident in getattr(facts, "identifiers", []):
+            if len(ident) >= 3:
+                terms.add(ident.lower())
+        for dep in getattr(facts, "dependencies", {}):
+            terms.add(dep.lower())
+    all_narr = " ".join(s.narration for s in script.scenes).lower()
+    matched = sum(1 for t in terms if len(t) >= 3 and re.search(rf"\b{re.escape(t)}\b", all_narr))
+    return matched

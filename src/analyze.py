@@ -529,9 +529,10 @@ def extract_js_facts(
     rel_path: str,
     code: str,
     all_js_files: set[str],
-) -> list[ImportEdge]:
-    """Extract internal import edges from JS/TS code using regex."""
+) -> tuple[list[ImportEdge], list[TopSymbol]]:
+    """Extract internal import edges and top-level function/class symbols from JS/TS code using regex."""
     edges: list[ImportEdge] = []
+    symbols: list[TopSymbol] = []
     patterns = [
         re.compile(r"""(?:import|require)\s*\(?['"](\.[^'"]+)['"]\s*\)?"""),
     ]
@@ -546,7 +547,26 @@ def extract_js_facts(
                     if known != rel_path:
                         edges.append(ImportEdge(source=rel_path, target=known, raw_line=m.group(0)))
 
-    return edges
+    for m in re.finditer(r"(?:function|class|const|let|var)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code):
+        name = m.group(1)
+        if name not in ("require", "module", "exports", "import"):
+            line_no = code[:m.start()].count("\n") + 1
+            lines = code.splitlines()
+            full_line = lines[line_no - 1].strip() if line_no - 1 < len(lines) else ""
+            symbols.append(
+                TopSymbol(
+                    name=name,
+                    kind="function",
+                    file=rel_path,
+                    start_line=line_no,
+                    end_line=line_no,
+                    def_line=full_line,
+                    code_excerpt=full_line,
+                    calls=[],
+                )
+            )
+
+    return edges, symbols
 
 
 # --- Main analysis function ---
@@ -649,8 +669,9 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
             module_docs.append(m_doc)
 
     for js_file in sorted(js_files):
-        edges = extract_js_facts(js_file, files[js_file], js_files)
+        edges, symbols = extract_js_facts(js_file, files[js_file], js_files)
         all_edges.extend(edges)
+        all_symbols.extend(symbols)
 
     # Deduplicate edges & flags
     unique_edges = []
@@ -722,7 +743,7 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
                 continue
             # Check if any keyword appears as word
             if any(re.search(rf"\b{kw}\b", s_line, re.IGNORECASE) for kw in keywords):
-                pipeline_stages[stage] = s_line[:120]
+                pipeline_stages[stage] = s_line
                 break
 
     # 8. Relevance calculation over README + docstrings + dependency names

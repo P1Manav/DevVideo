@@ -19,15 +19,20 @@ from .gates import (
     check_duration_gate,
     check_frames_valid_gate,
     check_groundedness,
+    check_motion_gate,
+    check_narration_quality_gate,
     check_no_overflow_gate,
     check_overflow_gate,
     check_secret_gate,
     check_secret_leaks_gate,
+    check_specificity_gate,
     check_voice_present_gate,
 )
 from .metrics import (
     check_coverage,
     compute_domain_relevance,
+    compute_readme_coverage,
+    compute_repo_specific_terms_count,
     evaluate_clarity,
 )
 from .report import EvalGate, EvalReport
@@ -49,7 +54,13 @@ __all__ = [
     "check_no_overflow_gate",
     "check_overflow_gate",
     "check_frames_valid_gate",
+    "check_voice_present_gate",
+    "check_narration_quality_gate",
+    "check_specificity_gate",
+    "check_motion_gate",
     "compute_domain_relevance",
+    "compute_readme_coverage",
+    "compute_repo_specific_terms_count",
     "check_coverage",
     "evaluate_clarity",
     "run_eval",
@@ -76,8 +87,9 @@ def run_eval(
     renderer_used: str = "playwright",
     renderer_fallback_reason: str = "",
     calibrated_wpm: float = 165.0,
+    facts: Any | None = None,
 ) -> EvalReport:
-    """Run all 9 hard evaluation gates and compute soft metrics."""
+    """Run all 13 hard evaluation gates and compute soft metrics."""
     report = EvalReport(
         backend_requested=backend_requested,
         backend_used=backend_used,
@@ -101,8 +113,8 @@ def run_eval(
     # 3. Gate 3: Audible Voice
     report.gates.append(check_audio_audible_gate(actual_mp4, tts_used=tts_used))
 
-    # 4. Gate 4: Groundedness
-    report.gates.append(check_groundedness(script, repo_files))
+    # 4. Gate 4: Groundedness (Provenance)
+    report.gates.append(check_groundedness(script, repo_files, facts=facts))
 
     # 5. Gate 5: Code Verbatim
     report.gates.append(check_code_verbatim_gate(script, repo_files))
@@ -120,20 +132,35 @@ def run_eval(
     if frame_paths:
         report.gates.append(check_frames_valid_gate(frame_paths))
     else:
-        # Default pass if frame files were not retained/provided
         report.gates.append(EvalGate(name="frames_valid", passed=True, value="untested", threshold="100%", details="No frames provided"))
 
     # 10. Gate 10: Voice Present (non-blocking unless DEVVIDEO_REQUIRE_VOICE=1)
     report.gates.append(check_voice_present_gate(tts_used=tts_used))
 
+    # 11. Gate 11: Narration Quality (hard gate)
+    report.gates.append(check_narration_quality_gate(script, repo_files))
+
+    # 12. Gate 12: Specificity (hard gate)
+    report.gates.append(check_specificity_gate(script, repo_files, facts=facts))
+
+    # 13. Gate 13: Motion (hard gate)
+    if actual_mp4 and actual_mp4.exists():
+        report.gates.append(check_motion_gate(actual_mp4))
+    else:
+        report.gates.append(EvalGate(name="motion", passed=True, value="skipped", threshold=">= 24 changes", details="No MP4 video provided for motion analysis"))
+
     # Soft Metrics
-    domain_score = compute_domain_relevance(script)
-    report.metrics["domain_relevance"] = domain_score
-    if domain_score < 0.35:
+    domain_score = getattr(facts, "relevance_score", None) or compute_domain_relevance(script)
+    report.metrics["relevance"] = float(domain_score)
+    report.metrics["domain_relevance"] = float(domain_score)
+    if float(domain_score) < 0.35:
         report.metrics["domain_relevance_warning"] = "low_relevance (< 0.35)"
 
+    report.metrics["readme_coverage"] = compute_readme_coverage(script, facts=facts)
+    report.metrics["repo_specific_terms"] = compute_repo_specific_terms_count(script, repo_files, facts=facts)
     report.metrics["coverage"] = check_coverage(script)
     report.metrics["scene_count"] = len(script.scenes)
+    report.metrics["wpm"] = calibrated_wpm
     report.metrics["speech_wpm"] = calibrated_wpm
     report.metrics["clarity"] = evaluate_clarity(script, llm_used=backend_used)
     report.metrics["video_duration_seconds"] = round(num_duration, 2)

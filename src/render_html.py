@@ -146,6 +146,7 @@ def highlight_code_snippet(
     file_path: str = "",
     focus_range: tuple[int, int] | None = None,
     caption_callout: str | None = None,
+    start_line: int = 1,
 ) -> str:
     """
     Format source code with Pygments syntax highlighting, real token colors,
@@ -159,10 +160,10 @@ def highlight_code_snippet(
     raw_lines = code.strip().splitlines()[:14]
 
     lines_html = []
-    for idx, raw_line in enumerate(raw_lines, start=1):
+    for idx, raw_line in enumerate(raw_lines, start=start_line):
         hl_line = highlight(raw_line, lexer, formatter).rstrip("\n")
         is_focused = True
-        if focus_range is not None:
+        if focus_range is not None and focus_range[0] <= focus_range[1]:
             is_focused = (focus_range[0] <= idx <= focus_range[1])
 
         line_cls = "code-line active" if is_focused else "code-line dimmed"
@@ -246,8 +247,25 @@ def build_frame_html(
             </div>
             """
         else:
+            sub_phase = sdata.get("sub_phase", 0)
+            phase_borders = ["#38bdf8", "#a855f7", "#10b981", "#f59e0b"]
+            title_bgs = [
+                "rgba(15, 23, 42, 0.9)",
+                "rgba(19, 39, 72, 0.95)",
+                "rgba(42, 25, 72, 0.95)",
+                "rgba(14, 46, 54, 0.95)",
+            ]
+            border_c = phase_borders[sub_phase % len(phase_borders)]
+            t_bg = title_bgs[sub_phase % len(title_bgs)]
+            glows = [
+                "0 0 25px rgba(56, 189, 248, 0.4)",
+                "0 0 40px rgba(168, 85, 247, 0.45)",
+                "0 0 35px rgba(16, 185, 129, 0.45)",
+                "0 0 35px rgba(245, 158, 11, 0.45)",
+            ]
+            glow = glows[sub_phase % len(glows)]
             inner_content = f"""
-            <div class="title-card">
+            <div class="title-card phase-{sub_phase}" style="background: {t_bg}; border: 1px solid {border_c}; border-radius: 16px; padding: 32px 40px; box-shadow: {glow};">
               {lang_chip_html}
               <h1 class="hero-title">{title_text}</h1>
               {owner_html}
@@ -282,19 +300,62 @@ def build_frame_html(
         focus_range = sdata.get("focus_range")
         caption_callout = sdata.get("caption_callout") or (active_focus if active_focus and not active_focus.startswith("-") else None)
 
+        start_line = sdata.get("start_line", 1)
+        sub_phase = sdata.get("sub_phase", 0)
+        c_type = sdata.get("callout_type", "focus")
+        phase_colors = {
+            "setup": ("#0ea5e9", "rgba(14, 165, 233, 0.45)"),
+            "flow": ("#a855f7", "rgba(168, 85, 247, 0.45)"),
+            "focus": ("#10b981", "rgba(16, 185, 129, 0.45)"),
+        }
+        border_c, glow_c = phase_colors.get(c_type, ("#10b981", "rgba(16, 185, 129, 0.45)"))
+        if sub_phase % 2 == 1:
+            border_c, glow_c = ("#38bdf8", "rgba(56, 189, 248, 0.55)")
+
         code_body = highlight_code_snippet(
             code=code_body_text,
             file_path=code_file,
             focus_range=focus_range,
             caption_callout=caption_callout,
+            start_line=start_line,
         )
         file_header = html.escape(code_file) if code_file else "Source Code"
+        callout_banner = ""
+        if caption_callout:
+            c_badge = "AST SETUP" if c_type == "setup" else ("AST FLOW" if c_type == "flow" else "AST FOCUS")
+            c_gradients = {
+                "setup": "linear-gradient(135deg, rgba(6, 182, 212, 0.4) 0%, rgba(59, 130, 246, 0.5) 100%)",
+                "flow": "linear-gradient(135deg, rgba(168, 85, 247, 0.4) 0%, rgba(99, 102, 241, 0.5) 100%)",
+                "focus": "linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(20, 184, 166, 0.5) 100%)",
+            }
+            c_bg = c_gradients.get(c_type, c_gradients["focus"])
+            callout_banner = f"""
+            <div class="code-callout-banner" style="background: {c_bg};">
+              <span class="callout-badge">{c_badge}</span>
+              <span class="callout-text">{html.escape(caption_callout)}</span>
+            </div>
+            """
+        code_bgs = [
+            "#090d16",
+            "#14243b",
+            "#23183d",
+            "#0e2b33",
+            "#281a38",
+        ]
+        type_bg_map = {
+            "setup": "#09101f",
+            "flow": "#1e375c",
+            "focus": "#0c1524",
+        }
+        c_win_bg = type_bg_map.get(c_type, code_bgs[sub_phase % len(code_bgs)])
+        code_cls = f"code-window phase-{c_type} subphase-{sub_phase}"
         inner_content = f"""
-        <div class="code-window">
+        <div class="{code_cls}" style="background: {c_win_bg}; border: 2px solid {border_c}; box-shadow: 0 0 35px {glow_c};">
           <div class="window-titlebar">
             <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
             <span class="filepath">{file_header}</span>
           </div>
+          {callout_banner}
           <pre class="code-pre"><code>{code_body}</code></pre>
         </div>
         """
@@ -303,22 +364,74 @@ def build_frame_html(
         cmd_typed = sdata.get("command_display") or meta.get("command") or content.lstrip("$ ")
         cursor_vis = sdata.get("cursor_visible", True)
         cursor_html = '<span class="cursor">_</span>' if cursor_vis else '<span class="cursor-hidden">&nbsp;</span>'
+        is_typing = sdata.get("is_typing", False)
+        typing_pct = sdata.get("typing_pct", 0)
+        typing_step = sdata.get("step", 0)
         flag_info = sdata.get("flag_callout")
+
+        typing_status_html = ""
+        if is_typing:
+            typing_bgs = [
+                "linear-gradient(135deg, rgba(14, 165, 233, 0.5) 0%, rgba(99, 102, 241, 0.5) 100%)",
+                "linear-gradient(135deg, rgba(168, 85, 247, 0.5) 0%, rgba(236, 72, 153, 0.5) 100%)",
+            ]
+            b_bg = typing_bgs[typing_step % len(typing_bgs)]
+            typing_status_html = f"""
+            <div class="terminal-status-banner typing" style="background: {b_bg};">
+              <span class="status-pulse-dot">●</span>
+              <span class="status-title">SYNTHESIZING COMMAND ({typing_pct}%)</span>
+              <div class="status-track"><div class="status-fill" style="width: {typing_pct}%;"></div></div>
+            </div>
+            """
+        elif state_kind == "terminal_cursor":
+            typing_status_html = """
+            <div class="terminal-status-banner ready">
+              <span class="status-pulse-dot static">✔</span>
+              <span class="status-title">COMMAND READY</span>
+              <div class="status-track"><div class="status-fill" style="width: 100%;"></div></div>
+            </div>
+            """
 
         flag_callout_html = ""
         if flag_info and isinstance(flag_info, dict):
-            fl_name = html.escape(flag_info.get("flag", ""))
+            fl_name = html.escape(flag_info.get("flag", "RUN"))
             fl_help = html.escape(flag_info.get("help", ""))
-            flag_callout_html = f'<div class="flag-callout"><span class="flag-badge">{fl_name}</span> <span class="flag-desc">{fl_help}</span></div>'
+            flag_callout_html = f"""
+            <div class="terminal-callout-banner">
+              <span class="term-badge">{fl_name}</span>
+              <span class="term-desc">{fl_help}</span>
+            </div>
+            """
 
+        phase_idx = (typing_step % 6) if is_typing else (0 if state_kind == "terminal_cursor" else 3)
+        term_bgs = [
+            "#0a101d",
+            "#1c3454",
+            "#0c1524",
+            "#1f385a",
+            "#0b1220",
+            "#223e64",
+        ]
+        term_borders = [
+            "#38bdf8",
+            "#10b981",
+            "#a855f7",
+            "#06b6d4",
+            "#f59e0b",
+            "#ec4899",
+        ]
+        t_bg = term_bgs[phase_idx % len(term_bgs)]
+        t_border = term_borders[phase_idx % len(term_borders)]
+        term_cls = f"terminal-window phase-{phase_idx}"
         inner_content = f"""
-        <div class="terminal-window">
+        <div class="{term_cls}" style="background: {t_bg}; border: 2px solid {t_border}; box-shadow: 0 0 35px {t_border}55;">
           <div class="window-titlebar">
             <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
             <span class="filepath">bash - quickstart</span>
           </div>
           <div class="terminal-body">
             <div class="prompt-line"><span class="user-prompt">dev@workspace:~$</span> <span class="term-cmd">{html.escape(cmd_typed)}</span>{cursor_html}</div>
+            {typing_status_html}
             {flag_callout_html}
           </div>
         </div>
@@ -328,8 +441,9 @@ def build_frame_html(
         stages = sdata.get("stages") or list(meta.get("pipeline_stages", {}).keys())
         active_stage = sdata.get("active_stage")
         evidence_line = sdata.get("evidence_line") or ""
+        mode = sdata.get("mode", "pipeline")
 
-        if stages:
+        if stages and mode != "announcement" and mode != "artifacts":
             stage_cards = []
             for st in stages:
                 is_active = (st == active_stage)
@@ -340,20 +454,64 @@ def build_frame_html(
             if evidence_line:
                 ev_html = f'<div class="evidence-box"><span class="ev-badge">EVIDENCE</span> {html.escape(evidence_line[:120])}</div>'
 
+            active_banner_html = ""
+            if active_stage:
+                stage_gradients = {
+                    "decode": "linear-gradient(135deg, rgba(6, 182, 212, 0.45) 0%, rgba(59, 130, 246, 0.45) 100%)",
+                    "embed": "linear-gradient(135deg, rgba(168, 85, 247, 0.45) 0%, rgba(99, 102, 241, 0.45) 100%)",
+                    "index": "linear-gradient(135deg, rgba(16, 185, 129, 0.45) 0%, rgba(20, 184, 166, 0.45) 100%)",
+                    "query": "linear-gradient(135deg, rgba(245, 158, 11, 0.45) 0%, rgba(244, 63, 94, 0.45) 100%)",
+                    "serve": "linear-gradient(135deg, rgba(139, 92, 246, 0.45) 0%, rgba(217, 70, 239, 0.45) 100%)",
+                }
+                st_bg = stage_gradients.get(active_stage.lower(), "linear-gradient(135deg, rgba(14, 165, 233, 0.35) 0%, rgba(99, 102, 241, 0.45) 100%)")
+                active_banner_html = f"""
+                <div class="active-stage-banner" style="background: {st_bg};">
+                  <span class="active-stage-tag">ACTIVE STAGE</span>
+                  <span class="active-stage-title">{html.escape(active_stage.upper())}</span>
+                </div>
+                """
+
+            stage_cls = f"stage-{html.escape(active_stage.lower())}" if active_stage else "stage-default"
             inner_content = f"""
-            <div class="fit-card">
+            <div class="fit-card {stage_cls}">
               <h2 class="card-title">Multimodal Pipeline Grounding</h2>
               <div class="stages-track">{'<span class="stage-arrow">→</span>'.join(stage_cards)}</div>
+              {active_banner_html}
               {ev_html}
+            </div>
+            """
+        elif mode == "announcement":
+            sub_phase = sdata.get("sub_phase", 0)
+            phase_styles = [
+                ("border: 2px solid #38bdf8; box-shadow: 0 0 35px rgba(56, 189, 248, 0.55); background: rgba(14, 38, 68, 0.95);", "rgba(56, 189, 248, 0.25)", "#38bdf8", "SCOPE: GENERAL PACKAGE"),
+                ("border: 2px solid #a855f7; box-shadow: 0 0 35px rgba(168, 85, 247, 0.55); background: rgba(38, 18, 62, 0.95);", "rgba(168, 85, 247, 0.25)", "#a855f7", "STANDARD RUNTIME UTILITY"),
+                ("border: 2px solid #10b981; box-shadow: 0 0 35px rgba(16, 185, 129, 0.55); background: rgba(12, 44, 40, 0.95);", "rgba(16, 185, 129, 0.25)", "#10b981", "DOWNSTREAM PIPELINE READY"),
+            ]
+            st_card, st_bg, st_color, st_tag = phase_styles[sub_phase % len(phase_styles)]
+            inner_content = f"""
+            <div class="fit-card phase-{sub_phase}" style="{st_card}">
+              <h2 class="card-title">Domain Scope & Applicability</h2>
+              <div class="general-scope-banner" style="background: {st_bg}; border-left: 5px solid {st_color};">
+                <span class="scope-tag" style="background: {st_color}; color: #0f172a; font-weight: 800;">{st_tag}</span>
+                <p class="fit-desc" style="margin-top: 10px;">Repository does not specialize in video understanding; standard software package.</p>
+              </div>
             </div>
             """
         else:
             files = sdata.get("files") or ["transcript.vtt", "chapters.json", "index.jsonl"]
-            files_html = "".join(f'<div class="artifact-pill">📄 {html.escape(f)}</div>' for f in files)
+            sub_phase = sdata.get("sub_phase", 0)
+            rev_n = min(len(files), sub_phase + 1)
+            files_html = "".join(
+                f'<div class="artifact-pill {"active" if idx < rev_n else "pending"}" style="border-color: {"#38bdf8" if idx < rev_n else "#475569"}; background: {"rgba(14, 165, 233, 0.35)" if idx < rev_n else "rgba(30, 41, 59, 0.4)"}; color: {"#38bdf8" if idx < rev_n else "#64748b"}; font-weight: {"700" if idx < rev_n else "400"};">📄 {html.escape(f)}</div>'
+                for idx, f in enumerate(files)
+            )
+            fit_bgs = ["rgba(15, 23, 42, 0.9)", "rgba(16, 38, 70, 0.95)", "rgba(40, 20, 65, 0.95)"]
+            fit_bg = fit_bgs[sub_phase % len(fit_bgs)]
+            border_c = "#38bdf8" if sub_phase % 2 == 0 else "#a855f7"
             inner_content = f"""
-            <div class="fit-card">
+            <div class="fit-card phase-{sub_phase}" style="background: {fit_bg}; border: 2px solid {border_c}; box-shadow: 0 0 35px {border_c}55;">
               <h2 class="card-title">Structured Retrieval Package</h2>
-              <p class="fit-desc">Generated assets for automated search and downstream indexing:</p>
+              <p class="fit-desc">Generated assets for downstream search and multimodal indexing:</p>
               <div class="artifacts-row">{files_html}</div>
             </div>
             """
@@ -363,6 +521,7 @@ def build_frame_html(
         rev_count = sdata.get("revealed_count", len(takeaways))
         start_file = sdata.get("start_file") or meta.get("start_file") or ""
         highlight_start = sdata.get("highlight_start", False)
+        sub_phase = sdata.get("sub_phase", 0)
 
         items_html = []
         for i, t in enumerate(takeaways[:3]):
@@ -375,8 +534,16 @@ def build_frame_html(
         if start_file and highlight_start:
             start_card_html = f'<div class="start-file-card"><span class="start-label">Start Here:</span> <code class="start-code">{html.escape(start_file)}</code></div>'
 
+        recap_bgs = [
+            "rgba(15, 23, 42, 0.9)",
+            "rgba(18, 38, 70, 0.95)",
+            "rgba(40, 22, 70, 0.95)",
+            "rgba(14, 45, 52, 0.95)",
+        ]
+        r_bg = recap_bgs[sub_phase % len(recap_bgs)]
+        border_c = "#38bdf8" if sub_phase % 2 == 0 else "#a855f7"
         inner_content = f"""
-        <div class="recap-card">
+        <div class="recap-card phase-{sub_phase}" style="background: {r_bg}; border: 1px solid {border_c}; box-shadow: 0 0 25px {border_c}40;">
           <h2 class="card-title">Key Takeaways</h2>
           <ul class="takeaway-list">{''.join(items_html)}</ul>
           {start_card_html}
@@ -386,15 +553,25 @@ def build_frame_html(
     else:  # overview or general
         points = sdata.get("points") or meta.get("points") or [content[:120]]
         rev_count = sdata.get("revealed_count", len(points))
+        sub_phase = sdata.get("sub_phase", 0)
         items_html = []
         for i, p in enumerate(points[:3]):
             if i < rev_count:
                 is_active = (i == rev_count - 1)
                 cls = "overview-point active" if is_active else "overview-point"
-                items_html.append(f'<div class="{cls}"><span class="point-bullet">✦</span>{html.escape(p)}</div>')
+                pulse_color = "#38bdf8" if sub_phase % 2 == 0 else "#a855f7"
+                items_html.append(f'<div class="{cls}"><span class="point-bullet" style="color: {pulse_color};">✦</span>{html.escape(p)}</div>')
 
+        ov_bgs = [
+            "rgba(15, 23, 42, 0.9)",
+            "rgba(18, 38, 70, 0.95)",
+            "rgba(40, 22, 70, 0.95)",
+            "rgba(14, 45, 52, 0.95)",
+        ]
+        ov_bg = ov_bgs[sub_phase % len(ov_bgs)]
+        border_c = "#38bdf8" if sub_phase % 2 == 0 else "#6366f1"
         inner_content = f"""
-        <div class="overview-card">
+        <div class="overview-card phase-{sub_phase}" style="background: {ov_bg}; border: 1px solid {border_c}; box-shadow: 0 0 25px {border_c}40;">
           <h2 class="card-title">{html.escape(scene_title or "Overview")}</h2>
           <div class="points-container">{''.join(items_html)}</div>
         </div>
@@ -509,6 +686,34 @@ def build_frame_html(
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
   }}
+  .code-window.phase-setup {{
+    border: 2px solid #0ea5e9;
+    box-shadow: 0 0 35px rgba(14, 165, 233, 0.45);
+  }}
+  .code-window.phase-flow {{
+    border: 2px solid #a855f7;
+    box-shadow: 0 0 35px rgba(168, 85, 247, 0.45);
+  }}
+  .code-window.phase-focus {{
+    border: 2px solid #10b981;
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.45);
+  }}
+  .terminal-window.phase-0 {{
+    border: 2px solid #38bdf8;
+    box-shadow: 0 0 35px rgba(56, 189, 248, 0.45);
+  }}
+  .terminal-window.phase-1 {{
+    border: 2px solid #10b981;
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.45);
+  }}
+  .terminal-window.phase-2 {{
+    border: 2px solid #818cf8;
+    box-shadow: 0 0 35px rgba(129, 140, 248, 0.45);
+  }}
+  .terminal-window.phase-3 {{
+    border: 2px solid #f59e0b;
+    box-shadow: 0 0 35px rgba(245, 158, 11, 0.45);
+  }}
   .window-titlebar {{
     background: #111827;
     height: 32px;
@@ -537,8 +742,8 @@ def build_frame_html(
     overflow: hidden;
   }}
   .code-line {{ display: flex; gap: 16px; transition: opacity 0.2s; }}
-  .code-line.active {{ background: rgba(56, 189, 248, 0.15); border-left: 3px solid #38bdf8; padding-left: 4px; }}
-  .code-line.dimmed {{ opacity: 0.42; }}
+  .code-line.active {{ background: rgba(56, 189, 248, 0.32); border-left: 5px solid #38bdf8; padding-left: 4px; }}
+  .code-line.dimmed {{ opacity: 0.38; }}
   .line-no {{ color: #475569; user-select: none; width: 22px; text-align: right; }}
   .code-text {{ white-space: pre; }}
   .cont-marker {{ color: #38bdf8; font-weight: 700; }}
@@ -553,6 +758,100 @@ def build_frame_html(
     display: flex;
     align-items: center;
     gap: 8px;
+  }}
+  .code-callout-banner {{
+    margin: 10px 20px 14px;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.35) 0%, rgba(99, 102, 241, 0.45) 100%);
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+  }}
+  .callout-badge {{
+    background: #0284c7;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }}
+  .callout-text {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: #ffffff;
+    font-weight: 600;
+  }}
+  .terminal-status-banner {{
+    margin-top: 20px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 8px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  }}
+  .terminal-status-banner.typing {{
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(99, 102, 241, 0.25) 100%);
+    border-color: #38bdf8;
+  }}
+  .terminal-status-banner.ready {{
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(20, 184, 166, 0.25) 100%);
+    border-color: #10b981;
+  }}
+  .status-pulse-dot {{ color: #38bdf8; font-size: 16px; font-weight: 700; }}
+  .status-pulse-dot.static {{ color: #10b981; }}
+  .status-title {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e8f0;
+    min-width: 230px;
+    letter-spacing: 0.5px;
+  }}
+  .status-track {{
+    flex: 1;
+    height: 10px;
+    background: rgba(30, 41, 59, 0.7);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }}
+  .status-fill {{
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #38bdf8);
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  }}
+  .terminal-callout-banner {{
+    margin-top: 18px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(6, 182, 212, 0.4) 100%);
+    border: 1px solid #10b981;
+    border-radius: 8px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  }}
+  .term-badge {{
+    background: #059669;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }}
+  .term-desc {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: #ffffff;
   }}
   /* Pygments syntax token styling */
   .c, .c1, .ch {{ color: #64748b; font-style: italic; }}
@@ -646,6 +945,69 @@ def build_frame_html(
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     color: #cbd5e1;
+  }}
+  .active-stage-banner {{
+    margin: 16px 0;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(99, 102, 241, 0.35) 100%);
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+  }}
+  .active-stage-tag {{
+    background: #0284c7;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }}
+  .active-stage-title {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1px;
+  }}
+  .general-scope-banner {{
+    margin: 16px 0;
+    padding: 16px 20px;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+  }}
+  .scope-tag {{
+    background: #475569;
+    color: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }}
+  .fit-card.stage-decode {{
+    background: radial-gradient(circle at 50% 40%, rgba(6, 182, 212, 0.4) 0%, rgba(12, 74, 110, 0.95) 75%);
+    border-color: #38bdf8;
+  }}
+  .fit-card.stage-embed {{
+    background: radial-gradient(circle at 50% 40%, rgba(168, 85, 247, 0.4) 0%, rgba(59, 7, 100, 0.95) 75%);
+    border-color: #c084fc;
+  }}
+  .fit-card.stage-index {{
+    background: radial-gradient(circle at 50% 40%, rgba(16, 185, 129, 0.4) 0%, rgba(2, 44, 34, 0.95) 75%);
+    border-color: #34d399;
+  }}
+  .fit-card.stage-query {{
+    background: radial-gradient(circle at 50% 40%, rgba(245, 158, 11, 0.4) 0%, rgba(69, 26, 3, 0.95) 75%);
+    border-color: #fbbf24;
+  }}
+  .fit-card.stage-serve {{
+    background: radial-gradient(circle at 50% 40%, rgba(244, 63, 94, 0.4) 0%, rgba(76, 5, 25, 0.95) 75%);
+    border-color: #f43f5e;
   }}
   .ev-badge {{ background: #059669; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 8px; }}
   .fit-desc {{ font-size: 16px; color: #94a3b8; margin-bottom: 20px; }}

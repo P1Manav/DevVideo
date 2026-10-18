@@ -197,16 +197,21 @@ def run_pipeline(
         )
 
         total_audio_dur = sum(s.duration_seconds for s in script.scenes)
-        # Duration repair if over budget
-        if total_audio_dur > budget_seconds + 3.0:
-            repair_manager.repair_duration(script)
+        rate_multiplier = 1.0
+        # Duration repair if over budget: +8% rate once, then drop recap bullets, then drop lowest-priority scene
+        while total_audio_dur > budget_seconds + 3.0 and repair_manager.can_repair():
+            action, rate_multiplier = repair_manager.repair_duration(script, rate_multiplier=rate_multiplier)
+            if action in ("no_action", "max_attempts_exceeded"):
+                break
             # Re-synthesize after repair
             tts_used, tts_fallback_reason, calibrated_wpm, wav_paths = synthesize_scenes_chain(
                 scenes=script.scenes,
                 audio_dir=audio_dir,
                 requested_backend=tts_used,
                 voice=voice,
+                rate_multiplier=rate_multiplier,
             )
+            total_audio_dur = sum(s.duration_seconds for s in script.scenes)
 
         timings["voice"] = round(time.time() - t0, 2)
 
@@ -243,6 +248,8 @@ def run_pipeline(
             meta_val = scene_obj.on_screen.metadata if (scene_obj.on_screen and scene_obj.on_screen.metadata) else {}
 
             frame_file = frames_dir / f"frame_{f_idx:03d}_{state.scene_id}_{state.state_kind}.png"
+            s_data = dict(state.state_data or {})
+            s_data["state_index"] = f_idx
             res = render_scene_to_png(
                 scene_id=state.scene_id,
                 content_type=state.scene_kind,
@@ -258,7 +265,7 @@ def run_pipeline(
                 metadata=meta_val,
                 active_focus=state.active_focus,
                 state_kind=state.state_kind,
-                state_data=state.state_data,
+                state_data=s_data,
             )
             if res.has_overflow:
                 overflow_scenes.append(state.scene_id)
@@ -316,6 +323,7 @@ def run_pipeline(
             renderer_used=renderer_used,
             renderer_fallback_reason=renderer_fallback_reason,
             calibrated_wpm=calibrated_wpm,
+            facts=facts,
         )
         result.eval_report = eval_report
         eval_report.save(output_dir / "eval_report.json")
@@ -356,7 +364,7 @@ def run_pipeline(
                 shutil.move(str(video_path), str(rejected_video))
             video_rel_path = "_rejected/video.mp4"
             video_sha = hashlib.sha256(rejected_video.read_bytes()).hexdigest() if rejected_video.exists() else None
-            failed_gates = [g.name for g in eval_report.gates if not g.passed]
+            failed_gates = [g.name for g in eval_report.gates if not g.passed and getattr(g, "blocking", True)]
             result.error = f"Eval gates failed: {failed_gates}"
             logger.warning(f"Gate check failed: {failed_gates}. Video moved to {rejected_video}")
 

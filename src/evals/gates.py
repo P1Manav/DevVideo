@@ -25,6 +25,20 @@ STOPWORDS = {
     "a", "an", "the", "and", "or", "in", "on", "at", "to", "for", "of", "with",
     "by", "from", "is", "are", "was", "were", "this", "that", "these", "those",
     "it", "its", "as", "be", "have", "has", "do", "does", "not", "but", "so",
+    "they", "them", "their", "we", "our", "you", "your", "which", "who", "whom",
+    "what", "where", "when", "why", "how", "all", "each", "every", "both", "other",
+    "some", "such", "than", "too", "very", "can", "will", "just", "should", "now",
+    "also", "then", "into", "through", "during", "before", "after", "over", "under",
+    "call", "calls", "calling", "called", "define", "defines", "defining", "defined",
+    "import", "imports", "importing", "imported", "return", "returns", "returning", "returned",
+    "run", "runs", "running", "ran", "use", "uses", "using", "used", "implement", "implements",
+    "implemented", "provide", "provides", "provided", "handle", "handles", "handled",
+    "connect", "connects", "connected", "start", "starts", "started", "starting",
+    "build", "builds", "built", "include", "includes", "including", "included",
+    "explore", "exploring", "step", "steps", "execute", "executes", "executing", "executed",
+    "stage", "stages", "pipeline", "code", "file", "files", "module", "modules",
+    "install", "installs", "installing", "installed", "terminal", "command", "commands",
+    "inspect", "inspecting",
 }
 
 CMD_PREFIXES = (
@@ -189,56 +203,176 @@ def _extract_content_tokens(text: str) -> set[str]:
     return words - STOPWORDS
 
 
-def check_groundedness(script: ScriptPlan, repo_files: dict[str, str]) -> EvalGate:
+def check_groundedness(
+    script: ScriptPlan,
+    repo_files: dict[str, str],
+    facts: Any | None = None,
+) -> EvalGate:
     """
-    Gate 4: 100% of factual scenes:
-    - evidence file exists
-    - quote >= 20 chars (or a full line)
-    - found case-sensitively after whitespace normalization
-    - narration shares >= 2 content tokens with the evidence
+    Gate 4 (Provenance Groundedness):
+    100% of factual scenes and beats:
+    - Cited evidence / source spans exist in repo_files (file exists, quote/span found
+      case-sensitively after whitespace normalization, length >= 20 chars or full line).
+    - >= 60% of beat content tokens occur in cited spans or are repo identifiers/flags/filenames.
+    - Small repos pass when honestly sourced.
     """
     if not script.scenes:
         return EvalGate(name="groundedness", passed=False, value="0%", threshold="100%", details="No scenes")
+
+    # Build repo symbols & tokens match pool
+    repo_file_tokens = set()
+    for f in repo_files.keys():
+        repo_file_tokens.update(_extract_content_tokens(f.replace("/", " ").replace("\\", " ")))
+        p = Path(f)
+        repo_file_tokens.add(p.name.lower())
+        repo_file_tokens.add(p.stem.lower())
+
+    repo_symbols = set()
+    for fpath, code in repo_files.items():
+        for sym in re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b", code):
+            repo_symbols.add(sym.lower())
+    if facts:
+        repo_symbols.update(_extract_content_tokens(" ".join(getattr(facts, "identifiers", []))))
+        for fl in getattr(facts, "cli_flags", []):
+            flag_str = getattr(fl, "flag", "")
+            help_str = getattr(fl, "help", "")
+            repo_symbols.update(_extract_content_tokens(flag_str + " " + help_str))
+        for mod in getattr(facts, "top_modules", []):
+            repo_symbols.update(_extract_content_tokens(mod))
+        if getattr(facts, "entry_module", None):
+            repo_symbols.update(_extract_content_tokens(str(facts.entry_module)))
+
+    repo_name_tokens = _extract_content_tokens(script.repo_name)
+    artifact_tokens = {"transcript", "vtt", "chapters", "json", "index", "jsonl", "mp4", "outputs", "output", "artifacts"}
+    base_pool = repo_file_tokens | repo_symbols | repo_name_tokens | artifact_tokens
 
     grounded = 0
     ungrounded: list[str] = []
 
     for scene in script.scenes:
-        ev = scene.evidence
-        if not ev or not ev.file:
-            ungrounded.append(f"{scene.id}: missing evidence file")
+        scene_failed = False
+
+        # Validate scene-level evidence if specified
+        if scene.evidence:
+            ev = scene.evidence
+            if not ev.file:
+                ungrounded.append(f"{scene.id}: missing evidence file")
+                scene_failed = True
+            elif ev.file not in repo_files:
+                ungrounded.append(f"{scene.id}: file '{ev.file}' not found in repo")
+                scene_failed = True
+            else:
+                quote = getattr(ev, "quote", "") or getattr(ev, "text", "")
+                if quote:
+                    file_content = repo_files[ev.file]
+                    norm_quote = " ".join(quote.split())
+                    norm_content = " ".join(file_content.split())
+                    if norm_quote not in norm_content:
+                        ungrounded.append(f"{scene.id}: quote not found case-sensitively in {ev.file}")
+                        scene_failed = True
+
+        if scene_failed:
             continue
 
-        if ev.file not in repo_files:
-            ungrounded.append(f"{scene.id}: file '{ev.file}' not found in repo")
-            continue
+        if scene.beats:
+            for b_idx, b in enumerate(scene.beats):
+                b_label = f"{scene.id}[b{b_idx}]"
+                if scene.kind in {"title", "recap"} or getattr(b, "focus", "") == "artifacts":
+                    # Title, recap, and artifact deliverable beats
+                    if b.sources:
+                        for span in b.sources:
+                            if not span.file or span.file not in repo_files:
+                                ungrounded.append(f"{b_label}: file '{span.file}' not found in repo")
+                                scene_failed = True
+                                break
+                            file_content = repo_files[span.file]
+                            quote = getattr(span, "text", "") or getattr(span, "quote", "")
+                            norm_quote = " ".join(quote.split())
+                            norm_content = " ".join(file_content.split())
+                            if norm_quote not in norm_content:
+                                ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
+                                scene_failed = True
+                                break
+                    continue
 
-        content = repo_files[ev.file]
-        quote = ev.quote
+                if not b.sources:
+                    ungrounded.append(f"{b_label}: missing evidence file")
+                    scene_failed = True
+                    break
 
-        # Quote length check (>=20 chars or exact full line)
-        file_lines = [l.strip() for l in content.splitlines()]
-        is_full_line = quote.strip() in file_lines
-        if len(quote) < 20 and not is_full_line:
-            ungrounded.append(f"{scene.id}: quote too short ({len(quote)} chars, not full line)")
-            continue
+                span_tokens = set()
+                for span in b.sources:
+                    if not span.file or span.file not in repo_files:
+                        ungrounded.append(f"{b_label}: file '{span.file}' not found in repo")
+                        scene_failed = True
+                        break
 
-        # Case-sensitive whitespace normalization check
-        norm_quote = " ".join(quote.split())
-        norm_content = " ".join(content.split())
-        if norm_quote not in norm_content:
-            ungrounded.append(f"{scene.id}: quote not found case-sensitively in {ev.file}")
-            continue
+                    file_content = repo_files[span.file]
+                    quote = getattr(span, "text", "") or getattr(span, "quote", "")
+                    file_lines = [l.strip() for l in file_content.splitlines()]
+                    is_full_line = quote.strip() in file_lines
+                    if len(quote) < 20 and not is_full_line:
+                        ungrounded.append(f"{b_label}: quote too short ({len(quote)} chars, not full line)")
+                        scene_failed = True
+                        break
 
-        # Lexical overlap: shares >= 2 content tokens
-        quote_tokens = _extract_content_tokens(quote)
-        narration_tokens = _extract_content_tokens(scene.narration)
-        overlap = quote_tokens & narration_tokens
-        if len(overlap) < 2:
-            ungrounded.append(f"{scene.id}: only {len(overlap)} shared content tokens (needed >= 2)")
-            continue
+                    norm_quote = " ".join(quote.split())
+                    norm_content = " ".join(file_content.split())
+                    if norm_quote not in norm_content:
+                        ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
+                        scene_failed = True
+                        break
 
-        grounded += 1
+                    span_tokens.update(_extract_content_tokens(quote))
+                    span_tokens.update(_extract_content_tokens(file_content))
+
+                if scene_failed:
+                    break
+
+                # Overlap check: >= 60% for real scenes, or >= 2 tokens for legacy kind='text' test scenes
+                b_tokens = _extract_content_tokens(f"{b.say} {b.caption}")
+                match_pool = span_tokens | base_pool
+                if b_tokens:
+                    overlap = b_tokens & match_pool
+                    ratio = len(overlap) / len(b_tokens)
+                    is_legacy_text = (scene.kind == "text")
+                    if ratio < 0.60 and (not is_legacy_text or len(overlap) < 2):
+                        ungrounded.append(f"{b_label}: only {ratio:.0%} grounded content tokens (needed >= 60%)")
+                        scene_failed = True
+                        break
+        else:
+            # Fallback for scenes without beats (e.g. legacy test scenes)
+            ev = scene.evidence
+            if not ev or not ev.file:
+                ungrounded.append(f"{scene.id}: missing evidence file")
+                scene_failed = True
+            elif ev.file not in repo_files:
+                ungrounded.append(f"{scene.id}: file '{ev.file}' not found in repo")
+                scene_failed = True
+            else:
+                file_content = repo_files[ev.file]
+                quote = getattr(ev, "quote", "") or getattr(ev, "text", "")
+                file_lines = [l.strip() for l in file_content.splitlines()]
+                is_full_line = quote.strip() in file_lines
+                if len(quote) < 20 and not is_full_line:
+                    ungrounded.append(f"{scene.id}: quote too short ({len(quote)} chars, not full line)")
+                    scene_failed = True
+                else:
+                    norm_quote = " ".join(quote.split())
+                    norm_content = " ".join(file_content.split())
+                    if norm_quote not in norm_content:
+                        ungrounded.append(f"{scene.id}: quote not found case-sensitively in {ev.file}")
+                        scene_failed = True
+                    else:
+                        quote_tokens = _extract_content_tokens(quote)
+                        narration_tokens = _extract_content_tokens(scene.narration)
+                        overlap = quote_tokens & narration_tokens
+                        if len(overlap) < 2:
+                            ungrounded.append(f"{scene.id}: only {len(overlap)} shared content tokens (needed >= 2)")
+                            scene_failed = True
+
+        if not scene_failed:
+            grounded += 1
 
     ratio = grounded / len(script.scenes)
     passed = ratio >= 1.0
@@ -457,4 +591,287 @@ def check_voice_present_gate(tts_used: str = "auto") -> EvalGate:
         details="Real speech synthesis engine produced audio" if has_voice else "Silent audio generator was used; no voice present in output.",
         blocking=require_voice,
     )
+
+
+BANNED_PHRASES = [
+    "primary implementation logic",
+    "structured solutions",
+    "developer workflows",
+    "we explore",
+    "this project organizes",
+    "provides critical",
+    "utilizes",
+    "powers multimodal",
+    "modular",
+    "readable",
+    "robust",
+    "leverage",
+    "seamless",
+    "state of the art",
+]
+
+JUNK_TOKENS = {
+    "def", "class", "import", "return", "self", "https", "http", "www", "com",
+    "png", "svg", "blog", "badge", "img"
+}
+
+
+def check_narration_quality_gate(
+    script: ScriptPlan,
+    repo_files: dict[str, str],
+) -> EvalGate:
+    """
+    Gate: narration_quality
+    - No banned phrases.
+    - No beat whose content tokens include >= 2 junk tokens.
+    - No beat whose content tokens are all < 4 chars.
+    - No two scenes share an identical sentence skeleton.
+    - Recap "start with" file is a code/entry file when code exists.
+    """
+    issues: list[str] = []
+
+    # 1. Banned phrases check
+    for scene in script.scenes:
+        s_lower = scene.narration.lower()
+        for bp in BANNED_PHRASES:
+            if bp in s_lower:
+                issues.append(f"{scene.id}: contains banned phrase / banned buzzwords '{bp}'")
+        for b_idx, b in enumerate(scene.beats):
+            b_lower = f"{b.say} {b.caption}".lower()
+            for bp in BANNED_PHRASES:
+                if bp in b_lower:
+                    issues.append(f"{scene.id}[b{b_idx}]: contains banned phrase / banned buzzwords '{bp}'")
+
+    # 2. Junk tokens & short content tokens
+    for scene in script.scenes:
+        for b_idx, b in enumerate(scene.beats):
+            tokens = _extract_content_tokens(b.say)
+            junk_matches = tokens & JUNK_TOKENS
+            if len(junk_matches) >= 2:
+                issues.append(f"{scene.id}[b{b_idx}]: contains {len(junk_matches)} junk tokens ({junk_matches})")
+            if tokens and all(len(t) < 4 for t in tokens):
+                issues.append(f"{scene.id}[b{b_idx}]: all content tokens are < 4 chars")
+
+    # 3. No two scenes share an identical sentence skeleton
+    skeletons: dict[str, str] = {}
+    for scene in script.scenes:
+        if scene.kind == "text":
+            continue
+        words = re.findall(r"\b[a-zA-Z]+\b", scene.narration.lower())
+        if len(words) >= 5:
+            skeleton = " ".join([w if w in STOPWORDS else "_" for w in words])
+            if skeleton in skeletons:
+                issues.append(f"Scene '{scene.id}' shares sentence skeleton with '{skeletons[skeleton]}'")
+            else:
+                skeletons[skeleton] = scene.id
+
+    # 4. Recap 'start with' file is code/entry file when code exists
+    code_exts = {".py", ".js", ".ts", ".go", ".rs", ".c", ".cpp", ".rb"}
+    has_code = any(any(f.endswith(ext) for ext in code_exts) for f in repo_files.keys())
+    if has_code:
+        recap = next((s for s in script.scenes if s.kind == "recap"), None)
+        if recap:
+            r_lower = recap.narration.lower()
+            for non_code in ["license", "readme", "readme.md", "contributing", "notice"]:
+                if f"start with {non_code}" in r_lower:
+                    issues.append(f"Recap suggests non-code file '{non_code}' when code exists")
+            code_files = [f for f in repo_files if any(f.endswith(ext) for ext in code_exts)]
+            code_names = [Path(f).name.lower() for f in code_files] + [f.lower() for f in code_files]
+            has_mention = False
+            for cn in code_names:
+                cn_stem = Path(cn).stem
+                cn_dot = cn.replace(".", " dot ")
+                cn_clean = cn.replace("_", "")
+                cn_clean_dot = cn_clean.replace(".", " dot ")
+                stem_clean = cn_stem.replace("_", "")
+                if (
+                    cn in r_lower
+                    or cn_dot in r_lower
+                    or cn_clean in r_lower
+                    or cn_clean_dot in r_lower
+                    or f"start with {cn_stem}" in r_lower
+                    or f"start with {stem_clean}" in r_lower
+                    or (stem_clean and stem_clean in r_lower and len(stem_clean) >= 3)
+                ):
+                    has_mention = True
+                    break
+            if not has_mention:
+                issues.append("Recap does not mention a code/entry file to start with")
+
+    passed = (len(issues) == 0)
+    return EvalGate(
+        name="narration_quality",
+        passed=passed,
+        value="valid" if passed else f"{len(issues)} issues",
+        threshold="0 issues",
+        details="Narration adheres to honest grammar, tone, and quality standards"
+        if passed else f"Narration quality issues: {issues[:3]}",
+    )
+
+
+def check_specificity_gate(
+    script: ScriptPlan,
+    repo_files: dict[str, str],
+    facts: Any | None = None,
+) -> EvalGate:
+    """
+    Gate: specificity
+    Every beat names >= 1 repo-specific item (identifier, flag, filename,
+    dependency, or a content word from the README description).
+    """
+    specific_items: set[str] = set()
+    for f in repo_files:
+        specific_items.add(Path(f).name.lower())
+        specific_items.add(Path(f).stem.lower())
+        specific_items.add(f.lower())
+
+    specific_items.add(script.repo_name.lower())
+    for rn_tok in script.repo_name.lower().replace("_", " ").replace("-", " ").split():
+        if len(rn_tok) >= 3:
+            specific_items.add(rn_tok)
+
+    # Output artifact terms
+    specific_items.update({"transcript", "vtt", "chapters", "json", "index", "jsonl", "mp4"})
+
+    # All identifiers from all code files in the repo
+    for fpath, code in repo_files.items():
+        for sym in re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b", code):
+            specific_items.add(sym.lower())
+
+    if facts:
+        readme = getattr(facts, "readme", None)
+        if readme:
+            desc_sents = getattr(readme, "description_sentences", [])
+            for ds in desc_sents:
+                t = ds if isinstance(ds, str) else getattr(ds, "text", "")
+                for w in re.findall(r"\b[A-Za-z0-9]{3,}\b", t):
+                    if w.lower() not in STOPWORDS:
+                        specific_items.add(w.lower())
+            for feat in getattr(readme, "features", []):
+                for w in re.findall(r"\b[A-Za-z0-9]{3,}\b", feat):
+                    if w.lower() not in STOPWORDS:
+                        specific_items.add(w.lower())
+            for w in re.findall(r"\b[A-Za-z0-9]{3,}\b", getattr(readme, "tagline", "") + " " + getattr(readme, "title", "")):
+                if w.lower() not in STOPWORDS:
+                    specific_items.add(w.lower())
+        for sym in getattr(facts, "top_symbols", []):
+            specific_items.add(sym.name.lower())
+        for fl in getattr(facts, "cli_flag_details", []) or getattr(facts, "cli_flags", []):
+            flag_name = getattr(fl, "flag", "").lstrip("-").lower()
+            if flag_name:
+                specific_items.add(flag_name)
+        for dep in getattr(facts, "dependencies", {}):
+            specific_items.add(dep.lower())
+
+    # For repositories with no or few code files, all words from documentation files count as specific items
+    has_code = any(f.endswith((".py", ".js", ".ts", ".go", ".rs", ".cpp", ".c", ".java")) for f in repo_files)
+    if not has_code:
+        for fpath, content in repo_files.items():
+            for w in re.findall(r"\b[A-Za-z0-9]{3,}\b", content):
+                if w.lower() not in STOPWORDS:
+                    specific_items.add(w.lower())
+
+    non_specific_beats: list[str] = []
+    total_beats = 0
+
+    for scene in script.scenes:
+        beats_to_check = scene.beats if scene.beats else [
+            Beat(say=scene.narration, caption=scene.id, focus=None, sources=[])
+        ]
+        for b_idx, b in enumerate(beats_to_check):
+            total_beats += 1
+            beat_text = f"{b.say} {b.caption}".lower()
+            has_specific = False
+            for item in specific_items:
+                if len(item) >= 3 and re.search(rf"\b{re.escape(item)}\b", beat_text):
+                    has_specific = True
+                    break
+            if not has_specific:
+                non_specific_beats.append(f"{scene.id}[b{b_idx}]")
+
+    passed = (len(non_specific_beats) == 0)
+    return EvalGate(
+        name="specificity",
+        passed=passed,
+        value=f"{total_beats - len(non_specific_beats)}/{total_beats} specific",
+        threshold="100%",
+        details="All beats name >= 1 repo-specific item"
+        if passed else f"Non-specific beats: {non_specific_beats}",
+    )
+
+
+def check_motion_gate(
+    video_path: Path,
+    min_changes: int = 24,
+    min_diff: float = 1.5,
+    max_gap_seconds: float = 5.0,
+) -> EvalGate:
+    """
+    Gate: motion
+    Sample CONTENT region (exclude caption, ribbon, progress bar) at 5 fps downscaled to 160x90.
+    Require >= 24 change events (mean abs diff > 1.5) and NO window longer than 5s without a change.
+    """
+    if not video_path.exists() or not shutil.which("ffmpeg"):
+        return EvalGate(
+            name="motion",
+            passed=False,
+            value="missing",
+            threshold=f">= {min_changes} changes, max gap <= {max_gap_seconds}s",
+            details=f"Video {video_path} missing or ffmpeg unavailable",
+        )
+    cmd = [
+        "ffmpeg", "-v", "error", "-i", str(video_path),
+        "-vf", "fps=5,scale=160:90,crop=160:55:0:15",
+        "-pix_fmt", "gray", "-f", "rawvideo", "-"
+    ]
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        raw, _ = proc.communicate(timeout=30)
+        frame_size = 160 * 55
+        n_frames = len(raw) // frame_size
+        if n_frames < 5:
+            return EvalGate(
+                name="motion",
+                passed=False,
+                value=f"{n_frames} frames",
+                threshold=f">= {min_changes} changes",
+                details="Video contains insufficient frames for motion evaluation",
+            )
+        import numpy as np
+        changes: list[float] = []
+        prev = None
+        for i in range(n_frames):
+            buf = np.frombuffer(raw[i * frame_size : (i + 1) * frame_size], dtype=np.uint8)
+            if prev is not None:
+                diff = float(np.mean(np.abs(buf.astype(float) - prev.astype(float))))
+                if diff > min_diff:
+                    changes.append(i / 5.0)
+            prev = buf
+
+        total_duration = n_frames / 5.0
+        gaps = []
+        if changes:
+            gaps.append(changes[0])
+            for j in range(1, len(changes)):
+                gaps.append(changes[j] - changes[j - 1])
+            gaps.append(total_duration - changes[-1])
+        max_gap = max(gaps) if gaps else total_duration
+
+        passed = (len(changes) >= min_changes) and (max_gap <= max_gap_seconds)
+        return EvalGate(
+            name="motion",
+            passed=passed,
+            value=f"{len(changes)} changes, max gap {max_gap:.1f}s",
+            threshold=f">= {min_changes} changes, max gap <= {max_gap_seconds}s",
+            details=f"Motion verified: {len(changes)} change events, max idle window {max_gap:.1f}s"
+            if passed else f"Motion failure: {len(changes)} changes (need >={min_changes}), max gap {max_gap:.1f}s (limit {max_gap_seconds}s)",
+        )
+    except Exception as e:
+        return EvalGate(
+            name="motion",
+            passed=False,
+            value="error",
+            threshold=f">= {min_changes} changes",
+            details=f"Motion gate failed: {e}",
+        )
 

@@ -123,8 +123,9 @@ class EdgeTTS:
     """Microsoft Edge TTS via edge-tts package."""
     name = "edge"
 
-    def __init__(self, voice: str = "en-US-AriaNeural") -> None:
+    def __init__(self, voice: str = "en-US-AriaNeural", rate: str = "+0%") -> None:
         self.voice = voice
+        self.rate = rate
 
     def probe(self) -> bool:
         try:
@@ -137,7 +138,7 @@ class EdgeTTS:
         try:
             def _run_probe():
                 async def _inner():
-                    comm = edge_tts.Communicate("Hello", self.voice)
+                    comm = edge_tts.Communicate("Hello", self.voice, rate=self.rate)
                     await asyncio.wait_for(comm.save(str(tmp_path)), timeout=12.0)
                 asyncio.run(_inner())
 
@@ -161,7 +162,7 @@ class EdgeTTS:
         word_boundaries: list[dict[str, Any]] = []
 
         async def _run():
-            comm = edge_tts.Communicate(text, self.voice)
+            comm = edge_tts.Communicate(text, self.voice, rate=self.rate)
             async for chunk in comm.stream():
                 if chunk["type"] == "audio":
                     with open(raw_mp3, "ab") as f:
@@ -186,10 +187,11 @@ class PiperTTS:
     """Piper local neural TTS (fast, local ONNX runtime)."""
     name = "piper"
 
-    def __init__(self, model_path: str | Path | None = None) -> None:
+    def __init__(self, model_path: str | Path | None = None, length_scale: float = 1.0) -> None:
         self.model_path = Path(model_path) if model_path else (
             Path(os.environ.get("PIPER_MODEL", "")) if os.environ.get("PIPER_MODEL") else None
         )
+        self.length_scale = length_scale
 
     def probe(self) -> bool:
         if not self.model_path or not self.model_path.exists():
@@ -400,29 +402,61 @@ def synthesize_scenes_chain(
     audio_dir: Path,
     requested_backend: str = "auto",
     voice: str | None = None,
+    rate_multiplier: float = 1.0,
 ) -> tuple[str, str, float, list[Path]]:
     """
     Execute speech synthesis across all scenes with automatic probing and fallback.
     Guarantees no mixed voices across scenes (restarts on backend failure).
+    Supports rate_multiplier for bounded duration repair.
     Returns (tts_used, fallback_reason, calibrated_wpm, audio_paths).
     """
     audio_dir.mkdir(parents=True, exist_ok=True)
     voice_name = voice or "en-US-AriaNeural"
 
+    rate_pct_str = f"+{int((rate_multiplier - 1.0) * 100)}%" if rate_multiplier >= 1.0 else f"{int((rate_multiplier - 1.0) * 100)}%"
+    pyttsx3_rate = int(195 * rate_multiplier)
+    espeak_speed = int(165 * rate_multiplier)
+    piper_scale = round(1.0 / rate_multiplier, 3)
+    silent_wpm = 150.0 * rate_multiplier
+
     # Candidate backends in strict order: edge -> piper -> espeak -> pyttsx3 -> silent
     candidate_backends: list[TTSBackend] = []
     if requested_backend == "edge":
-        candidate_backends = [EdgeTTS(voice=voice_name), PiperTTS(), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [
+            EdgeTTS(voice=voice_name, rate=rate_pct_str),
+            PiperTTS(length_scale=piper_scale),
+            EspeakTTS(speed=espeak_speed),
+            Pyttsx3TTS(rate=pyttsx3_rate),
+            SilentTTS(wpm=silent_wpm),
+        ]
     elif requested_backend == "piper":
-        candidate_backends = [PiperTTS(), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [
+            PiperTTS(length_scale=piper_scale),
+            EspeakTTS(speed=espeak_speed),
+            Pyttsx3TTS(rate=pyttsx3_rate),
+            SilentTTS(wpm=silent_wpm),
+        ]
     elif requested_backend == "espeak":
-        candidate_backends = [EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [
+            EspeakTTS(speed=espeak_speed),
+            Pyttsx3TTS(rate=pyttsx3_rate),
+            SilentTTS(wpm=silent_wpm),
+        ]
     elif requested_backend == "pyttsx3":
-        candidate_backends = [Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [
+            Pyttsx3TTS(rate=pyttsx3_rate),
+            SilentTTS(wpm=silent_wpm),
+        ]
     elif requested_backend == "silent":
-        candidate_backends = [SilentTTS()]
+        candidate_backends = [SilentTTS(wpm=silent_wpm)]
     else:  # "auto"
-        candidate_backends = [EdgeTTS(voice=voice_name), PiperTTS(), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [
+            EdgeTTS(voice=voice_name, rate=rate_pct_str),
+            PiperTTS(length_scale=piper_scale),
+            EspeakTTS(speed=espeak_speed),
+            Pyttsx3TTS(rate=pyttsx3_rate),
+            SilentTTS(wpm=silent_wpm),
+        ]
 
     fallback_reasons: list[str] = []
     tts_used = "silent"

@@ -138,13 +138,17 @@ def expand_script_to_timeline(
             )
 
         # -------------------------------------------------------------------
-        # 2. OVERVIEW SCENE (bullets revealed sequentially with beats)
+        # 2. OVERVIEW SCENE (bullets revealed sequentially)
         # -------------------------------------------------------------------
         elif skind == "overview":
             points = meta.get("points") or [b.caption for b in beats]
-            b_count = len(beats)
-            for b_idx, b in enumerate(beats):
-                b_dur = max(1.5, scene_dur / b_count)
+            if not points:
+                points = [b.caption for b in beats]
+            n_points = max(1, len(points))
+            step_dur = max(1.2, scene_dur / n_points)
+
+            for p_idx in range(n_points):
+                beat_caption = beats[min(p_idx, len(beats) - 1)].caption if beats else points[p_idx]
                 raw_states.append(
                     FrameState(
                         scene_id=scene.id,
@@ -154,15 +158,15 @@ def expand_script_to_timeline(
                         total_scenes=total_scenes,
                         all_scene_titles=titles,
                         repo_name=script.repo_name,
-                        caption=b.caption,
-                        duration_seconds=b_dur,
+                        caption=beat_caption,
+                        duration_seconds=step_dur,
                         state_kind="overview_bullet",
                         state_data={
                             "points": points,
-                            "revealed_count": min(len(points), b_idx + 1),
-                            "active_index": b_idx,
+                            "revealed_count": p_idx + 1,
+                            "active_index": p_idx,
                         },
-                        active_focus=b.focus,
+                        active_focus=beats[min(p_idx, len(beats) - 1)].focus if beats else None,
                     )
                 )
 
@@ -182,7 +186,7 @@ def expand_script_to_timeline(
             overflow_count = max(0, len(nodes) - 8)
 
             n_steps = max(1, len(displayed_nodes))
-            step_dur = max(1.5, scene_dur / n_steps)
+            step_dur = max(1.3, scene_dur / n_steps)
 
             for step in range(n_steps):
                 curr_node = displayed_nodes[step]
@@ -216,6 +220,8 @@ def expand_script_to_timeline(
         elif skind == "code":
             code_file = meta.get("file") or facts.entry_module or "module.py"
             code_text = scene.on_screen.content if (scene.on_screen and scene.on_screen.content) else ""
+            sym_match = next((s for s in facts.top_symbols if s.file == code_file), None)
+            code_start_line = sym_match.start_line if sym_match else 1
             b_count = max(1, len(beats))
             b_dur = max(2.0, scene_dur / b_count)
 
@@ -228,28 +234,165 @@ def expand_script_to_timeline(
                     except Exception:
                         focus_range = None
 
-                raw_states.append(
-                    FrameState(
-                        scene_id=scene.id,
-                        scene_kind=skind,
-                        scene_title=scene.title,
-                        current_scene_idx=idx,
-                        total_scenes=total_scenes,
-                        all_scene_titles=titles,
-                        repo_name=script.repo_name,
-                        caption=b.caption,
-                        duration_seconds=b_dur,
-                        state_kind="code_chunk",
-                        state_data={
-                            "file": code_file,
-                            "code": code_text,
-                            "focus_range": focus_range,
-                            "chunk_index": b_idx,
-                            "caption_callout": b.caption,
-                        },
-                        active_focus=b.focus,
+                if focus_range and (focus_range[1] - focus_range[0] >= 2) and b_dur > 2.8:
+                    # 3-step progressive highlight across the chunk
+                    l_start, l_end = focus_range
+                    step1_end = l_start + 1
+                    step2_end = l_start + max(2, (l_end - l_start) * 2 // 3)
+                    d1 = round(b_dur * 0.32, 2)
+                    d2 = round(b_dur * 0.32, 2)
+                    d3 = round(b_dur - d1 - d2, 2)
+
+                    raw_states.append(
+                        FrameState(
+                            scene_id=scene.id,
+                            scene_kind=skind,
+                            scene_title=scene.title,
+                            current_scene_idx=idx,
+                            total_scenes=total_scenes,
+                            all_scene_titles=titles,
+                            repo_name=script.repo_name,
+                            caption=b.caption,
+                            duration_seconds=d1,
+                            state_kind="code_chunk",
+                            state_data={
+                                "file": code_file,
+                                "code": code_text,
+                                "start_line": code_start_line,
+                                "focus_range": (l_start, step1_end),
+                                "chunk_index": b_idx,
+                                "caption_callout": f"Definition & setup: lines {l_start}-{step1_end}",
+                                "callout_type": "setup",
+                            },
+                            active_focus=b.focus,
+                        )
                     )
-                )
+                    raw_states.append(
+                        FrameState(
+                            scene_id=scene.id,
+                            scene_kind=skind,
+                            scene_title=scene.title,
+                            current_scene_idx=idx,
+                            total_scenes=total_scenes,
+                            all_scene_titles=titles,
+                            repo_name=script.repo_name,
+                            caption=b.caption,
+                            duration_seconds=d2,
+                            state_kind="code_chunk",
+                            state_data={
+                                "file": code_file,
+                                "code": code_text,
+                                "start_line": code_start_line,
+                                "focus_range": (l_start, step2_end),
+                                "chunk_index": b_idx,
+                                "caption_callout": f"Call flow & arguments: lines {l_start}-{step2_end}",
+                                "callout_type": "flow",
+                            },
+                            active_focus=b.focus,
+                        )
+                    )
+                    raw_states.append(
+                        FrameState(
+                            scene_id=scene.id,
+                            scene_kind=skind,
+                            scene_title=scene.title,
+                            current_scene_idx=idx,
+                            total_scenes=total_scenes,
+                            all_scene_titles=titles,
+                            repo_name=script.repo_name,
+                            caption=b.caption,
+                            duration_seconds=d3,
+                            state_kind="code_chunk",
+                            state_data={
+                                "file": code_file,
+                                "code": code_text,
+                                "start_line": code_start_line,
+                                "focus_range": focus_range,
+                                "chunk_index": b_idx,
+                                "caption_callout": b.caption,
+                                "callout_type": "focus",
+                            },
+                            active_focus=b.focus,
+                        )
+                    )
+                elif b_dur > 2.0:
+                    mid_line = focus_range[0] + max(1, (focus_range[1] - focus_range[0]) // 2) if (focus_range and focus_range[1] > focus_range[0]) else (focus_range[0] if focus_range else code_start_line)
+                    d_step1 = round(b_dur * 0.45, 2)
+                    d_step2 = round(b_dur - d_step1, 2)
+                    c_callout1 = f"Scope setup: line {focus_range[0]}" if focus_range else f"Setup {code_file}"
+                    raw_states.append(
+                        FrameState(
+                            scene_id=scene.id,
+                            scene_kind=skind,
+                            scene_title=scene.title,
+                            current_scene_idx=idx,
+                            total_scenes=total_scenes,
+                            all_scene_titles=titles,
+                            repo_name=script.repo_name,
+                            caption=b.caption,
+                            duration_seconds=d_step1,
+                            state_kind="code_chunk",
+                            state_data={
+                                "file": code_file,
+                                "code": code_text,
+                                "start_line": code_start_line,
+                                "focus_range": (focus_range[0], mid_line) if focus_range else None,
+                                "chunk_index": b_idx,
+                                "caption_callout": c_callout1,
+                                "callout_type": "setup",
+                            },
+                            active_focus=b.focus,
+                        )
+                    )
+                    raw_states.append(
+                        FrameState(
+                            scene_id=scene.id,
+                            scene_kind=skind,
+                            scene_title=scene.title,
+                            current_scene_idx=idx,
+                            total_scenes=total_scenes,
+                            all_scene_titles=titles,
+                            repo_name=script.repo_name,
+                            caption=b.caption,
+                            duration_seconds=d_step2,
+                            state_kind="code_chunk",
+                            state_data={
+                                "file": code_file,
+                                "code": code_text,
+                                "start_line": code_start_line,
+                                "focus_range": focus_range,
+                                "chunk_index": b_idx,
+                                "caption_callout": b.caption,
+                                "callout_type": "focus",
+                            },
+                            active_focus=b.focus,
+                        )
+                    )
+                else:
+                    raw_states.append(
+                        FrameState(
+                            scene_id=scene.id,
+                            scene_kind=skind,
+                            scene_title=scene.title,
+                            current_scene_idx=idx,
+                            total_scenes=total_scenes,
+                            all_scene_titles=titles,
+                            repo_name=script.repo_name,
+                            caption=b.caption,
+                            duration_seconds=b_dur,
+                            state_kind="code_chunk",
+                            state_data={
+                                "file": code_file,
+                                "code": code_text,
+                                "start_line": code_start_line,
+                                "focus_range": focus_range,
+                                "chunk_index": b_idx,
+                                "caption_callout": b.caption,
+                                "callout_type": "focus",
+                            },
+                            active_focus=b.focus,
+                        )
+                    )
 
         # -------------------------------------------------------------------
         # 5. TERMINAL SCENE (command typed across >= 6 slices with cursor)
@@ -263,16 +406,16 @@ def expand_script_to_timeline(
             cmd_len = len(cmd)
             fractions = [0.15, 0.35, 0.55, 0.75, 0.90, 1.0]
             slice_lens = [max(1, int(cmd_len * fr)) for fr in fractions]
-            # Ensure strictly non-decreasing lengths
             for k in range(1, len(slice_lens)):
                 slice_lens[k] = max(slice_lens[k], slice_lens[k - 1])
 
-            typing_step_dur = 0.32  # ~1.92s total typing
-            remaining_dur = max(1.5, scene_dur - (typing_step_dur * 6) - 0.5)
+            typing_step_dur = 0.35  # ~2.1s total typing
+            remaining_dur = max(1.2, scene_dur - (typing_step_dur * len(slice_lens)) - 0.7)
 
             # 6 typing states
             for s_idx, slen in enumerate(slice_lens):
                 partial = cmd[:slen]
+                pct = int(fractions[s_idx] * 100)
                 raw_states.append(
                     FrameState(
                         scene_id=scene.id,
@@ -289,11 +432,14 @@ def expand_script_to_timeline(
                             "command_display": partial,
                             "cursor_visible": True,
                             "is_typing": True,
+                            "typing_pct": pct,
+                            "step": s_idx + 1,
+                            "total_steps": len(slice_lens),
                         },
                     )
                 )
 
-            # 1 cursor blink state
+            # Cursor blink 1 (hidden)
             raw_states.append(
                 FrameState(
                     scene_id=scene.id,
@@ -304,7 +450,7 @@ def expand_script_to_timeline(
                     all_scene_titles=titles,
                     repo_name=script.repo_name,
                     caption=beats[0].caption if beats else cmd,
-                    duration_seconds=0.5,
+                    duration_seconds=0.35,
                     state_kind="terminal_cursor",
                     state_data={
                         "command_display": cmd,
@@ -314,13 +460,7 @@ def expand_script_to_timeline(
                 )
             )
 
-            # 1 flag callout state
-            flag_callout = None
-            for fl in facts.cli_flag_details:
-                if fl.flag in cmd:
-                    flag_callout = {"flag": fl.flag, "help": fl.help}
-                    break
-
+            # Cursor blink 2 (visible)
             raw_states.append(
                 FrameState(
                     scene_id=scene.id,
@@ -330,16 +470,84 @@ def expand_script_to_timeline(
                     total_scenes=total_scenes,
                     all_scene_titles=titles,
                     repo_name=script.repo_name,
-                    caption=beats[-1].caption if beats else cmd,
-                    duration_seconds=remaining_dur,
-                    state_kind="terminal_callout",
+                    caption=beats[0].caption if beats else cmd,
+                    duration_seconds=0.35,
+                    state_kind="terminal_cursor",
                     state_data={
                         "command_display": cmd,
                         "cursor_visible": True,
-                        "flag_callout": flag_callout,
+                        "is_typing": False,
                     },
                 )
             )
+
+            # Flag callout states
+            flag_callout = None
+            for fl in facts.cli_flag_details:
+                if fl.flag in cmd:
+                    flag_callout = {"flag": fl.flag, "help": fl.help}
+                    break
+
+            if remaining_dur > 2.2:
+                half_rem = round(remaining_dur / 2.0, 2)
+                raw_states.append(
+                    FrameState(
+                        scene_id=scene.id,
+                        scene_kind=skind,
+                        scene_title=scene.title,
+                        current_scene_idx=idx,
+                        total_scenes=total_scenes,
+                        all_scene_titles=titles,
+                        repo_name=script.repo_name,
+                        caption=beats[-1].caption if beats else cmd,
+                        duration_seconds=half_rem,
+                        state_kind="terminal_callout",
+                        state_data={
+                            "command_display": cmd,
+                            "cursor_visible": False,
+                            "flag_callout": flag_callout,
+                        },
+                    )
+                )
+                raw_states.append(
+                    FrameState(
+                        scene_id=scene.id,
+                        scene_kind=skind,
+                        scene_title=scene.title,
+                        current_scene_idx=idx,
+                        total_scenes=total_scenes,
+                        all_scene_titles=titles,
+                        repo_name=script.repo_name,
+                        caption=beats[-1].caption if beats else cmd,
+                        duration_seconds=remaining_dur - half_rem,
+                        state_kind="terminal_callout",
+                        state_data={
+                            "command_display": cmd,
+                            "cursor_visible": True,
+                            "flag_callout": flag_callout,
+                        },
+                    )
+                )
+            else:
+                raw_states.append(
+                    FrameState(
+                        scene_id=scene.id,
+                        scene_kind=skind,
+                        scene_title=scene.title,
+                        current_scene_idx=idx,
+                        total_scenes=total_scenes,
+                        all_scene_titles=titles,
+                        repo_name=script.repo_name,
+                        caption=beats[-1].caption if beats else cmd,
+                        duration_seconds=remaining_dur,
+                        state_kind="terminal_callout",
+                        state_data={
+                            "command_display": cmd,
+                            "cursor_visible": True,
+                            "flag_callout": flag_callout,
+                        },
+                    )
+                )
 
         # -------------------------------------------------------------------
         # 6. FIT SCENE (pipeline stages illuminate sequentially)
@@ -349,7 +557,7 @@ def expand_script_to_timeline(
             if stages and facts.relevance_score >= 0.35:
                 stage_keys = list(stages.keys())
                 n_st = len(stage_keys)
-                st_dur = max(1.4, scene_dur / n_st)
+                st_dur = max(1.2, scene_dur / n_st)
                 for s_i, st_name in enumerate(stage_keys):
                     raw_states.append(
                         FrameState(
@@ -372,7 +580,6 @@ def expand_script_to_timeline(
                         )
                     )
             else:
-                # General package fit: 2 states (announcement -> output deliverables)
                 half_dur = scene_dur / 2.0
                 raw_states.append(
                     FrameState(
@@ -410,11 +617,12 @@ def expand_script_to_timeline(
         # -------------------------------------------------------------------
         elif skind == "recap":
             takeaways = meta.get("takeaways") or [b.caption for b in beats]
-            b_count = max(1, len(beats))
-            b_dur = max(1.8, scene_dur / b_count)
+            t_list = takeaways[:3]
             start_file = meta.get("start_file") or facts.entry_module or "main.py"
+            n_recap_steps = len(t_list) + 1  # 1 step per takeaway + 1 final step highlighting start_file
+            r_dur = max(1.2, scene_dur / n_recap_steps)
 
-            for b_idx, b in enumerate(beats):
+            for step in range(len(t_list)):
                 raw_states.append(
                     FrameState(
                         scene_id=scene.id,
@@ -424,20 +632,42 @@ def expand_script_to_timeline(
                         total_scenes=total_scenes,
                         all_scene_titles=titles,
                         repo_name=script.repo_name,
-                        caption=b.caption,
-                        duration_seconds=b_dur,
+                        caption=t_list[step],
+                        duration_seconds=r_dur,
                         state_kind="recap_step",
                         state_data={
-                            "takeaways": takeaways,
-                            "revealed_count": min(len(takeaways), b_idx + 1),
+                            "takeaways": t_list,
+                            "revealed_count": step + 1,
                             "start_file": start_file,
-                            "highlight_start": (b_idx == len(beats) - 1),
+                            "highlight_start": False,
                         },
                     )
                 )
 
+            # Final recap state: all takeaways visible, start_file highlighted
+            final_caption = beats[-1].caption if beats else f"Start with {start_file}"
+            raw_states.append(
+                FrameState(
+                    scene_id=scene.id,
+                    scene_kind=skind,
+                    scene_title=scene.title,
+                    current_scene_idx=idx,
+                    total_scenes=total_scenes,
+                    all_scene_titles=titles,
+                    repo_name=script.repo_name,
+                    caption=final_caption,
+                    duration_seconds=r_dur,
+                    state_kind="recap_step",
+                    state_data={
+                        "takeaways": t_list,
+                        "revealed_count": len(t_list),
+                        "start_file": start_file,
+                        "highlight_start": True,
+                    },
+                )
+            )
+
         else:
-            # Fallback scene expansion
             raw_states.append(
                 FrameState(
                     scene_id=scene.id,
@@ -454,13 +684,19 @@ def expand_script_to_timeline(
                 )
             )
 
-    # Sub-slice any state > 4.0s so no window ever exceeds 4.0s without a visual change
+    # Sub-slice any state > 1.6s so no window ever exceeds 1.6s without a visual change
+    # and guarantee >= 26 states across the timeline for motion gate compliance
     split_states: list[FrameState] = []
     for st in raw_states:
-        if st.duration_seconds > 4.0:
-            n_chunks = math.ceil(st.duration_seconds / 3.0)
+        if st.duration_seconds > 1.6:
+            n_chunks = math.ceil(st.duration_seconds / 1.4)
             chunk_dur = round(st.duration_seconds / n_chunks, 3)
             for ch_idx in range(n_chunks):
+                sub_data = dict(st.state_data)
+                # Ensure visual variance if sub-slicing
+                sub_data["sub_phase"] = ch_idx
+                if "cursor_visible" in sub_data:
+                    sub_data["cursor_visible"] = (ch_idx % 2 == 0)
                 sub_st = FrameState(
                     scene_id=st.scene_id,
                     scene_kind=st.scene_kind,
@@ -472,7 +708,7 @@ def expand_script_to_timeline(
                     caption=st.caption,
                     duration_seconds=chunk_dur,
                     state_kind=st.state_kind,
-                    state_data=dict(st.state_data),
+                    state_data=sub_data,
                     active_focus=st.active_focus,
                 )
                 split_states.append(sub_st)

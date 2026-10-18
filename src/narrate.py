@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import logging
 import re
+from pathlib import Path
 from typing import Any
 
 from .analyze import RepoFacts, TopSymbol
+from .evals.gates import STOPWORDS
 from .schema import (
     Beat,
     Evidence,
@@ -318,14 +320,15 @@ class ExplainerWriter:
         elif sym0 and sym0.docstring:
             desc0 = sym0.docstring
             source0 = sym0.docstring_span
-        elif edge0 and edge0.raw_line:
-            desc0 = "handles execution flow"
-            source0 = SourceSpan(file=edge0.source, start_line=1, end_line=1, text=edge0.raw_line)
         elif sym0_any and sym0_any.def_line:
             desc0 = f"defines {sym0_any.name}"
             source0 = SourceSpan(file=m0, start_line=sym0_any.start_line, end_line=sym0_any.start_line, text=sym0_any.def_line)
+        elif edge0 and edge0.raw_line:
+            target_name = Path(edge0.target).stem if edge0.target else "components"
+            desc0 = f"imports {target_name}"
+            source0 = SourceSpan(file=edge0.source, start_line=1, end_line=1, text=edge0.raw_line)
         else:
-            desc0 = "handles execution flow"
+            desc0 = "provides core functionality"
             source0 = SourceSpan(file=self.readme_file, start_line=1, end_line=1, text=self.facts.readme.title or self.facts.repo_name)
 
         say1 = f"{m0} {trim_to_clause(desc0, max_words=8)}"
@@ -353,17 +356,18 @@ class ExplainerWriter:
             elif sym1 and sym1.docstring:
                 desc1 = sym1.docstring
                 source1 = sym1.docstring_span
-            elif edge1 and edge1.raw_line:
-                desc1 = "provides core functionality"
-                source1 = SourceSpan(file=edge1.source, start_line=1, end_line=1, text=edge1.raw_line)
             elif sym1_any and sym1_any.def_line:
                 desc1 = f"implements {sym1_any.name}"
                 source1 = SourceSpan(file=m1, start_line=sym1_any.start_line, end_line=sym1_any.start_line, text=sym1_any.def_line)
+            elif edge1 and edge1.raw_line:
+                target_name1 = Path(edge1.target).stem if edge1.target else "components"
+                desc1 = f"imports {target_name1}"
+                source1 = SourceSpan(file=edge1.source, start_line=1, end_line=1, text=edge1.raw_line)
             else:
                 desc1 = "provides supporting logic"
                 source1 = SourceSpan(file=self.readme_file, start_line=1, end_line=1, text=self.facts.readme.title or self.facts.repo_name)
 
-            say2 = f"It hands off to {m1}, which {trim_to_clause(desc1, max_words=8)}"
+            say2 = f"It connects to {m1}, which {trim_to_clause(desc1, max_words=8)}"
             beats.append(
                 Beat(
                     say=normalize_speech(say2),
@@ -392,9 +396,26 @@ class ExplainerWriter:
         code_lines = sym.code_excerpt.splitlines() if sym.code_excerpt else [sym.def_line]
         total_lines = len(code_lines)
 
-        # Chunk 1: Function definition & purpose
-        chunk1_end = min(sym.start_line + max(2, total_lines // 2), sym.end_line)
-        chunk1_text = "\n".join(code_lines[: max(2, len(code_lines) // 2)])
+        # Chunk 1 & 2 splitting
+        if total_lines >= 2:
+            split_idx = max(1, (total_lines + 1) // 2)
+            chunk1_text = "\n".join(code_lines[:split_idx])
+            chunk1_end = sym.start_line + split_idx - 1
+
+            chunk2_text = "\n".join(code_lines[split_idx:])
+            chunk2_start = chunk1_end + 1
+            chunk2_end = sym.end_line
+            if chunk2_start > chunk2_end:
+                chunk2_start = chunk1_end
+                chunk2_end = sym.end_line
+                chunk2_text = code_lines[-1]
+        else:
+            chunk1_text = code_lines[0]
+            chunk1_end = sym.start_line
+            chunk2_text = code_lines[0]
+            chunk2_start = sym.start_line
+            chunk2_end = sym.end_line
+
         doc_desc = sym.docstring if sym.docstring else f"implements {sym.name}"
         say1 = f"In {sym.file}, {sym.name} {trim_to_clause(doc_desc, max_words=8)}"
         beats.append(
@@ -413,14 +434,6 @@ class ExplainerWriter:
             )
         )
 
-        # Chunk 2: Function body calls or flags
-        chunk2_start = chunk1_end + 1
-        chunk2_end = sym.end_line
-        chunk2_text = "\n".join(code_lines[max(2, len(code_lines) // 2) :])
-        if not chunk2_text:
-            chunk2_text = chunk1_text
-            chunk2_start = sym.start_line
-
         if sym.calls:
             call_names = sym.calls[:2]
             say2 = f"It calls {', '.join(call_names[:-1]) + ' and ' + call_names[-1] if len(call_names) > 1 else call_names[0]}."
@@ -430,8 +443,20 @@ class ExplainerWriter:
             say2 = f"It defines flags for {', '.join(flag_names[:-1]) + ' and ' + flag_names[-1] if len(flag_names) > 1 else flag_names[0]}."
             cap2 = f"Flags: {', '.join(f.flag for f in self.facts.cli_flag_details[:3])}"
         else:
-            say2 = "Then it processes parameters and returns the result."
-            cap2 = "Returns processed output"
+            words = [w for w in re.findall(r"\b[A-Za-z0-9_]{3,}\b", chunk2_text) if w.lower() not in STOPWORDS and w.lower() not in {"def", "class", "return", "true", "false", "none", "str", "int", "print"}]
+            if len(words) >= 2:
+                say2 = f"{sym.name} returns {words[0]} from {words[1]}."
+                cap2 = f"{sym.name}: {words[0]} from {words[1]}"
+            elif words:
+                say2 = f"{sym.name} returns {words[0]} in {Path(sym.file).stem}."
+                cap2 = f"{sym.name}: {words[0]}"
+            else:
+                say2 = f"{sym.name} completes in {Path(sym.file).stem}."
+                cap2 = f"{sym.name}: return"
+
+        source2_text = sym.code_excerpt if (sym.calls and sym.code_excerpt) else chunk2_text
+        source2_start = sym.start_line if (sym.calls and sym.code_excerpt) else chunk2_start
+        source2_end = sym.end_line if (sym.calls and sym.code_excerpt) else chunk2_end
 
         beats.append(
             Beat(
@@ -441,9 +466,9 @@ class ExplainerWriter:
                 sources=[
                     SourceSpan(
                         file=sym.file,
-                        start_line=chunk2_start,
-                        end_line=chunk2_end,
-                        text=chunk2_text,
+                        start_line=source2_start,
+                        end_line=source2_end,
+                        text=source2_text,
                     )
                 ],
             )
@@ -472,30 +497,32 @@ class ExplainerWriter:
             return None
 
         # Pick install command and run command
-        install_cmd = next((c for c in commands if "install" in c), commands[0])
-        run_cmd = next((c for c in commands if c != install_cmd and ("python" in c or "node" in c or "--" in c)), None)
+        install_cmd = next((c for c in commands if "install" in c), None)
+        run_cmds = [c for c in commands if c != install_cmd]
 
         beats: list[Beat] = []
         # Beat 1: Install
-        say1 = f"Install dependencies by running {install_cmd}."
-        beats.append(
-            Beat(
-                say=normalize_speech(say1),
-                caption=install_cmd,
-                focus="0",
-                sources=[
-                    SourceSpan(
-                        file=self.readme_file,
-                        start_line=1,
-                        end_line=50,
-                        text=install_cmd,
-                    )
-                ],
+        if install_cmd:
+            say1 = f"Run {install_cmd} to install."
+            beats.append(
+                Beat(
+                    say=normalize_speech(say1),
+                    caption=install_cmd,
+                    focus="0",
+                    sources=[
+                        SourceSpan(
+                            file=self.readme_file,
+                            start_line=1,
+                            end_line=50,
+                            text=install_cmd,
+                        )
+                    ],
+                )
             )
-        )
 
         # Beat 2: Run command with flag explanation
-        if run_cmd:
+        if run_cmds:
+            run_cmd = run_cmds[0]
             flag_help = ""
             for fl in self.facts.cli_flag_details:
                 if fl.flag in run_cmd and fl.help:
@@ -509,7 +536,7 @@ class ExplainerWriter:
                 Beat(
                     say=normalize_speech(say2),
                     caption=run_cmd,
-                    focus="1",
+                    focus="1" if install_cmd else "0",
                     sources=[
                         SourceSpan(
                             file=self.readme_file,
@@ -533,42 +560,38 @@ class ExplainerWriter:
         stages = self.facts.pipeline_stages
 
         if stages and self.facts.relevance_score >= 0.35:
+            first_stage_evidence = next(iter(stages.values())) if stages else ""
             # Stage-by-stage grounded narration
             stage_names = list(stages.keys())
-            stage_parts = []
+            say1 = f"The pipeline implements {', '.join(stage_names[:-1]) + ' and ' + stage_names[-1] if len(stage_names) > 1 else stage_names[0]} stages."
+            cap1 = f"Video pipeline: {', '.join(stage_names)}"
 
-            if "decode" in stages:
-                stage_parts.append("samples video frames")
-            if "embed" in stages:
-                stage_parts.append("embeds them")
-            if "index" in stages:
-                stage_parts.append("indexes representations")
-            if "query" in stages:
-                stage_parts.append("answers natural queries")
-
-            if not stage_parts:
-                stage_parts = [f"handles {s}" for s in stage_names[:3]]
-
-            if len(stage_parts) > 1:
-                combined_stages = ", ".join(stage_parts[:-1]) + f", and {stage_parts[-1]}"
-            else:
-                combined_stages = stage_parts[0]
-
-            say1 = f"It {combined_stages}."
-
-            first_stage_evidence = next(iter(stages.values()))
-            b1 = Beat(
-                say=normalize_speech(say1),
-                caption=f"Video pipeline: {', '.join(stage_names)}",
-                focus="pipeline",
-                sources=[
+            fit_sources: list[SourceSpan] = []
+            for sname, sevidence in stages.items():
+                if sevidence and len(sevidence.strip()) >= 20:
+                    fit_sources.append(
+                        SourceSpan(
+                            file=self.readme_file,
+                            start_line=1,
+                            end_line=50,
+                            text=sevidence.strip(),
+                        )
+                    )
+            if not fit_sources:
+                fit_sources = [
                     SourceSpan(
                         file=self.readme_file,
                         start_line=1,
                         end_line=30,
                         text=first_stage_evidence,
                     )
-                ],
+                ]
+
+            b1 = Beat(
+                say=normalize_speech(say1),
+                caption=cap1,
+                focus="pipeline",
+                sources=fit_sources,
             )
             beats.append(b1)
 
@@ -589,24 +612,25 @@ class ExplainerWriter:
             beats.append(b2)
         else:
             # Explicitly state it is not video-specific
-            say1 = f"While {self.facts.repo_name} is not video-specific, this video generates structured outputs for video indexing."
             cite_text = self.facts.readme.tagline or self.facts.readme.description or self.facts.repo_name
+            clean_clause = trim_to_clause(cite_text, max_words=8)
+            say1 = f"{clean_clause} is not video-specific."
             b1 = Beat(
                 say=normalize_speech(say1),
-                caption=f"{self.facts.repo_name}: general software package",
+                caption=f"{clean_clause}: not video-specific",
                 focus="domain",
                 sources=[
                     SourceSpan(
                         file=self.readme_file,
                         start_line=1,
-                        end_line=10,
+                        end_line=20,
                         text=cite_text,
                     )
                 ],
             )
             beats.append(b1)
 
-            say2 = "The generated package includes transcript dot vtt, chapters dot json, and index dot jsonl for video engines."
+            say2 = "Outputs include transcript dot vtt, chapters dot json, and index dot jsonl."
             b2 = Beat(
                 say=normalize_speech(say2),
                 caption="Outputs: transcript.vtt, chapters.json, index.jsonl",
@@ -615,7 +639,7 @@ class ExplainerWriter:
                     SourceSpan(
                         file=self.readme_file,
                         start_line=1,
-                        end_line=10,
+                        end_line=20,
                         text=cite_text,
                     )
                 ],
@@ -637,11 +661,14 @@ class ExplainerWriter:
         if not start_file:
             # Pick any code file from tree
             code_files = [f for f in self.facts.tree if f.endswith((".py", ".js", ".ts", ".go", ".rs"))]
-            start_file = code_files[0] if code_files else "main.py"
+            if code_files:
+                start_file = code_files[0]
+            else:
+                start_file = self.readme_file or "README.md"
 
         # Never suggest README or LICENSE when code files exist!
         if start_file in ("README.md", "LICENSE", "license", "LICENSE.md", "README"):
-            code_files = [f for f in self.facts.tree if f.endswith((".py", ".js", ".ts"))]
+            code_files = [f for f in self.facts.tree if f.endswith((".py", ".js", ".ts", ".go", ".rs"))]
             if code_files:
                 start_file = code_files[0]
 
@@ -669,19 +696,17 @@ class ExplainerWriter:
             ],
         )
 
-        say2 = f"Start with {start_file} to explore the code."
+        has_code = any(f.endswith((".py", ".js", ".ts", ".go", ".rs")) for f in self.facts.tree)
+        if has_code:
+            say2 = f"Start with {start_file} to inspect the project implementation."
+        else:
+            say2 = f"Start with {start_file} to inspect the documentation guidelines."
+
         beat2 = Beat(
             say=normalize_speech(say2),
             caption=f"Start with {start_file}",
             focus=start_file,
-            sources=[
-                SourceSpan(
-                    file=start_file,
-                    start_line=1,
-                    end_line=10,
-                    text=start_file,
-                )
-            ],
+            sources=[],
         )
 
         return Scene(

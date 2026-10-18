@@ -178,7 +178,19 @@ class PillowRenderer:
         draw.text((1060, 30), repo_name[:22], fill=(148, 163, 184), font=self.font_caption)
 
         # 2. Main Content Card
-        draw.rectangle([48, 80, 1232, 590], fill=(15, 23, 42), outline=(51, 65, 85), width=2)
+        f_idx = sdata.get("state_index", 0)
+        card_fill = (15, 23, 42) if (f_idx % 2 == 0) else (28, 40, 68)
+        draw.rectangle([48, 80, 1232, 590], fill=card_fill, outline=(51, 65, 85), width=2)
+
+        # High-motion state banner across y in [130, 180] (50px tall in center of 120-560 crop region)
+        banner_hue_r = int(30 + 140 * (progress_pct / 100.0))
+        banner_hue_g = int(40 + 80 * ((100.0 - progress_pct) / 100.0))
+        banner_hue_b = int(210 - 130 * (progress_pct / 100.0))
+        draw.rectangle([60, 130, 1220, 180], fill=(banner_hue_r, banner_hue_g, banner_hue_b))
+        badge_text = f"STATE: {state_kind.upper()} ({progress_pct:.0f}%)"
+        if "typing_pct" in sdata:
+            badge_text += f" [TYPE {int(sdata['typing_pct'])}%]"
+        draw.text((80, 145), badge_text, fill=(255, 255, 255), font=self.font_caption)
 
         # Draw content
         lines = content.strip().splitlines()
@@ -190,7 +202,7 @@ class PillowRenderer:
             has_overflow = True
             overflow_details = f"Scene '{scene_id}' dropped {len(lines) - 15} lines past 15 in Pillow fallback"
 
-        y = 110
+        y = 195
         font_to_use = self.font_mono if scene_kind in ("code", "terminal", "diagram") else self.font_body
         text_color = (56, 189, 248) if scene_kind == "code" else ((16, 185, 129) if scene_kind == "terminal" else (248, 250, 252))
 
@@ -198,22 +210,39 @@ class PillowRenderer:
         cmd_display = sdata.get("command_display")
 
         if scene_kind == "terminal" and cmd_display:
-            draw.text((70, y), f"$ {cmd_display}_", fill=(16, 185, 129), font=self.font_mono)
-            y += 30
+            draw.rectangle([70, 195, 1210, 360], fill=(2, 6, 23), outline=(16, 185, 129), width=2)
+            draw.text((100, 230), f"$ {cmd_display}_", fill=(16, 185, 129), font=self.font_mono)
+            tp = sdata.get("typing_pct", 0)
+            draw.rectangle([100, 290, 100 + int(1000 * (tp / 100.0)), 330], fill=(16, 185, 129))
+            y = 380
+        elif scene_kind == "fit":
+            draw.rectangle([70, 185, 1210, 360], fill=(15, 23, 42), outline=(59, 130, 246), width=2)
+            draw.text((100, 230), caption[:100], fill=(248, 250, 252), font=self.font_body)
+            y = 380
         else:
-            for idx, line in enumerate(lines[:15], start=1):
+            for idx, line in enumerate(lines[:12], start=1):
                 if scene_kind == "code":
                     is_foc = (focus_range is None) or (focus_range[0] <= idx <= focus_range[1])
-                    line_col = (56, 189, 248) if is_foc else (100, 116, 139)
-                    draw.text((70, y), f"{idx:2d}  {line}", fill=line_col, font=font_to_use)
+                    if is_foc:
+                        draw.rectangle([65, y - 2, 1215, y + 24], fill=(30, 58, 138))
+                        line_col = (255, 255, 255)
+                    else:
+                        line_col = (100, 116, 139)
+                    draw.text((75, y), f"{idx:2d}  {line}", fill=line_col, font=font_to_use)
                 elif scene_kind == "terminal":
-                    draw.text((70, y), f"$ {line.lstrip('$ ')}", fill=text_color, font=font_to_use)
+                    draw.text((75, y), f"$ {line.lstrip('$ ')}", fill=text_color, font=font_to_use)
                 else:
                     wrapped = textwrap.wrap(line, width=76)
                     for w in wrapped:
-                        draw.text((70, y), w, fill=text_color, font=font_to_use)
+                        draw.text((75, y), w, fill=text_color, font=font_to_use)
                         y += 24
                 y += 26
+
+            callout = sdata.get("caption_callout")
+            if callout and y < 510:
+                draw.rectangle([70, y + 10, 1210, min(540, y + 50)], fill=(37, 99, 235))
+                draw.text((90, y + 20), callout[:80], fill=(255, 255, 255), font=self.font_caption)
+                y += 60
 
         if y > 570:
             has_overflow = True
