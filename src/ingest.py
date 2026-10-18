@@ -1,16 +1,23 @@
 """
-Ingest module: clone a GitHub repo and extract documentation files.
+Ingest module: clone a GitHub repo safely and extract documentation and code files.
 
-Responsibilities:
-- Validate GitHub URLs (only https://github.com/<owner>/<repo>)
-- Shallow clone with hooks disabled
-- Collect README, docs, and key source files
-- Apply size and file-count caps
-- Redact secrets before any text leaves this module
+Security & Reliability features:
+- Validate GitHub URLs strictly (https://github.com/<owner>/<repo>[.git], rejects '.' and '..')
+- Secure shallow clone: core.hooksPath pointing to empty dir, core.symlinks=false, protocol.file.allow=never
+- Environment GIT_TERMINAL_PROMPT=0, stdin=DEVNULL to prevent hangs
+- Checked-out size cap (200 MB)
+- Skip symlinks and paths escaping repo directory
+- Deterministic sorted os.walk
+- File caps: 50 files, 100 KB per file, 500 KB total
+- Comprehensive secret redaction (API keys, JWT, PEM, Slack, Google, GitHub PAT, short symbol passwords)
+- Redaction entropy rule skips paths, file extensions, and command lines
+- Records exact secret values removed for independent gate verification
+- Neutralizes prompt-injection delimiter lookalikes in untrusted repo text
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import math
 import os
@@ -18,8 +25,9 @@ import re
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -33,27 +41,68 @@ _GITHUB_RE = re.compile(
 def validate_github_url(url: str) -> tuple[str, str]:
     """
     Validate that `url` is a proper GitHub HTTPS URL.
+    Rejects '.' and '..' and any path traversal characters.
     Returns (owner, repo) or raises ValueError.
     """
-    m = _GITHUB_RE.match(url.strip())
+    clean_url = url.strip()
+    m = _GITHUB_RE.match(clean_url)
     if not m:
         raise ValueError(
             f"Invalid GitHub URL: {url!r}. "
             "Must be https://github.com/<owner>/<repo>"
         )
-    return m.group("owner"), m.group("repo")
+
+    owner = m.group("owner")
+    repo = m.group("repo")
+
+    # Security check S2: Reject '.' and '..' and path traversal
+    if owner in (".", "..") or repo in (".", "..") or ".." in owner or ".." in repo:
+        raise ValueError(
+            f"Invalid GitHub URL: {url!r}. "
+            "Owner and repo cannot be '.' or '..' or contain path traversal."
+        )
+
+    return owner, repo
 
 
 # --- Secret redaction ---
 
-# Patterns that look like API keys, tokens, passwords
+# Patterns for specific credential formats
 _SECRET_PATTERNS = [
-    re.compile(r"(?i)(api[_-]?key|secret|token|password|passwd|auth)\s*[:=]\s*['\"]?([A-Za-z0-9_/+=-]{16,})['\"]?"),
-    re.compile(r"(?i)bearer\s+[A-Za-z0-9_/+=-]{20,}"),
-    re.compile(r"sk-[A-Za-z0-9]{20,}"),  # OpenAI-style keys
-    re.compile(r"ghp_[A-Za-z0-9]{36,}"),  # GitHub PATs
-    re.compile(r"AKIA[A-Z0-9]{16}"),  # AWS access keys
+    # PEM Private Keys
+    re.compile(r"-----BEGIN [A-Z0-9 ]+ PRIVATE KEY-----[^-]+-----END [A-Z0-9 ]+ PRIVATE KEY-----", re.DOTALL),
+    # JWT tokens
+    re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
+    # Slack tokens
+    re.compile(r"\bxox[baprs]-[0-9A-Za-z_-]{10,}\b"),
+    # Google API keys
+    re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
+    # GitHub fine-grained and classic tokens
+    re.compile(r"\bgithub_pat_[0-9A-Za-z_]{22,}\b"),
+    re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,}\b"),
+    # OpenAI & Anthropic keys
+    re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}\b"),
+    re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
+    # AWS access keys
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    # Bearer tokens
+    re.compile(r"(?i)bearer\s+([A-Za-z0-9_/+=-]{20,})"),
+    # Short / symbol password assignments (e.g. password = "p@$$w0rd", db_password = '...', secret: 'xyz!#123')
+    re.compile(r"""(?i)\b([A-Za-z0-9_-]*(?:password|passwd|secret|api[_-]?key|token|auth))\s*[:=]\s*(['"])([^'"]{6,})\2"""),
 ]
+
+_COMMON_FILE_EXTENSIONS = (
+    ".mp4", ".wav", ".mp3", ".png", ".jpg", ".jpeg", ".gif", ".svg",
+    ".json", ".jsonl", ".py", ".ts", ".js", ".html", ".css", ".txt",
+    ".md", ".vtt", ".srt", ".xml", ".yaml", ".yml", ".toml", ".gz",
+    ".tar", ".zip", ".so", ".dll", ".exe", ".bin", ".whl",
+)
+
+_COMMAND_LINE_PREFIXES = (
+    "$ ", "# ", ">>> ", "ffmpeg", "ffprobe", "git", "python", "python3",
+    "pip", "pip3", "docker", "npm", "npx", "yarn", "pnpm", "uv", "poetry",
+    "cargo", "go", "make", "curl", "bash", "sh", "cd", "export", "pytest",
+)
 
 
 def _shannon_entropy(s: str) -> float:
@@ -75,27 +124,89 @@ def _has_high_entropy(token: str, threshold: float = 4.0) -> bool:
     return len(token) >= 20 and _shannon_entropy(token) > threshold
 
 
-def redact_secrets(text: str) -> str:
+def redact_secrets(text: str, recorded_secrets: set[str] | None = None) -> str:
     """
     Replace anything that looks like a secret with [REDACTED].
-    Uses both pattern matching and entropy checks.
+    Populates `recorded_secrets` with stripped secret values for gate verification.
+    Entropy rule strictly skips paths, file extensions, and command lines.
     """
+    if not text:
+        return text
+
     result = text
+
+    # Apply specific regex patterns
     for pat in _SECRET_PATTERNS:
-        result = pat.sub("[REDACTED]", result)
+        def _replacer(m: re.Match) -> str:
+            val = m.group(0)
+            if m.lastindex == 3:
+                key_name = m.group(1)
+                secret_val = m.group(3)
+                if recorded_secrets is not None and secret_val and len(secret_val) >= 6:
+                    recorded_secrets.add(secret_val)
+                return f'{key_name} = "[REDACTED]"'
+            elif "bearer" in val.lower():
+                secret_val = m.group(1) if m.lastindex else val
+                if recorded_secrets is not None and secret_val:
+                    recorded_secrets.add(secret_val)
+                return "Bearer [REDACTED]"
+            else:
+                if recorded_secrets is not None and val:
+                    recorded_secrets.add(val)
+                return "[REDACTED]"
 
-    # Entropy-based: find long hex/base64-ish tokens
-    for match in re.finditer(r"[A-Za-z0-9_/+=-]{24,}", result):
-        token = match.group()
-        if _has_high_entropy(token):
-            result = result.replace(token, "[REDACTED]")
+        result = pat.sub(_replacer, result)
 
-    return result
+    # Entropy-based detection on lines that are NOT command lines
+    lines = result.splitlines(keepends=True)
+    out_lines: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+        is_cmd = any(stripped.startswith(pfx) for pfx in _COMMAND_LINE_PREFIXES)
+
+        if is_cmd:
+            # Preserve command lines without entropy corruption
+            out_lines.append(line)
+            continue
+
+        def _entropy_sub(m: re.Match) -> str:
+            token = m.group(0)
+            # Skip path-like structure
+            if "/" in token or "\\" in token:
+                return token
+            # Skip file extensions
+            lower_token = token.lower()
+            if any(lower_token.endswith(ext) for ext in _COMMON_FILE_EXTENSIONS):
+                return token
+
+            if _has_high_entropy(token):
+                if recorded_secrets is not None:
+                    recorded_secrets.add(token)
+                return "[REDACTED]"
+            return token
+
+        line_redacted = re.sub(r"[A-Za-z0-9_/+=-]{24,}", _entropy_sub, line)
+        out_lines.append(line_redacted)
+
+    return "".join(out_lines)
+
+
+def neutralize_repo_text(text: str) -> str:
+    """Neutralize any delimiter lookalikes in untrusted repo text (Prompt injection defense)."""
+    if not text:
+        return text
+    # Replace delimiter lookalikes so attackers cannot escape untrusted data blocks
+    return re.sub(
+        r"===\s*(?:END[_\s]+)?UNTRUSTED[A-Z0-9_\s]*===",
+        "[DELIMITER_NEUTRALIZED]",
+        text,
+        flags=re.IGNORECASE,
+    )
 
 
 # --- File collection ---
 
-# Extensions we care about for documentation and code
 _DOC_EXTENSIONS = {
     ".md", ".txt", ".rst", ".adoc",
     ".py", ".js", ".ts", ".go", ".rs", ".java",
@@ -103,7 +214,6 @@ _DOC_EXTENSIONS = {
     ".sh", ".bash", ".dockerfile",
 }
 
-# Files we always want if they exist
 _PRIORITY_FILES = {
     "README.md", "readme.md", "README.rst", "README.txt",
     "setup.py", "setup.cfg", "pyproject.toml",
@@ -112,7 +222,6 @@ _PRIORITY_FILES = {
     "LICENSE", "CONTRIBUTING.md",
 }
 
-# Caps
 MAX_FILES = 50
 MAX_FILE_SIZE = 100_000  # 100KB per file
 MAX_TOTAL_SIZE = 500_000  # 500KB total
@@ -120,50 +229,82 @@ MAX_TOTAL_SIZE = 500_000  # 500KB total
 
 @dataclass
 class RepoContent:
-    """Collected content from a repository."""
+    """Collected content and metadata from a repository."""
     repo_name: str
     owner: str
-    files: dict[str, str] = field(default_factory=dict)  # relative_path -> content
+    files: dict[str, str] = field(default_factory=dict)  # relative_posix_path -> content
     clone_dir: str | None = None
+    redacted_secrets: set[str] = field(default_factory=set)
+    commit_sha: str = ""
 
 
-def collect_files(repo_dir: Path) -> dict[str, str]:
+def collect_files(repo_dir: Path, recorded_secrets: set[str] | None = None) -> dict[str, str]:
     """
-    Walk the repo and collect relevant text files.
-    Returns dict of relative_path -> redacted_content.
+    Walk the repo deterministically and collect relevant text files.
+    Skips symlinks, skips paths escaping repo directory.
+    Returns dict of relative_posix_path -> redacted_and_neutralized_content.
     """
     files: dict[str, str] = {}
     total_size = 0
+    resolved_repo = repo_dir.resolve()
 
     # Priority files first
     for pf in sorted(_PRIORITY_FILES):
         p = repo_dir / pf
-        if p.is_file() and p.stat().st_size <= MAX_FILE_SIZE:
-            try:
+        if not p.is_file():
+            continue
+        # S1: Skip symlinks
+        if p.is_symlink():
+            continue
+        try:
+            resolved_p = p.resolve()
+            if not str(resolved_p).startswith(str(resolved_repo)):
+                continue
+            if p.stat().st_size <= MAX_FILE_SIZE:
                 content = p.read_text(encoding="utf-8", errors="replace")
-                files[pf] = redact_secrets(content)
+                content = redact_secrets(content, recorded_secrets=recorded_secrets)
+                content = neutralize_repo_text(content)
+                files[pf] = content
                 total_size += len(content)
-            except Exception:
-                logger.warning(f"Could not read priority file {pf}")
+        except Exception:
+            logger.warning(f"Could not read priority file {pf}")
 
-    # Then walk for other files
-    for root_str, _dirs, filenames in os.walk(repo_dir):
+    # Deterministic walk for other files
+    for root_str, dirs, filenames in os.walk(repo_dir):
+        # Sort in place for deterministic traversal
+        dirs.sort()
+        filenames.sort()
+
         root = Path(root_str)
-        # Skip hidden dirs, node_modules, vendor, etc.
-        rel_root = root.relative_to(repo_dir)
+        try:
+            rel_root = root.relative_to(repo_dir)
+        except ValueError:
+            continue
+
         parts = rel_root.parts
+        # Skip hidden directories, virtualenvs, dependencies
         if any(p.startswith(".") or p in ("node_modules", "vendor", "__pycache__", "venv", ".venv") for p in parts):
             continue
 
-        for fname in sorted(filenames):
+        for fname in filenames:
             if len(files) >= MAX_FILES:
                 break
             if total_size >= MAX_TOTAL_SIZE:
                 break
 
             fpath = root / fname
-            rel = str(fpath.relative_to(repo_dir)).replace("\\", "/")
+            # S1: Skip symlinks
+            if fpath.is_symlink():
+                continue
 
+            try:
+                resolved_f = fpath.resolve()
+                if not str(resolved_f).startswith(str(resolved_repo)):
+                    continue
+            except Exception:
+                continue
+
+            rel = str(fpath.relative_to(repo_dir)).replace("\\", "/")
             if rel in files:
                 continue
 
@@ -176,7 +317,9 @@ def collect_files(repo_dir: Path) -> dict[str, str]:
                 if size > MAX_FILE_SIZE:
                     continue
                 content = fpath.read_text(encoding="utf-8", errors="replace")
-                files[rel] = redact_secrets(content)
+                content = redact_secrets(content, recorded_secrets=recorded_secrets)
+                content = neutralize_repo_text(content)
+                files[rel] = content
                 total_size += len(content)
             except Exception:
                 pass
@@ -186,69 +329,136 @@ def collect_files(repo_dir: Path) -> dict[str, str]:
 
 def clone_repo(url: str, target_dir: Path) -> Path:
     """
-    Shallow clone a GitHub repo with hooks disabled.
-    Returns the path to the cloned directory.
+    Shallow clone a GitHub repo with hooks disabled, symlinks disabled, and file protocol blocked.
+    Returns path to cloned directory.
     """
     owner, repo = validate_github_url(url)
     clone_path = target_dir / repo
 
+    # Create empty directory for core.hooksPath (Windows-safe, no /dev/null)
+    empty_hooks_dir = target_dir / "_empty_hooks"
+    empty_hooks_dir.mkdir(parents=True, exist_ok=True)
+
     cmd = [
-        "git", "clone",
+        "git",
+        "-c", f"core.hooksPath={empty_hooks_dir}",
+        "-c", "core.symlinks=false",
+        "-c", "protocol.file.allow=never",
+        "clone",
         "--depth", "1",
         "--single-branch",
-        "--config", "core.hooksPath=/dev/null",  # disable hooks
+        "--no-tags",
         url,
         str(clone_path),
     ]
 
     logger.info(f"Cloning {url} into {clone_path}")
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+
     result = subprocess.run(
         cmd,
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=120,
+        env=env,
     )
     if result.returncode != 0:
         raise RuntimeError(
             f"git clone failed (exit {result.returncode}): {result.stderr[:500]}"
         )
 
+    # Size cap check: abort if checked-out size > 200 MB
+    total_bytes = 0
+    for p in clone_path.rglob("*"):
+        if p.is_file() and not p.is_symlink():
+            try:
+                total_bytes += p.stat().st_size
+            except Exception:
+                pass
+    if total_bytes > 200 * 1024 * 1024:
+        raise ValueError(
+            f"Repository checked-out size ({total_bytes / (1024*1024):.1f} MB) exceeds 200 MB cap"
+        )
+
     return clone_path
 
 
-def ingest_github(url: str) -> RepoContent:
+def get_git_commit_sha(repo_path: Path) -> str:
+    """Retrieve HEAD commit SHA if available."""
+    try:
+        res = subprocess.run(
+            ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if res.returncode == 0:
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+@contextlib.contextmanager
+def safe_clone_github(url: str) -> Iterator[RepoContent]:
     """
-    Full ingest pipeline: validate URL, clone, collect files, clean up.
+    Context manager for cloning a GitHub repository that guarantees cleanup in every outcome.
     """
     owner, repo = validate_github_url(url)
-
-    tmp = tempfile.mkdtemp(prefix="devvideo_")
+    tmp_dir = tempfile.mkdtemp(prefix="devvideo_clone_")
     try:
-        clone_path = clone_repo(url, Path(tmp))
-        files = collect_files(clone_path)
-        return RepoContent(
+        clone_path = clone_repo(url, Path(tmp_dir))
+        recorded_secrets: set[str] = set()
+        files = collect_files(clone_path, recorded_secrets=recorded_secrets)
+        commit_sha = get_git_commit_sha(clone_path)
+        yield RepoContent(
             repo_name=repo,
             owner=owner,
             files=files,
             clone_dir=str(clone_path),
+            redacted_secrets=recorded_secrets,
+            commit_sha=commit_sha,
         )
-    except Exception:
-        shutil.rmtree(tmp, ignore_errors=True)
-        raise
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def ingest_github(url: str) -> RepoContent:
+    """
+    Full ingest pipeline for a GitHub URL with guaranteed cleanup.
+    """
+    with safe_clone_github(url) as content:
+        # Return collected content (clone_dir is None after cleanup)
+        return RepoContent(
+            repo_name=content.repo_name,
+            owner=content.owner,
+            files=content.files,
+            clone_dir=None,
+            redacted_secrets=content.redacted_secrets,
+            commit_sha=content.commit_sha,
+        )
 
 
 def ingest_local(path: str) -> RepoContent:
     """
-    Ingest from a local directory (for testing / local usage).
+    Ingest from a local directory (CLI only, must exist).
     """
     p = Path(path)
     if not p.is_dir():
         raise ValueError(f"Not a directory: {path}")
 
-    files = collect_files(p)
+    recorded_secrets: set[str] = set()
+    files = collect_files(p, recorded_secrets=recorded_secrets)
+    commit_sha = get_git_commit_sha(p)
+
     return RepoContent(
         repo_name=p.name,
         owner="local",
         files=files,
         clone_dir=str(p),
+        redacted_secrets=recorded_secrets,
+        commit_sha=commit_sha,
     )
