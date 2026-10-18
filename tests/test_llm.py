@@ -71,7 +71,7 @@ class TestClaudeLLM:
         cmd = call_args[0][0]
         assert cmd[0] == "claude"
         assert cmd[1] == "-p"
-        assert cmd[2] == "test prompt"
+        assert call_args[1].get("input") == "test prompt"
 
     @patch("shutil.which", return_value="/usr/bin/claude")
     @patch("subprocess.run")

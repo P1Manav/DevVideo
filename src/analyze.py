@@ -167,13 +167,10 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
 
     # Extract description from intro or first non-title paragraph
     description = ""
-    intro_body = sections.get("intro", "")
-    for para in intro_body.split("\n\n"):
-        clean_para = para.strip().replace("\n", " ")
-        if clean_para and clean_para != title and not clean_para.startswith("#"):
-            description = clean_para
-            break
-    if not description and len(non_empty_lines) > 1:
+    intro_lines = [l.strip() for l in sec_lines if l.strip() and l.strip() != title and not l.strip().startswith("#")]
+    if intro_lines:
+        description = intro_lines[0]
+    elif len(non_empty_lines) > 1:
         for l in non_empty_lines:
             if l != title and not l.startswith("#"):
                 description = l
