@@ -1,0 +1,38 @@
+{
+  "status": "published",
+  "tool_git_sha": "66c267e811b3a0647ddc57c8b1376d294cfe9a16",
+  "input_repo_commit_sha": "66c267e811b3a0647ddc57c8b1376d294cfe9a16",
+  "repo_name": "vidsearch_py",
+  "versions": {
+    "python": "3.10.6",
+    "ffmpeg": "7.1-essentials_build-www.gyan.dev",
+    "playwright": "installed"
+  },
+  "timings": {
+    "ingest": 0.05,
+    "analyze": 0.0,
+    "plan": 0.0,
+    "voice": 2.75,
+    "render": 3.41,
+    "assemble": 3.89,
+    "eval": 3.95,
+    "total": 14.09
+  },
+  "backend_requested": "offline",
+  "backend_used": "offline",
+  "tts_requested": "silent",
+  "tts_used": "silent",
+  "tts_backend": "silent",
+  "tts_fallback_reason": "",
+  "llm_requested": "offline",
+  "llm_used": "offline",
+  "llm_fallback_reason": "",
+  "renderer_requested": "auto",
+  "renderer_used": "playwright",
+  "renderer_fallback_reason": "",
+  "video": "video.mp4",
+  "video_sha256": "97a737e014ecaa0eb5468fe2881ac1d4d8e9db3220b519df0fdee851067a1687",
+  "video_duration_seconds": 54.2,
+  "eval_report": "eval_report.json",
+  "all_gates_passed": true
+}

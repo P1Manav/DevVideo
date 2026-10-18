@@ -21,4 +21,4 @@ This log documents non-obvious design and engineering decisions made during the 
 - bounded_repair_manager: Implemented bounded 2-attempt automated repairs for duration speedup / scene dropping, overflow line reduction, and command replacement before triggering rejection.
 - pipeline_quarantine_manifest: Configured pipeline to write manifest.json and dispatch webhooks on ALL outcomes (published, rejected, failed); quarantined failed-gate videos to out/_rejected/.
 - docker_and_ci_hardening: Configured Dockerfile with non-root UID 10001 devvideo user, HOME=/home/devvideo, and playwright browser path; added must_run marker in pytest enforcing CI failure on unexpected test skips.
-
+- phase0_baseline: Captured baseline pytest (155 passing), ran baseline pipeline on vidsearch_py and openai/CLIP into docs/verification/baseline/, and confirmed E1-E6 reproduction.

@@ -1,0 +1,89 @@
+{
+  "all_gates_passed": true,
+  "gates": [
+    {
+      "name": "duration",
+      "passed": true,
+      "value": "54.2s",
+      "threshold": "<= 60.0s",
+      "details": "Final video duration 54.2s"
+    },
+    {
+      "name": "av_sync",
+      "passed": true,
+      "value": "max_scene=0.00s, stream=0.03s",
+      "threshold": "scene <= 0.15s, stream <= 0.3s",
+      "details": "A/V sync verified (scene drift 0.00s, stream drift 0.03s)"
+    },
+    {
+      "name": "audio_audible",
+      "passed": true,
+      "value": "N/A (silent)",
+      "threshold": "> -50.0 dB",
+      "details": "Silent TTS used; audible gate marked N/A"
+    },
+    {
+      "name": "groundedness",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "7/7 scenes grounded"
+    },
+    {
+      "name": "code_verbatim",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "1/1 code scenes verbatim"
+    },
+    {
+      "name": "command_validity",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "1/1 commands verified verbatim"
+    },
+    {
+      "name": "secret_leaks",
+      "passed": true,
+      "value": "0",
+      "threshold": "0",
+      "details": "No secrets detected"
+    },
+    {
+      "name": "no_overflow",
+      "passed": true,
+      "value": "0 overflowing scenes",
+      "threshold": "0",
+      "details": "All scene frames fit within bounds"
+    },
+    {
+      "name": "frames_valid",
+      "passed": true,
+      "value": "13/13 non-flat",
+      "threshold": "100%",
+      "details": "Sampled frames are visually valid"
+    }
+  ],
+  "metrics": {
+    "domain_relevance": 0.63,
+    "coverage": {
+      "has_title": true,
+      "has_overview": true,
+      "has_diagram": true,
+      "has_code": true,
+      "has_terminal": true,
+      "has_fit": true,
+      "has_recap": true
+    },
+    "scene_count": 7,
+    "speech_wpm": 150.0,
+    "clarity": "skipped",
+    "video_duration_seconds": 54.2
+  },
+  "backend_requested": "offline",
+  "backend_used": "offline",
+  "fallback_reason": "",
+  "renderer_used": "playwright",
+  "renderer_fallback_reason": ""
+}

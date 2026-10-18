@@ -1,0 +1,284 @@
+{
+  "repo_name": "CLIP",
+  "scenes": [
+    {
+      "id": "title",
+      "kind": "title",
+      "title": "Overview",
+      "narration": "Welcome to CLIP. We explore blog and https in under one minute.",
+      "beats": [
+        {
+          "say": "Welcome to CLIP. We explore blog and https in under one minute.",
+          "caption": "CLIP: blog and https",
+          "focus": "CLIP",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "title",
+        "content": "CLIP\nopenai\nOther",
+        "metadata": {
+          "repo": "CLIP",
+          "owner": "openai",
+          "language": "Other"
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "[[Blog]](https://openai.com/blog/clip/) [[Paper]](https://arxiv.org/abs/2103.00020) [[Model Card]](model-card.md) [[Colab]](https://colab.research.google.com/github/openai/clip/blob/master/notebooks/Interacting_with_CLIP.ipynb)"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "overview",
+      "kind": "overview",
+      "title": "Purpose",
+      "narration": "This project organizes clip and contrastive. You can integrate these components into your developer workflows.",
+      "beats": [
+        {
+          "say": "This project organizes clip and contrastive.",
+          "caption": "Focuses on clip and contrastive",
+          "focus": "purpose",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "You can integrate these components into your developer workflows.",
+          "caption": "Integrates into developer workflows",
+          "focus": "integration",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "overview",
+        "content": "CLIP\n\nCLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. It can b",
+        "metadata": {
+          "points": [
+            "Focuses on clip",
+            "Structured contrastive"
+          ]
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3. We found CLIP matches the performance of the original ResNet50 on ImageNet “zero-shot” without using any of the original 1.28M labeled examples, overcoming several major challenges in computer vision."
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "diagram",
+      "kind": "diagram",
+      "title": "Architecture",
+      "narration": "The architecture is organized around 5 modules connecting clip and import. Execution flows from clip/ init dot py into clip/model dot py.",
+      "beats": [
+        {
+          "say": "The architecture is organized around 5 modules connecting clip and import.",
+          "caption": "Core architecture: 5 modules",
+          "focus": "clip/__init__.py",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "Execution flows from clip/ init dot py into clip/model dot py.",
+          "caption": "Flow: clip/__init__.py to clip/model.py",
+          "focus": "clip/model.py",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "diagram",
+        "content": "clip/__init__.py -> clip/model.py\nclip/__init__.py -> clip/clip.py\nclip/__init__.py -> clip/simple_tokenizer.py\nclip/clip.py -> clip/model.py\nclip/clip.py -> clip/simple_tokenizer.py\nhubconf.py -> clip/clip.py",
+        "metadata": {
+          "nodes": [
+            "clip/__init__.py",
+            "clip/clip.py",
+            "clip/model.py",
+            "clip/simple_tokenizer.py",
+            "hubconf.py"
+          ],
+          "edges": [
+            {
+              "from": "clip/__init__.py",
+              "to": "clip/model.py"
+            },
+            {
+              "from": "clip/__init__.py",
+              "to": "clip/clip.py"
+            },
+            {
+              "from": "clip/__init__.py",
+              "to": "clip/simple_tokenizer.py"
+            },
+            {
+              "from": "clip/clip.py",
+              "to": "clip/model.py"
+            },
+            {
+              "from": "clip/clip.py",
+              "to": "clip/simple_tokenizer.py"
+            },
+            {
+              "from": "hubconf.py",
+              "to": "clip/clip.py"
+            }
+          ]
+        }
+      },
+      "evidence": {
+        "file": "clip/__init__.py",
+        "quote": "from .clip import *"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "code",
+      "kind": "code",
+      "title": "Key Code",
+      "narration": "Let us look at def and available in clip/clip dot py. It provides the primary implementation logic for this module.",
+      "beats": [
+        {
+          "say": "Let us look at def and available in clip/clip dot py.",
+          "caption": "Inspecting available_models in clip/clip.py",
+          "focus": "89",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "It provides the primary implementation logic for this module.",
+          "caption": "Returns the names of available CLIP models",
+          "focus": "91",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "code",
+        "content": "def available_models() -> List[str]:\n    \"\"\"Returns the names of available CLIP models\"\"\"\n    return list(_MODELS.keys())",
+        "metadata": {
+          "file": "clip/clip.py",
+          "symbol": "available_models",
+          "start_line": 89,
+          "end_line": 91
+        }
+      },
+      "evidence": {
+        "file": "clip/clip.py",
+        "quote": "def available_models() -> List[str]:"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "terminal",
+      "kind": "terminal",
+      "title": "Terminal",
+      "narration": "To install and run, execute pip with install in your shell. Run pip install ftfy regex tqdm.",
+      "beats": [
+        {
+          "say": "To install and run, execute pip with install in your shell.",
+          "caption": "Run quickstart command in shell",
+          "focus": "prompt",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "Run pip install ftfy regex tqdm.",
+          "caption": "pip install ftfy regex tqdm",
+          "focus": "command",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "terminal",
+        "content": "$ pip install ftfy regex tqdm",
+        "metadata": {
+          "command": "pip install ftfy regex tqdm"
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "pip install ftfy regex tqdm"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "fit",
+      "kind": "fit",
+      "title": "Pipeline Fit",
+      "narration": "While CLIP focuses on hugging and face, it is not video-specific. This generated video ships with retrieval transcripts, chapters, and index records for video search engines.",
+      "beats": [
+        {
+          "say": "While CLIP focuses on hugging and face, it is not video-specific.",
+          "caption": "Outputs transcript.vtt, chapters.json, and index.jsonl",
+          "focus": "domain",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "This generated video ships with retrieval transcripts, chapters, and index records for video search engines.",
+          "caption": "Delivers structured multimodal assets",
+          "focus": "artifacts",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "fit",
+        "content": "Video Pipeline Fit\nRelevance Score: 0.10\nRelevant terms: clip",
+        "metadata": {
+          "relevance_score": 0.1,
+          "terms": [
+            "clip"
+          ]
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "* [Hugging Face implementation of CLIP](https://huggingface.co/docs/transformers/model_doc/clip): for easier integration with the HF ecosystem"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "recap",
+      "kind": "recap",
+      "title": "Takeaways",
+      "narration": "To recap, CLIP provides structured solutions for clip and png. Next, check out LICENSE to start developing.",
+      "beats": [
+        {
+          "say": "To recap, CLIP provides structured solutions for clip and png.",
+          "caption": "3 key takeaways for developers",
+          "focus": "takeaways",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "Next, check out LICENSE to start developing.",
+          "caption": "Explore next: LICENSE",
+          "focus": "LICENSE",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "recap",
+        "content": "1. Core focus on clip\n2. Structured png workflow\n3. Explored via LICENSE",
+        "metadata": {
+          "takeaways": [
+            "1. Core focus on clip",
+            "2. Structured png workflow",
+            "3. Explored via LICENSE"
+          ],
+          "next_file": "LICENSE"
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "![CLIP](CLIP.png)"
+      },
+      "duration_seconds": 0.0
+    }
+  ]
+}
