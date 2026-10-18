@@ -212,6 +212,9 @@ def generate_index_jsonl(scenes: list[Scene], index_path: Path) -> None:
             for i, beat in enumerate(scene.beats):
                 b_start = round(current_time + (beat.start_seconds or 0.0), 2)
                 b_end = round(current_time + (beat.end_seconds or (beat.start_seconds or 0.0) + 2.0), 2)
+                b_sources = [s.model_dump() for s in beat.sources]
+                s_line = beat.sources[0].start_line if beat.sources else (getattr(scene.evidence, "line", 1) if scene.evidence else 1)
+                e_line = beat.sources[0].end_line if beat.sources else (getattr(scene.evidence, "line", 1) if scene.evidence else 1)
                 record = {
                     "beat_id": f"{scene.id}_{i}",
                     "scene_id": scene.id,
@@ -221,8 +224,11 @@ def generate_index_jsonl(scenes: list[Scene], index_path: Path) -> None:
                     "focus": beat.focus,
                     "start_seconds": b_start,
                     "end_seconds": b_end,
-                    "evidence_file": scene.evidence.file if scene.evidence else "",
-                    "evidence_quote": scene.evidence.quote if scene.evidence else "",
+                    "evidence_file": (beat.sources[0].file if beat.sources else (scene.evidence.file if scene.evidence else "")),
+                    "evidence_quote": (beat.sources[0].text if beat.sources else (scene.evidence.quote if scene.evidence else "")),
+                    "sources": b_sources,
+                    "start_line": s_line,
+                    "end_line": e_line,
                 }
                 f.write(json.dumps(record) + "\n")
             current_time += scene.duration_seconds

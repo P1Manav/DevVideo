@@ -16,7 +16,7 @@ from typing import Any
 
 from PIL import Image
 
-from ..schema import ScriptPlan
+from ..schema import ScriptPlan, is_disallowed_span
 from .report import EvalGate
 
 logger = logging.getLogger(__name__)
@@ -265,12 +265,16 @@ def check_groundedness(
             else:
                 quote = getattr(ev, "quote", "") or getattr(ev, "text", "")
                 if quote:
-                    file_content = repo_files[ev.file]
-                    norm_quote = " ".join(quote.split())
-                    norm_content = " ".join(file_content.split())
-                    if norm_quote not in norm_content:
-                        ungrounded.append(f"{scene.id}: quote not found case-sensitively in {ev.file}")
+                    if is_disallowed_span(quote):
+                        ungrounded.append(f"{scene.id}: disallowed span format '{quote[:30]}'")
                         scene_failed = True
+                    else:
+                        file_content = repo_files[ev.file]
+                        norm_quote = " ".join(quote.split())
+                        norm_content = " ".join(file_content.split())
+                        if norm_quote not in norm_content:
+                            ungrounded.append(f"{scene.id}: quote not found case-sensitively in {ev.file}")
+                            scene_failed = True
 
         if scene_failed:
             continue
@@ -286,14 +290,33 @@ def check_groundedness(
                                 ungrounded.append(f"{b_label}: file '{span.file}' not found in repo")
                                 scene_failed = True
                                 break
-                            file_content = repo_files[span.file]
                             quote = getattr(span, "text", "") or getattr(span, "quote", "")
+                            if is_disallowed_span(quote):
+                                ungrounded.append(f"{b_label}: disallowed span format '{quote[:30]}'")
+                                scene_failed = True
+                                break
+                            file_content = repo_files[span.file]
                             norm_quote = " ".join(quote.split())
                             norm_content = " ".join(file_content.split())
                             if norm_quote not in norm_content:
                                 ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
                                 scene_failed = True
                                 break
+                            file_lines = [l.strip() for l in file_content.splitlines()]
+                            num_lines = max(1, len(file_lines))
+                            if span.start_line > 0 or span.end_line > 0:
+                                if span.start_line < 1 or span.end_line < span.start_line or span.start_line > num_lines:
+                                    ungrounded.append(f"{b_label}: line range {span.start_line}-{span.end_line} outside file boundaries (1-{num_lines}) in {span.file}")
+                                    scene_failed = True
+                                    break
+                                eff_start = max(0, span.start_line - 1)
+                                eff_end = min(num_lines, span.end_line + 1)
+                                cited_slice = file_lines[eff_start:eff_end]
+                                norm_cited = " ".join(" ".join(cited_slice).split())
+                                if norm_quote not in norm_cited and norm_cited not in norm_quote:
+                                    ungrounded.append(f"{b_label}: quoted text does not appear in cited line range {span.start_line}-{span.end_line} in {span.file}")
+                                    scene_failed = True
+                                    break
                     continue
 
                 if not b.sources:
@@ -308,8 +331,13 @@ def check_groundedness(
                         scene_failed = True
                         break
 
-                    file_content = repo_files[span.file]
                     quote = getattr(span, "text", "") or getattr(span, "quote", "")
+                    if is_disallowed_span(quote):
+                        ungrounded.append(f"{b_label}: disallowed span format '{quote[:30]}'")
+                        scene_failed = True
+                        break
+
+                    file_content = repo_files[span.file]
                     file_lines = [l.strip() for l in file_content.splitlines()]
                     is_full_line = quote.strip() in file_lines
                     if len(quote) < 20 and not is_full_line:
@@ -323,6 +351,21 @@ def check_groundedness(
                         ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
                         scene_failed = True
                         break
+
+                    num_lines = max(1, len(file_lines))
+                    if span.start_line > 0 or span.end_line > 0:
+                        if span.start_line < 1 or span.end_line < span.start_line or span.start_line > num_lines:
+                            ungrounded.append(f"{b_label}: line range {span.start_line}-{span.end_line} outside file boundaries (1-{num_lines}) in {span.file}")
+                            scene_failed = True
+                            break
+                        eff_start = max(0, span.start_line - 1)
+                        eff_end = min(num_lines, span.end_line + 1)
+                        cited_slice = file_lines[eff_start:eff_end]
+                        norm_cited = " ".join(" ".join(cited_slice).split())
+                        if norm_quote not in norm_cited and norm_cited not in norm_quote:
+                            ungrounded.append(f"{b_label}: quoted text does not appear in cited line range {span.start_line}-{span.end_line} in {span.file}")
+                            scene_failed = True
+                            break
 
                     span_tokens.update(_extract_content_tokens(quote))
                     span_tokens.update(_extract_content_tokens(file_content))

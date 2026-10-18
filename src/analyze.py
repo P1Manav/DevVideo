@@ -169,6 +169,7 @@ class ImportEdge(BaseModel):
     source: str
     target: str
     raw_line: str = ""
+    line_number: int = 1
 
 
 class RepoFacts(BaseModel):
@@ -490,7 +491,7 @@ def extract_python_facts(
                 for f in all_py_files:
                     if f.startswith(mod_name) or mod_name in f:
                         if f != rel_path:
-                            edges.append(ImportEdge(source=rel_path, target=f, raw_line=raw_l))
+                            edges.append(ImportEdge(source=rel_path, target=f, raw_line=raw_l, line_number=node.lineno))
         elif isinstance(node, ast.ImportFrom):
             if node.module:
                 mod_name = node.module.replace(".", "/")
@@ -498,7 +499,7 @@ def extract_python_facts(
                 for f in all_py_files:
                     if f.startswith(mod_name) or mod_name in f:
                         if f != rel_path:
-                            edges.append(ImportEdge(source=rel_path, target=f, raw_line=raw_l))
+                            edges.append(ImportEdge(source=rel_path, target=f, raw_line=raw_l, line_number=node.lineno))
 
     # 2. Top-level functions & classes
     for node in tree.body:
@@ -611,10 +612,11 @@ def extract_js_facts(
         for m in pat.finditer(code):
             target_rel = m.group(1)
             norm = os.path.normpath(os.path.join(dir_name, target_rel)).replace("\\", "/")
+            line_no = code[:m.start()].count("\n") + 1
             for known in all_js_files:
                 if known == norm or known.startswith(norm + ".") or norm in known:
                     if known != rel_path:
-                        edges.append(ImportEdge(source=rel_path, target=known, raw_line=m.group(0)))
+                        edges.append(ImportEdge(source=rel_path, target=known, raw_line=m.group(0), line_number=line_no))
 
     for m in re.finditer(r"(?:function|class|const|let|var)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code):
         name = m.group(1)

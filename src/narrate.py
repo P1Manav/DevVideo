@@ -170,6 +170,32 @@ def convert_docstring_to_verb_phrase(doc: str) -> str:
     return f"provides {first[0].lower() + first[1:]}"
 
 
+def find_exact_line_range(raw_lines: list[str], text: str) -> tuple[int, int]:
+    """Find exact 1-indexed (start_line, end_line) where text appears in raw_lines."""
+    norm_t = " ".join(text.split()).strip()
+    if not norm_t or not raw_lines:
+        return 1, 1
+    # 1. Exact or substring match within a single line
+    for idx, l in enumerate(raw_lines):
+        norm_l = " ".join(l.split()).strip()
+        if norm_t == norm_l or norm_t in norm_l:
+            return idx + 1, idx + 1
+    # 2. Multi-line window match (2 to 10 lines)
+    for i in range(len(raw_lines)):
+        accum = []
+        for j in range(i, min(i + 10, len(raw_lines))):
+            accum.append(raw_lines[j].strip())
+            joined = " ".join(accum)
+            if norm_t in joined:
+                return i + 1, j + 1
+    # 3. First line containing significant words
+    for idx, l in enumerate(raw_lines):
+        for w in text.split():
+            if len(w) > 4 and w.lower() in l.lower():
+                return idx + 1, idx + 1
+    return 1, 1
+
+
 def compress_sentence(sentence: str, max_words: int = 22) -> list[str]:
     """
     R1: Compress a sentence into 1 or 2 complete grammatical beats without truncation.
@@ -422,10 +448,11 @@ class ExplainerWriter:
         if len(caption_text.split()) > 10:
             caption_text = " ".join(caption_text.split()[:10])
 
+        sp, ep = find_exact_line_range(self.facts.readme.raw_lines, tagline)
         source_span = SourceSpan(
             file=self.readme_file,
-            start_line=1,
-            end_line=10,
+            start_line=sp,
+            end_line=ep,
             text=tagline,
         )
 
@@ -551,17 +578,20 @@ class ExplainerWriter:
             say3 = f"It provides {feat}."
             caption3 = f"Features: {feat[:35]}"
             matching_l = next((l for l in self.facts.readme.raw_lines if feat.lower() in l.lower()), self.facts.readme.tagline or feat)
-            feat_span = SourceSpan(file=self.readme_file, start_line=1, end_line=30, text=matching_l)
+            sp, ep = find_exact_line_range(self.facts.readme.raw_lines, matching_l)
+            feat_span = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=matching_l)
         elif self.facts.cli_flags:
             flags_str = " and ".join(self.facts.cli_flags[:2])
             say3 = f"It provides command line flags {flags_str}."
             caption3 = f"Flags: {flags_str}"
-            feat_span = SourceSpan(file=self.readme_file, start_line=1, end_line=30, text=self.facts.readme.tagline or self.facts.repo_name)
+            txt = self.facts.readme.tagline or (self.facts.readme.raw_lines[0] if self.facts.readme.raw_lines else self.facts.repo_name)
+            sp, ep = find_exact_line_range(self.facts.readme.raw_lines, txt)
+            feat_span = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=txt)
         else:
             # Ensure span quote is a full line from raw_lines or >= 20 chars
             fallback_line = next((l for l in self.facts.readme.raw_lines if len(l.strip()) >= 20), (self.facts.readme.raw_lines[0] if self.facts.readme.raw_lines else self.facts.repo_name))
-            fb_idx = next((i + 1 for i, l in enumerate(self.facts.readme.raw_lines) if fallback_line in l), 1)
-            feat_span = SourceSpan(file=self.readme_file, start_line=fb_idx, end_line=fb_idx, text=fallback_line)
+            sp, ep = find_exact_line_range(self.facts.readme.raw_lines, fallback_line)
+            feat_span = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=fallback_line)
 
             quote_w = [w for w in re.findall(r"\b[A-Za-z]{4,}\b", fallback_line) if w.lower() not in STOPWORDS]
             if len(quote_w) >= 3:
@@ -613,7 +643,7 @@ class ExplainerWriter:
             say1 = f"{mod1} {role1}."
             caption1 = f"{mod1}: {role1[:35]}"
             m_doc_obj = next((m for m in self.facts.module_docstrings if m.file == mod1), None)
-            span1 = m_doc_obj.span if m_doc_obj else SourceSpan(file=mod1, start_line=1, end_line=10, text=m_doc1)
+            span1 = m_doc_obj.span if m_doc_obj else SourceSpan(file=mod1, start_line=1, end_line=1, text=m_doc1)
         elif sym1:
             say1 = f"{mod1} defines {sym1.name}."
             caption1 = f"{mod1}: defines {sym1.name}"
@@ -621,11 +651,13 @@ class ExplainerWriter:
         elif edge1:
             say1 = f"{mod1} imports from {edge1.target}."
             caption1 = f"{mod1}: imports {edge1.target}"
-            span1 = SourceSpan(file=mod1, start_line=1, end_line=5, text=edge1.raw_line)
+            span1 = SourceSpan(file=mod1, start_line=edge1.line_number, end_line=edge1.line_number, text=edge1.raw_line)
         else:
             say1 = f"{mod1} provides module code for {self.facts.repo_name}."
             caption1 = f"{mod1}: module code"
-            span1 = SourceSpan(file=self.readme_file, start_line=1, end_line=10, text=self.facts.readme.title or self.facts.repo_name)
+            txt = self.facts.readme.title or self.facts.repo_name
+            sp, ep = find_exact_line_range(self.facts.readme.raw_lines, txt)
+            span1 = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=txt)
 
         beats.append(Beat(
             say=tts_normalize_speech(say1),
@@ -647,7 +679,7 @@ class ExplainerWriter:
                 say2 = f"It connects to {mod2}, which {role2}."
                 caption2 = f"{mod2}: {role2[:35]}"
                 m_doc_obj2 = next((m for m in self.facts.module_docstrings if m.file == mod2), None)
-                span2 = m_doc_obj2.span if m_doc_obj2 else SourceSpan(file=mod2, start_line=1, end_line=10, text=m_doc2)
+                span2 = m_doc_obj2.span if m_doc_obj2 else SourceSpan(file=mod2, start_line=1, end_line=1, text=m_doc2)
             elif sym2:
                 say2 = f"It connects to {mod2}, which defines {sym2.name}."
                 caption2 = f"{mod2}: defines {sym2.name}"
@@ -655,11 +687,13 @@ class ExplainerWriter:
             elif edge2:
                 say2 = f"It connects to {mod2}, which imports {edge2.target}."
                 caption2 = f"{mod2}: imports {edge2.target}"
-                span2 = SourceSpan(file=mod2, start_line=1, end_line=5, text=edge2.raw_line)
+                span2 = SourceSpan(file=mod2, start_line=edge2.line_number, end_line=edge2.line_number, text=edge2.raw_line)
             else:
                 say2 = f"It connects to {mod2} in {self.facts.repo_name}."
                 caption2 = f"{mod2}: connection"
-                span2 = SourceSpan(file=self.readme_file, start_line=1, end_line=10, text=self.facts.readme.title or self.facts.repo_name)
+                txt = self.facts.readme.title or self.facts.repo_name
+                sp, ep = find_exact_line_range(self.facts.readme.raw_lines, txt)
+                span2 = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=txt)
 
             beats.append(Beat(
                 say=tts_normalize_speech(say2),
@@ -852,14 +886,17 @@ class ExplainerWriter:
             spans = []
             for st in evidenced_stages[:2]:
                 quote = self.facts.pipeline_stages[st]
-                spans.append(SourceSpan(file=self.readme_file, start_line=1, end_line=40, text=quote))
+                sp, ep = find_exact_line_range(self.facts.readme.raw_lines, quote)
+                spans.append(SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=quote))
             caption = f"Pipeline Stages: {stages_list}"
             focus = "pipeline"
         else:
             # R3 honest not-video-specific line
             say = f"{self.facts.repo_name} is not video-specific, but this video ships a transcript, chapters, and a retrieval index."
             caption = f"Deliverables: transcript, chapters, and retrieval index"
-            spans = [SourceSpan(file=self.readme_file, start_line=1, end_line=10, text=self.facts.readme.title or self.facts.repo_name)]
+            txt = self.facts.readme.title or self.facts.repo_name
+            sp, ep = find_exact_line_range(self.facts.readme.raw_lines, txt)
+            spans = [SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=txt)]
             focus = "artifacts"
 
         beat = Beat(
@@ -895,7 +932,8 @@ class ExplainerWriter:
         say2 = f"To dive in, explore {self.facts.repo_name} starting with {entry_f}."
         caption2 = f"Next Step: {entry_f}"
 
-        span1 = SourceSpan(file=self.readme_file, start_line=1, end_line=15, text=tagline)
+        sp1, ep1 = find_exact_line_range(self.facts.readme.raw_lines, tagline)
+        span1 = SourceSpan(file=self.readme_file, start_line=sp1, end_line=ep1, text=tagline)
 
         # Grounded source span for entry file
         m_doc = next((m for m in self.facts.module_docstrings if m.file == entry_f), None)
@@ -906,7 +944,8 @@ class ExplainerWriter:
             if sym:
                 span2 = SourceSpan(file=entry_f, start_line=sym.start_line, end_line=sym.end_line, text=sym.def_line or sym.name)
             else:
-                span2 = SourceSpan(file=self.readme_file, start_line=1, end_line=10, text=tagline)
+                sp2, ep2 = find_exact_line_range(self.facts.readme.raw_lines, tagline)
+                span2 = SourceSpan(file=self.readme_file, start_line=sp2, end_line=ep2, text=tagline)
 
 
         beats = [

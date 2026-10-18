@@ -159,6 +159,66 @@ class TestProvenanceGroundedness:
         assert not gate.passed
         assert "grounded content tokens" in gate.details
 
+    def test_disallowed_span_fails(self):
+        beat1 = Beat(
+            say="VidSearch indexes videos with CLIP and Faiss.",
+            caption="VidSearch indexing",
+            sources=[
+                SourceSpan(
+                    file="README.md",
+                    start_line=1,
+                    end_line=1,
+                    text="[![Build](https://img.shields.io/badge/build-passing-green)](https://github.com)",
+                )
+            ],
+        )
+        scene = Scene(id="overview", kind="overview", beats=[beat1])
+        script = ScriptPlan(repo_name="vidsearch", scenes=[scene, _dummy_recap()])
+
+        gate = check_groundedness(script, REPO_FILES, facts=DummyFacts())
+        assert not gate.passed
+        assert "disallowed span format" in gate.details
+
+    def test_line_range_outside_file_fails(self):
+        beat1 = Beat(
+            say="VidSearch indexes videos with CLIP and Faiss.",
+            caption="VidSearch indexing",
+            sources=[
+                SourceSpan(
+                    file="README.md",
+                    start_line=50,
+                    end_line=55,
+                    text="VidSearch indexes videos with CLIP and Faiss for natural language query search.",
+                )
+            ],
+        )
+        scene = Scene(id="overview", kind="overview", beats=[beat1])
+        script = ScriptPlan(repo_name="vidsearch", scenes=[scene, _dummy_recap()])
+
+        gate = check_groundedness(script, REPO_FILES, facts=DummyFacts())
+        assert not gate.passed
+        assert "outside file boundaries" in gate.details
+
+    def test_quote_not_in_cited_line_range_fails(self):
+        beat1 = Beat(
+            say="VidSearch indexes videos with CLIP and Faiss.",
+            caption="VidSearch indexing",
+            sources=[
+                SourceSpan(
+                    file="vidsearch/cli.py",
+                    start_line=5,
+                    end_line=6,
+                    text="import argparse",
+                )
+            ],
+        )
+        scene = Scene(id="overview", kind="overview", beats=[beat1])
+        script = ScriptPlan(repo_name="vidsearch", scenes=[scene, _dummy_recap()])
+
+        gate = check_groundedness(script, REPO_FILES, facts=DummyFacts())
+        assert not gate.passed
+        assert "quoted text does not appear in cited line range" in gate.details
+
 
 class TestNarrationQualityGate:
     def test_clean_narration_passes(self):

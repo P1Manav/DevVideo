@@ -87,13 +87,36 @@ class SourceSpan(BaseModel):
     text: str = ""
 
 
+def is_disallowed_span(text: str) -> bool:
+    """Disallow spans whose text is a link row, badge, heading-only, table row or an HTML tag line."""
+    t = text.strip()
+    if not t:
+        return True
+    # Badge or markdown image [![...](...)] or ![...](...)
+    if re.match(r"^\[?!\[.*?\]\(.*?\)\]?", t):
+        return True
+    # Link row (multiple [[Link]](...) or [Link](...))
+    if re.match(r"^(?:\[+[^\]]+\]+\([^)]+\)\s*)+$", t):
+        return True
+    # Heading only (# Heading)
+    if re.match(r"^#{1,6}\s+", t):
+        return True
+    # Table row (| col1 | col2 |)
+    if t.startswith("|") and t.endswith("|"):
+        return True
+    # HTML tag line (<div>, <br>, <h1>...</h1>)
+    if re.match(r"^<[^>]+>$", t) or re.match(r"^<[a-z0-9_-]+(\s+[^>]*?)?>.*?</[a-z0-9_-]+>$", t, re.I):
+        return True
+    return False
+
+
 class Beat(BaseModel):
     """
     One rhythm beat within a scene:
     - say: Spoken text (phonetically normalized for TTS)
     - caption: On-screen caption (short sentence, <= 22 words)
     - focus: Visual element ID, line range 'a-b', command index, or bullet index
-    - sources: Provenance citations justifying this beat
+    - sources: Provenance citations justifying this beat (deduped, max 3)
     """
     say: str
     caption: str
@@ -101,6 +124,20 @@ class Beat(BaseModel):
     sources: list[SourceSpan] = Field(default_factory=list)
     start_seconds: float = 0.0
     end_seconds: float = 0.0
+
+    @model_validator(mode="after")
+    def deduplicate_and_cap_sources(self) -> Beat:
+        seen = set()
+        deduped = []
+        for s in self.sources:
+            key = (s.file, s.start_line, s.end_line, s.text.strip())
+            if key not in seen:
+                seen.add(key)
+                deduped.append(s)
+            if len(deduped) == 3:
+                break
+        self.sources = deduped
+        return self
 
 
 class OnScreen(BaseModel):
