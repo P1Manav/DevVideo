@@ -122,6 +122,22 @@ class ExplainerWriter:
         if len(scenes) < 3:
             scenes = self._fill_sparse_scenes(scenes)
 
+        # Strict duration budgeting: target video duration 44s - 52s (at calibrated 120 WPM speech)
+        while True:
+            total_words = sum(len(s.narration.split()) for s in scenes)
+            if (total_words / 120.0) * 60.0 <= 52.0:
+                break
+            trimmed = False
+            for target_id in ("fit", "overview", "terminal", "code"):
+                sc = next((s for s in scenes if s.id == target_id and len(s.beats) > 1), None)
+                if sc:
+                    sc.beats.pop()
+                    sc.narration = " ".join(b.say for b in sc.beats)
+                    trimmed = True
+                    break
+            if not trimmed:
+                break
+
         # Validate no banned buzzwords; reject draft if any found
         for s in scenes:
             for b in s.beats:
@@ -149,8 +165,11 @@ class ExplainerWriter:
             top_lang = next(iter(self.facts.languages_by_bytes.keys()), "software")
             tagline = f"{self.facts.repo_name} is a {top_lang} project."
 
-        tagline_trimmed = trim_to_clause(tagline, max_words=14)
-        say = f"{title}. {tagline_trimmed}"
+        tagline_trimmed = trim_to_clause(tagline, max_words=10)
+        if tagline_trimmed.lower().startswith(title.lower()):
+            say = tagline_trimmed
+        else:
+            say = f"{title}. {tagline_trimmed}"
         caption = f"{title}: {trim_to_clause(tagline, max_words=8)}"
 
         sources: list[SourceSpan] = []
@@ -194,10 +213,10 @@ class ExplainerWriter:
         desc_sents = [s for s in self.facts.readme.description_sentences if not check_for_banned_phrases(s.text)]
         features = [f for f in self.facts.readme.features if not check_for_banned_phrases(f)]
 
-        # Beat 1: What it is / core capability
-        if desc_sents:
-            s0 = desc_sents[0]
-            txt = trim_to_clause(s0.text, max_words=18)
+        # Beat 1: Core capability (use distinct sentence from title if available)
+        s0 = desc_sents[1] if len(desc_sents) > 1 else (desc_sents[0] if desc_sents else None)
+        if s0:
+            txt = trim_to_clause(s0.text, max_words=12)
             b1 = Beat(
                 say=normalize_speech(txt),
                 caption=_clean_caption(s0.text),
@@ -213,27 +232,10 @@ class ExplainerWriter:
             )
             beats.append(b1)
 
-        # Beat 2: What it does
-        if len(desc_sents) > 1:
-            s1 = desc_sents[1]
-            txt = trim_to_clause(s1.text, max_words=18)
-            b2 = Beat(
-                say=normalize_speech(txt),
-                caption=_clean_caption(s1.text),
-                focus="capabilities",
-                sources=[
-                    SourceSpan(
-                        file=self.readme_file,
-                        start_line=s1.start_line,
-                        end_line=s1.end_line,
-                        text=s1.text,
-                    )
-                ],
-            )
-            beats.append(b2)
-        elif features:
+        # Beat 2: Features or dependencies
+        if features:
             f0 = features[0]
-            txt = f"It provides {trim_to_clause(f0, max_words=14)}"
+            txt = f"It provides {trim_to_clause(f0, max_words=10)}"
             b2 = Beat(
                 say=normalize_speech(txt),
                 caption=_clean_caption(f0),
@@ -248,30 +250,11 @@ class ExplainerWriter:
                 ],
             )
             beats.append(b2)
-
-        # Beat 3: What you get / key dependencies with roles
-        if len(features) > 1:
-            f1 = features[1]
-            txt = f"You get {trim_to_clause(f1, max_words=14)}"
-            b3 = Beat(
-                say=normalize_speech(txt),
-                caption=_clean_caption(f1),
-                focus="highlights",
-                sources=[
-                    SourceSpan(
-                        file=self.readme_file,
-                        start_line=1,
-                        end_line=30,
-                        text=f1,
-                    )
-                ],
-            )
-            beats.append(b3)
         elif self.facts.dependency_roles:
             dep_items = list(self.facts.dependency_roles.items())[:2]
             parts = [f"{dep} for {role}" for dep, role in dep_items]
             txt = f"It builds on {' and '.join(parts)}."
-            b3 = Beat(
+            b2 = Beat(
                 say=normalize_speech(txt),
                 caption=f"Dependencies: {', '.join(d for d, _ in dep_items)}",
                 focus="dependencies",
@@ -284,7 +267,8 @@ class ExplainerWriter:
                     )
                 ],
             )
-            beats.append(b3)
+            beats.append(b2)
+
 
 
         if not beats:
@@ -320,9 +304,11 @@ class ExplainerWriter:
 
         beats: list[Beat] = []
         m0 = modules[0]
-        # Find docstring for m0
+        # Find docstring or import or symbol for m0
         m0_doc = next((md for md in self.facts.module_docstrings if md.file == m0), None)
         sym0 = next((s for s in self.facts.top_symbols if s.file == m0 and s.docstring), None)
+        edge0 = next((e for e in self.facts.import_graph if (e.source == m0 or e.target == m0) and e.raw_line), None)
+        sym0_any = next((s for s in self.facts.top_symbols if s.file == m0), None)
 
         desc0 = ""
         source0 = None
@@ -332,15 +318,21 @@ class ExplainerWriter:
         elif sym0 and sym0.docstring:
             desc0 = sym0.docstring
             source0 = sym0.docstring_span
+        elif edge0 and edge0.raw_line:
+            desc0 = "handles execution flow"
+            source0 = SourceSpan(file=edge0.source, start_line=1, end_line=1, text=edge0.raw_line)
+        elif sym0_any and sym0_any.def_line:
+            desc0 = f"defines {sym0_any.name}"
+            source0 = SourceSpan(file=m0, start_line=sym0_any.start_line, end_line=sym0_any.start_line, text=sym0_any.def_line)
         else:
             desc0 = "handles execution flow"
-            source0 = SourceSpan(file=m0, start_line=1, end_line=5, text=m0)
+            source0 = SourceSpan(file=self.readme_file, start_line=1, end_line=1, text=self.facts.readme.title or self.facts.repo_name)
 
-        say1 = f"{m0} {trim_to_clause(desc0, max_words=12)}"
+        say1 = f"{m0} {trim_to_clause(desc0, max_words=8)}"
         beats.append(
             Beat(
                 say=normalize_speech(say1),
-                caption=f"{m0}: {trim_to_clause(desc0, max_words=8)}",
+                caption=f"{m0}: {trim_to_clause(desc0, max_words=6)}",
                 focus=m0,
                 sources=[source0],
             )
@@ -350,6 +342,9 @@ class ExplainerWriter:
             m1 = modules[1]
             m1_doc = next((md for md in self.facts.module_docstrings if md.file == m1), None)
             sym1 = next((s for s in self.facts.top_symbols if s.file == m1 and s.docstring), None)
+            edge1 = next((e for e in self.facts.import_graph if (e.source == m1 or e.target == m1) and e.raw_line), None)
+            sym1_any = next((s for s in self.facts.top_symbols if s.file == m1), None)
+
             desc1 = ""
             source1 = None
             if m1_doc and m1_doc.docstring:
@@ -358,15 +353,21 @@ class ExplainerWriter:
             elif sym1 and sym1.docstring:
                 desc1 = sym1.docstring
                 source1 = sym1.docstring_span
+            elif edge1 and edge1.raw_line:
+                desc1 = "provides core functionality"
+                source1 = SourceSpan(file=edge1.source, start_line=1, end_line=1, text=edge1.raw_line)
+            elif sym1_any and sym1_any.def_line:
+                desc1 = f"implements {sym1_any.name}"
+                source1 = SourceSpan(file=m1, start_line=sym1_any.start_line, end_line=sym1_any.start_line, text=sym1_any.def_line)
             else:
                 desc1 = "provides supporting logic"
-                source1 = SourceSpan(file=m1, start_line=1, end_line=5, text=m1)
+                source1 = SourceSpan(file=self.readme_file, start_line=1, end_line=1, text=self.facts.readme.title or self.facts.repo_name)
 
-            say2 = f"It hands off to {m1}, which {trim_to_clause(desc1, max_words=10)}"
+            say2 = f"It hands off to {m1}, which {trim_to_clause(desc1, max_words=8)}"
             beats.append(
                 Beat(
                     say=normalize_speech(say2),
-                    caption=f"{m1}: {trim_to_clause(desc1, max_words=8)}",
+                    caption=f"{m1}: {trim_to_clause(desc1, max_words=6)}",
                     focus=m1,
                     sources=[source1],
                 )
@@ -395,7 +396,7 @@ class ExplainerWriter:
         chunk1_end = min(sym.start_line + max(2, total_lines // 2), sym.end_line)
         chunk1_text = "\n".join(code_lines[: max(2, len(code_lines) // 2)])
         doc_desc = sym.docstring if sym.docstring else f"implements {sym.name}"
-        say1 = f"In {sym.file}, {sym.name} {trim_to_clause(doc_desc, max_words=12)}"
+        say1 = f"In {sym.file}, {sym.name} {trim_to_clause(doc_desc, max_words=8)}"
         beats.append(
             Beat(
                 say=normalize_speech(say1),
@@ -421,8 +422,8 @@ class ExplainerWriter:
             chunk2_start = sym.start_line
 
         if sym.calls:
-            call_names = sym.calls[:3]
-            say2 = f"It calls {', '.join(call_names[:-1]) + ' and ' + call_names[-1] if len(call_names) > 1 else call_names[0]} to coordinate operations."
+            call_names = sym.calls[:2]
+            say2 = f"It calls {', '.join(call_names[:-1]) + ' and ' + call_names[-1] if len(call_names) > 1 else call_names[0]}."
             cap2 = f"Calls: {', '.join(call_names)}"
         elif self.facts.cli_flag_details:
             flag_names = [f.flag.lstrip("-") for f in self.facts.cli_flag_details[:4]]
@@ -498,9 +499,12 @@ class ExplainerWriter:
             flag_help = ""
             for fl in self.facts.cli_flag_details:
                 if fl.flag in run_cmd and fl.help:
-                    flag_help = f", where {fl.flag.lstrip('-')} sets {fl.help.lower().rstrip('.')}"
+                    clean_h = trim_to_clause(fl.help.lower(), max_words=4).rstrip(".")
+                    flag_help = f" with {fl.flag.lstrip('-')} for {clean_h}"
                     break
-            say2 = f"Execute {run_cmd}{flag_help}."
+            run_cmd_parts = run_cmd.split()
+            short_cmd = " ".join(run_cmd_parts[:3]) if len(run_cmd_parts) > 3 else run_cmd
+            say2 = f"Execute {short_cmd}{flag_help}."
             beats.append(
                 Beat(
                     say=normalize_speech(say2),
@@ -648,8 +652,8 @@ class ExplainerWriter:
                 clean_tagline = clean_sents[0].text
         if not clean_tagline or check_for_banned_phrases(clean_tagline):
             clean_tagline = f"capabilities for {self.facts.repo_name}"
-        tagline_phrase = trim_to_clause(clean_tagline, max_words=10)
-        say1 = f"To recap, {self.facts.repo_name} provides {tagline_phrase}."
+        tagline_phrase = trim_to_clause(clean_tagline, max_words=6)
+        say1 = f"To recap, {self.facts.repo_name} provides {tagline_phrase}"
 
         beat1 = Beat(
             say=normalize_speech(say1),
@@ -665,7 +669,7 @@ class ExplainerWriter:
             ],
         )
 
-        say2 = f"Start with {start_file} to inspect the primary implementation."
+        say2 = f"Start with {start_file} to explore the code."
         beat2 = Beat(
             say=normalize_speech(say2),
             caption=f"Start with {start_file}",

@@ -69,7 +69,7 @@ class TestClaudeLLM:
         # Verify command construction
         call_args = mock_run.call_args
         cmd = call_args[0][0]
-        assert cmd[0] == "claude"
+        assert cmd[0] in ("claude", "/usr/bin/claude")
         assert cmd[1] == "-p"
         assert call_args[1].get("input") == "test prompt"
 

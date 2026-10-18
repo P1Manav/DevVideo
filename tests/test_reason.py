@@ -150,7 +150,7 @@ class TestReasoningLoop:
         )
 
         assert planner_used == "fallback_good"
-        assert "always_bad failed verification" in fallback_reason
+        assert "always_bad" in fallback_reason and "rejected" in fallback_reason
         assert plan.scenes[0].evidence.file == "README.md"
 
     def test_all_planners_fail_produces_degraded_plan(self, sample_facts, repo_files):

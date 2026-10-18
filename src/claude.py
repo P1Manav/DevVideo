@@ -42,7 +42,8 @@ class ClaudeLLM:
 
     def __init__(self, timeout: int = 180) -> None:
         self.timeout = timeout
-        if not shutil.which("claude"):
+        self.binary = shutil.which("claude")
+        if not self.binary:
             raise ClaudeMissingBinaryError(
                 "Claude CLI binary not found on PATH. Install it or use offline backend."
             )
@@ -52,7 +53,8 @@ class ClaudeLLM:
         Execute `claude -p` via subprocess, passing prompt through stdin.
         Avoids Windows argv command-line length limits.
         """
-        cmd = ["claude", "-p"]
+        cmd = [self.binary, "-p"]
+
 
         env = os.environ.copy()
         # VERIFY: Copy CLAUDE_KEY to ANTHROPIC_API_KEY only if unset (unverified live)

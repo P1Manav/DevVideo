@@ -40,7 +40,8 @@ from .assemble import (
 )
 from .evals import EvalReport, run_eval
 from .ingest import RepoContent, ingest_github, ingest_local
-from .llm import LLMBackend, MockLLM, get_llm_backend
+from .llm import select_planners
+
 from .reason import reason_and_plan
 from .render import PlaywrightRenderer, render_scene_to_png
 from .repair import RepairManager
@@ -164,32 +165,16 @@ def run_pipeline(
         t0 = time.time()
         logger.info(f"Stage 3 [Plan]: Planning script with LLM={req_llm}")
 
-        if req_llm == "mock":
-            mock_llm = MockLLM()
-            mock_llm.force_valid()
-            raw_resp = mock_llm.complete("")
-            script = ScriptPlan(**json.loads(raw_resp))
-            llm_used = "mock"
-        else:
-            from .plan import ClaudePlanner, OfflinePlanner
-            if req_llm == "claude":
-                planners = [ClaudePlanner(), OfflinePlanner()]
-            elif req_llm == "auto":
-                has_claude = shutil.which("claude") is not None
-                has_key = bool(os.environ.get("CLAUDE_KEY"))
-                if has_claude and has_key:
-                    planners = [ClaudePlanner(), OfflinePlanner()]
-                else:
-                    planners = [OfflinePlanner()]
-            else:
-                planners = [OfflinePlanner()]
+        planners, llm_requested, initial_fallback = select_planners(req_llm)
+        script, revision_history, llm_used, llm_fallback_reason = reason_and_plan(
+            facts=facts,
+            repo_files=repo.files,
+            planners=planners,
+            max_duration=budget_seconds,
+        )
+        if not llm_fallback_reason and initial_fallback:
+            llm_fallback_reason = initial_fallback
 
-            script, revision_history, llm_used, llm_fallback_reason = reason_and_plan(
-                facts=facts,
-                repo_files=repo.files,
-                planners=planners,
-                max_duration=budget_seconds,
-            )
 
         result.script = script
         script_path = output_dir / "scenes.json"
