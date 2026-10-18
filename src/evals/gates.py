@@ -837,16 +837,19 @@ def check_motion_gate(
                 threshold=f">= {min_changes} changes",
                 details="Video contains insufficient frames for motion evaluation",
             )
-        import numpy as np
+        from PIL import Image, ImageChops, ImageStat
         changes: list[float] = []
         prev = None
         for i in range(n_frames):
-            buf = np.frombuffer(raw[i * frame_size : (i + 1) * frame_size], dtype=np.uint8)
+            frame_bytes = raw[i * frame_size : (i + 1) * frame_size]
+            img = Image.frombytes("L", (160, 55), frame_bytes)
             if prev is not None:
-                diff = float(np.mean(np.abs(buf.astype(float) - prev.astype(float))))
+                diff_img = ImageChops.difference(img, prev)
+                stat = ImageStat.Stat(diff_img)
+                diff = float(stat.mean[0])
                 if diff > min_diff:
                     changes.append(i / 5.0)
-            prev = buf
+            prev = img
 
         total_duration = n_frames / 5.0
         gaps = []

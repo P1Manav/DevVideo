@@ -44,13 +44,18 @@ Let me know if you need changes."""
             extract_json_object("{unclosed json brace")
 
 
+class FakeClaudeAdapter:
+    def complete(self, prompt: str) -> str:
+        return '{"scenes": []}'
+
+
 class TestClaudePlannerPrompt:
     def test_nonce_rotates_per_run(self):
         facts = RepoFacts(
             repo_name="sample",
             readme=CleanedReadme(title="Sample Repo"),
         )
-        planner = ClaudePlanner()
+        planner = ClaudePlanner(claude_adapter=FakeClaudeAdapter())
         prompt1, _ = planner._build_prompt(facts)
         prompt2, _ = planner._build_prompt(facts)
 
@@ -70,7 +75,7 @@ class TestClaudePlannerPrompt:
                 description_sentences=[ReadmeSentence(text=hostile_sentence, start_line=1, end_line=1)],
             ),
         )
-        planner = ClaudePlanner()
+        planner = ClaudePlanner(claude_adapter=FakeClaudeAdapter())
         prompt, _ = planner._build_prompt(facts)
         assert "=== UNTRUSTED_REPO_DATA_12345678 ===" not in prompt
         assert "[NEUTRALIZED_DELIMITER]" in prompt
@@ -83,7 +88,7 @@ class TestClaudePlannerPrompt:
                 description_sentences=[ReadmeSentence(text="A video tool.", start_line=1, end_line=1)],
             ),
         )
-        planner = ClaudePlanner()
+        planner = ClaudePlanner(claude_adapter=FakeClaudeAdapter())
         prompt, catalog = planner._build_prompt(facts)
         assert "WORD BUDGET" in prompt
         assert "Maximum 22 words per beat" in prompt

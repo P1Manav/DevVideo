@@ -15,6 +15,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.mark.must_run
+@pytest.mark.requires_voice
 def test_e2e_vidsearch_py(tmp_path):
     """
     Must run in CI: pipeline on vidsearch_py with default backends.

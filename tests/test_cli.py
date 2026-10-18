@@ -82,11 +82,22 @@ class TestCLI:
 
     def test_run_yaml_independent_ffmpeg_espeak(self):
         """Assert run.yaml handles espeak-ng and ffmpeg in independent commands to prevent short-circuiting."""
-        import yaml
         run_yaml_path = Path(__file__).resolve().parent.parent / "run.yaml"
         assert run_yaml_path.exists()
-        data = yaml.safe_load(run_yaml_path.read_text(encoding="utf-8"))
-        setup_cmds = data.get("setup_commands", [])
+        content = run_yaml_path.read_text(encoding="utf-8")
+        setup_cmds = []
+        in_setup = False
+        for line in content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("setup_commands:"):
+                in_setup = True
+                continue
+            if in_setup:
+                if stripped.startswith("-"):
+                    cmd = stripped.lstrip("- ").strip("\"'")
+                    setup_cmds.append(cmd)
+                elif stripped and not stripped.startswith("#"):
+                    break
 
         ffmpeg_cmds = [cmd for cmd in setup_cmds if "ffmpeg" in cmd]
         espeak_cmds = [cmd for cmd in setup_cmds if "espeak-ng" in cmd]
