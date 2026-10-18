@@ -82,8 +82,8 @@ class SourceSpan(BaseModel):
     - text: Verbatim text slice
     """
     file: str = Field(..., min_length=1)
-    start_line: int = 1
-    end_line: int = 1
+    start_line: int = 0
+    end_line: int = 0
     text: str = ""
 
 
@@ -201,8 +201,8 @@ class Scene(BaseModel):
                 srcs.append(
                     SourceSpan(
                         file=self.evidence.file,
-                        start_line=1,
-                        end_line=1,
+                        start_line=0,
+                        end_line=0,
                         text=self.evidence.quote or self.narration,
                     )
                 )
@@ -225,8 +225,8 @@ class Scene(BaseModel):
                         beat.sources.append(
                             SourceSpan(
                                 file=self.evidence.file,
-                                start_line=1,
-                                end_line=1,
+                                start_line=0,
+                                end_line=0,
                                 text=self.evidence.quote,
                             )
                         )

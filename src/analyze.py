@@ -398,7 +398,7 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
         code_fences=fences,
         install_commands=install_commands,
         usage_commands=usage_commands,
-        raw_lines=valid_raw_lines,
+        raw_lines=raw_lines,
     )
 
 

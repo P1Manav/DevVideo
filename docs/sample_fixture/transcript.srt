@@ -1,0 +1,47 @@
+1
+00:00:00,250 --> 00:00:03,280
+CLIP: clip_real_like provides Python functionality
+
+2
+00:00:03,530 --> 00:00:09,790
+What it is: CLIP , Contrastive Language-Image Pre-Training
+
+3
+00:00:09,790 --> 00:00:15,430
+Capabilities: It can be instructed in natural
+
+4
+00:00:15,430 --> 00:00:17,770
+Capabilities: image text pairs
+
+5
+00:00:18,020 --> 00:00:23,460
+clip/clip.py: provides main interface functions for loading
+
+6
+00:00:23,460 --> 00:00:30,140
+clip/model.py: provides neural network model architecture defining
+
+7
+00:00:30,390 --> 00:00:35,710
+load: load a CLIP model
+
+8
+00:00:35,710 --> 00:00:38,370
+Calls: build_model
+
+9
+00:00:38,620 --> 00:00:42,090
+Install: pip install ftfy regex tqdm
+
+10
+00:00:42,090 --> 00:00:44,460
+Run: import clip
+
+11
+00:00:44,710 --> 00:00:48,510
+Summary: clip_real_like provides open source software tools
+
+12
+00:00:48,510 --> 00:00:52,970
+Next Step: inspect clip/clip.py

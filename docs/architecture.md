@@ -75,14 +75,21 @@ graph TD
 
 ---
 
-## 7. Runnable Hard Evaluation Gates (`src/evals/`)
-Nine automated hard gates enforce production quality:
-1. `duration`: Final MP4 <= 60.0s.
+## 7. Runnable Hard Evaluation Gates (`src/evals/registry.py`, `src/evals/gates.py`)
+Thirteen automated hard gates and one voice presence check enforce production quality:
+1. `duration`: Final container MP4 duration <= 60.0s via ffprobe.
 2. `av_sync`: Scene drift <= 0.15s, container stream drift <= 0.30s.
-3. `audio_audible`: Mean volume > -50 dB (proves voice is present).
-4. `groundedness`: 100% of scenes cite files with quote >= 20 chars and share >= 2 content tokens.
-5. `code_verbatim`: On-screen code is an exact verbatim line range.
-6. `command_validity`: All shell commands exist in repository fences (N/A if 0 commands).
-7. `secret_leaks`: 0 secrets detected via independent regex scanning.
-8. `no_overflow`: 0 dropped or overflowing lines across all rendered frames.
-9. `frames_valid`: 100% of sampled frames are non-flat.
+3. `audio_audible`: Mean volume > -35.0 dB via ffmpeg volumedetect (proves voice is audible).
+4. `groundedness`: 100% of scenes/beats cite verified source spans with >= 60% token grounding.
+5. `code_verbatim`: On-screen code is an exact verbatim line range from cited source.
+6. `rendered_code_matches`: Preserves 100% of characters, lines, and indentation in rendered output.
+7. `command_validity`: All shell commands exist in repository code fences (N/A if 0 commands).
+8. `secret_leaks`: 0 credentials detected via independent multi-pattern regex scanner.
+9. `no_overflow`: 0 dropped lines or bounding box clipping across DOM and Pillow frames.
+10. `frames_valid`: 100% of sampled video frames contain non-flat visual content.
+11. `narration_quality`: 0 violations of style rules (no banned buzzwords, no dangling endings, verbs in every beat).
+12. `specificity`: 100% of beats name concrete repository-specific identifiers or symbols.
+13. `onscreen_text_integrity`: 0 dangling stopwords, 0 mid-word splits, and fully grounded bullet points.
+14. `motion`: Content region motion events sampled at 5 fps (>= 24 changes, max idle gap <= 5.0s).
+15. `voice_present`: Verified speech engine present (non-blocking for headless environments).
+

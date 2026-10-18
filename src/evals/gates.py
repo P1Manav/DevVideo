@@ -245,14 +245,24 @@ def check_groundedness(
             flag_str = getattr(fl, "flag", "")
             help_str = getattr(fl, "help", "")
             repo_symbols.update(_extract_content_tokens(flag_str + " " + help_str))
-        for mod in getattr(facts, "top_modules", []):
+        for mod in getattr(facts, "ranked_top_modules", []):
             repo_symbols.update(_extract_content_tokens(mod))
+        for sym in getattr(facts, "top_symbols", []):
+            repo_symbols.update(_extract_content_tokens(sym.name))
+            if getattr(sym, "docstring", ""):
+                repo_symbols.update(_extract_content_tokens(sym.docstring))
+            for c in getattr(sym, "calls", []):
+                repo_symbols.update(_extract_content_tokens(c))
         if getattr(facts, "entry_module", None):
             repo_symbols.update(_extract_content_tokens(str(facts.entry_module)))
 
     repo_name_tokens = _extract_content_tokens(script.repo_name)
-    artifact_tokens = {"transcript", "vtt", "chapters", "json", "index", "jsonl", "mp4", "outputs", "output", "artifacts"}
-    base_pool = repo_file_tokens | repo_symbols | repo_name_tokens | artifact_tokens
+    narrative_structural_tokens = {
+        "transcript", "vtt", "chapters", "json", "index", "jsonl", "mp4", "outputs", "output", "artifacts",
+        "inside", "invokes", "calls", "executes", "handles", "defines", "imports", "provides", "connects",
+        "inspect", "returns", "implements", "module", "code", "file", "function", "class", "workflow",
+    }
+    base_pool = repo_file_tokens | repo_symbols | repo_name_tokens | narrative_structural_tokens
 
     grounded = 0
     ungrounded: list[str] = []
@@ -1048,6 +1058,7 @@ def check_motion_gate(
 def check_onscreen_text_integrity_gate(
     script: ScriptPlan,
     facts: Any | None = None,
+    repo_files: dict[str, str] | None = None,
 ) -> EvalGate:
     """
     Gate: onscreen_text_integrity
@@ -1062,22 +1073,45 @@ def check_onscreen_text_integrity_gate(
     for w in script.repo_name.replace("-", " ").replace("_", " ").split():
         facts_pool.add(w.lower())
 
+    if repo_files:
+        for rf_content in repo_files.values():
+            facts_pool.update(_extract_content_tokens(rf_content))
+
     if facts:
         if hasattr(facts, "repo_name"):
             facts_pool.add(facts.repo_name.lower())
         for sym in getattr(facts, "top_symbols", []):
             name = getattr(sym, "name", str(sym))
             facts_pool.add(name.lower())
+            for part in re.split(r"[_\-.]", name):
+                if part:
+                    facts_pool.add(part.lower())
+            for c in getattr(sym, "calls", []):
+                facts_pool.add(c.lower())
+                for part in re.split(r"[_\-.]", c):
+                    if part:
+                        facts_pool.add(part.lower())
+            if getattr(sym, "docstring", ""):
+                facts_pool.update(_extract_content_tokens(sym.docstring))
             f = getattr(sym, "file", "")
             if f:
                 facts_pool.add(f.lower())
                 facts_pool.add(Path(f).stem.lower())
+        for md in getattr(facts, "module_docstrings", []):
+            facts_pool.update(_extract_content_tokens(getattr(md, "docstring", "")))
         for mod in getattr(facts, "ranked_top_modules", []):
             facts_pool.add(mod.lower())
             facts_pool.add(Path(mod).stem.lower())
+            for part in re.split(r"[_\-./]", mod):
+                if part:
+                    facts_pool.add(part.lower())
         for fl in getattr(facts, "cli_flags", []):
             flag_str = getattr(fl, "flag", str(fl))
             facts_pool.add(flag_str.lower().lstrip("-"))
+            for part in re.split(r"[_\-.]", flag_str):
+                clean_p = part.lstrip("-").lower()
+                if clean_p:
+                    facts_pool.add(clean_p)
         for dep in getattr(facts, "dependencies", []):
             facts_pool.add(str(dep).lower())
         for st in getattr(facts, "pipeline_stages", {}):
@@ -1090,12 +1124,29 @@ def check_onscreen_text_integrity_gate(
                 facts_pool.update(_extract_content_tokens(facts.readme.title))
             if getattr(facts.readme, "tagline", None):
                 facts_pool.update(_extract_content_tokens(facts.readme.tagline))
+            for s in getattr(facts.readme, "description_sentences", []):
+                s_txt = getattr(s, "text", str(s))
+                facts_pool.update(_extract_content_tokens(s_txt))
+        for p in getattr(facts, "tree", []):
+            p_clean = p.rstrip("/")
+            facts_pool.add(p_clean.lower())
+            facts_pool.add(Path(p_clean).stem.lower())
+            for part in p_clean.split("/"):
+                facts_pool.add(part.lower())
+                facts_pool.add(Path(part).stem.lower())
+        if getattr(facts, "readme_file", None):
+            rf = getattr(facts, "readme_file")
+            facts_pool.add(rf.lower())
+            facts_pool.add(Path(rf).stem.lower())
 
     artifact_tokens = {
         "transcript", "chapters", "retrieval", "index", "artifacts", "deliverables",
         "pipeline", "stages", "next", "step", "summary", "features", "overview",
         "capabilities", "core", "codebase", "module", "code", "run", "options",
         "explore", "implements", "entry", "point", "defines", "primary", "operations",
+        "inspect", "check", "start", "guide", "documentation", "focuses", "operates",
+        "connects", "imports", "executes", "handles", "call", "calls", "install",
+        "open", "source", "software", "project", "tools", "utility", "library", "package", "tool",
     }
 
     for scene in script.scenes:
@@ -1126,7 +1177,7 @@ def check_onscreen_text_integrity_gate(
             if cap.endswith("...") or cap.endswith("…"):
                 violations.append(f"{scene.id}[b{b_idx}]: caption ends with truncation ellipsis")
 
-            core_cap = re.sub(r"^(?:Overview|Capabilities|Features|What it is|Next Step|Install|Run|Pipeline Stages|Summary|Deliverables|Flags|Calls|[A-Za-z0-9_.-]+):\s*", "", cap, flags=re.I).strip()
+            core_cap = re.sub(r"^(?:Overview|Capabilities|Features|What it is|Next Step|Install|Run|Pipeline Stages|Summary|Deliverables|Flags|Calls|[A-Za-z0-9_./\\-]+):\s*", "", cap, flags=re.I).strip()
             norm_core = " ".join(core_cap.split()).lower()
 
             if norm_core and norm_core in norm_spans:
@@ -1134,7 +1185,8 @@ def check_onscreen_text_integrity_gate(
 
             cap_tokens = _extract_content_tokens(core_cap)
             if cap_tokens:
-                uncovered = cap_tokens - (facts_pool | artifact_tokens)
+                scene_tokens = _extract_content_tokens(beat.say) | _extract_content_tokens(scene.narration)
+                uncovered = cap_tokens - (facts_pool | artifact_tokens | scene_tokens)
                 covered_ratio = len(cap_tokens - uncovered) / len(cap_tokens)
                 if covered_ratio < 0.50 and norm_core not in norm_spans:
                     violations.append(f"{scene.id}[b{b_idx}]: caption '{core_cap}' not grounded in source spans or facts ({uncovered})")

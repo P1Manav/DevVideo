@@ -1,0 +1,334 @@
+{
+  "repo_name": "clip_real_like",
+  "scenes": [
+    {
+      "id": "title",
+      "kind": "title",
+      "title": "Overview",
+      "narration": "clip real like provides Python functionality.",
+      "beats": [
+        {
+          "say": "clip real like provides Python functionality.",
+          "caption": "CLIP: clip_real_like provides Python functionality",
+          "focus": "clip_real_like",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
+        }
+      ],
+      "on_screen": {
+        "type": "title",
+        "content": "clip_real_like\n\nPython",
+        "metadata": {
+          "repo": "clip_real_like",
+          "owner": null,
+          "language": "Python",
+          "tagline": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+      },
+      "duration_seconds": 4.5
+    },
+    {
+      "id": "overview",
+      "kind": "overview",
+      "title": "Purpose",
+      "narration": "CLIP , Contrastive Language-Image Pre-Training, is a neural network trained on a variety of image, text pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image. It provides image, text, and pairs.",
+      "beats": [
+        {
+          "say": "CLIP , Contrastive Language-Image Pre-Training, is a neural network trained on a variety of image, text pairs.",
+          "caption": "What it is: CLIP , Contrastive Language-Image Pre-Training",
+          "focus": "concept",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        },
+        {
+          "say": "It can be instructed in natural language to predict the most relevant text snippet, given an image.",
+          "caption": "Capabilities: It can be instructed in natural",
+          "focus": "operation",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 5,
+              "end_line": 5,
+              "text": "It can be instructed in natural language to predict the most relevant text snippet, given an image, without being directly optimized for the task."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        },
+        {
+          "say": "It provides image, text, and pairs.",
+          "caption": "Capabilities: image text pairs",
+          "focus": "features",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        }
+      ],
+      "on_screen": {
+        "type": "overview",
+        "content": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.\nIt can be instructed in natural language to predict the most relevant text snippet, given an image, without being directly optimized for the task.\nCLIP jointly trains an image encoder and a text encoder to predict the correct pairings of a batch of (image, text) training examples.",
+        "metadata": {
+          "points": [
+            "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.",
+            "It can be instructed in natural language to predict the most relevant text snippet, given an image, without being directly optimized for the task.",
+            "CLIP jointly trains an image encoder and a text encoder to predict the correct pairings of a batch of (image, text) training examples."
+          ]
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+      },
+      "duration_seconds": 15.0
+    },
+    {
+      "id": "diagram",
+      "kind": "diagram",
+      "title": "Architecture",
+      "narration": "clip/clip dot py provides main interface functions for loading CLIP models and tokenizing text queries. It connects to clip/model dot py, which provides neural network model architecture defining the image and text encoders.",
+      "beats": [
+        {
+          "say": "clip/clip dot py provides main interface functions for loading CLIP models and tokenizing text queries.",
+          "caption": "clip/clip.py: provides main interface functions for loading",
+          "focus": "clip/clip.py",
+          "sources": [
+            {
+              "file": "clip/clip.py",
+              "start_line": 1,
+              "end_line": 5,
+              "text": "Main interface functions for loading CLIP models and tokenizing text queries."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        },
+        {
+          "say": "It connects to clip/model dot py, which provides neural network model architecture defining the image and text encoders.",
+          "caption": "clip/model.py: provides neural network model architecture defining",
+          "focus": "clip/model.py",
+          "sources": [
+            {
+              "file": "clip/model.py",
+              "start_line": 1,
+              "end_line": 5,
+              "text": "Neural network model architecture defining the image and text encoders."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        }
+      ],
+      "on_screen": {
+        "type": "diagram",
+        "content": "clip/clip.py -> clip/model.py\nclip/clip.py -> clip/simple_tokenizer.py",
+        "metadata": {
+          "nodes": [
+            "clip/clip.py",
+            "clip/model.py",
+            "clip/simple_tokenizer.py"
+          ],
+          "edges": [
+            {
+              "from": "clip/clip.py",
+              "to": "clip/model.py"
+            },
+            {
+              "from": "clip/clip.py",
+              "to": "clip/simple_tokenizer.py"
+            }
+          ]
+        }
+      },
+      "evidence": {
+        "file": "clip/clip.py",
+        "quote": "Main interface functions for loading CLIP models and tokenizing text queries."
+      },
+      "duration_seconds": 10.0
+    },
+    {
+      "id": "code",
+      "kind": "code",
+      "title": "Implementation",
+      "narration": "In clip/clip dot py, load load a CLIP model and its visual preprocessing transform. Inside load, it invokes build model.",
+      "beats": [
+        {
+          "say": "In clip/clip dot py, load load a CLIP model and its visual preprocessing transform.",
+          "caption": "load: load a CLIP model",
+          "focus": "load",
+          "sources": [
+            {
+              "file": "clip/clip.py",
+              "start_line": 16,
+              "end_line": 20,
+              "text": "Load a CLIP model and its visual preprocessing transform."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        },
+        {
+          "say": "Inside load, it invokes build model.",
+          "caption": "Calls: build_model",
+          "focus": "execution",
+          "sources": [
+            {
+              "file": "clip/clip.py",
+              "start_line": 16,
+              "end_line": 23,
+              "text": "model = build_model(name, device=device)"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        }
+      ],
+      "on_screen": {
+        "type": "code",
+        "content": "def load(name: str = \"ViT-B/32\", device: str = \"cpu\"):\n    \"\"\"\n    Load a CLIP model and its visual preprocessing transform.\n    Returns the loaded neural network model and torchvision preprocessing pipeline.\n    \"\"\"\n    model = build_model(name, device=device)\n    preprocess = lambda img: img\n    return model, preprocess",
+        "metadata": {
+          "file": "clip/clip.py",
+          "symbol": "load",
+          "start_line": 16,
+          "end_line": 23
+        }
+      },
+      "evidence": {
+        "file": "clip/clip.py",
+        "quote": "Load a CLIP model and its visual preprocessing transform."
+      },
+      "duration_seconds": 10.0
+    },
+    {
+      "id": "terminal",
+      "kind": "terminal",
+      "title": "Quickstart",
+      "narration": "Run pip install ftfy regex tqdm to install. Then execute import clip.",
+      "beats": [
+        {
+          "say": "Run pip install ftfy regex tqdm to install.",
+          "caption": "Install: pip install ftfy regex tqdm",
+          "focus": "install",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 16,
+              "end_line": 16,
+              "text": "pip install ftfy regex tqdm"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
+        },
+        {
+          "say": "Then execute import clip.",
+          "caption": "Run: import clip",
+          "focus": "run",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 22,
+              "end_line": 22,
+              "text": "import clip"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
+        }
+      ],
+      "on_screen": {
+        "type": "terminal",
+        "content": "$ pip install ftfy regex tqdm",
+        "metadata": {
+          "command": "pip install ftfy regex tqdm"
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "pip install ftfy regex tqdm"
+      },
+      "duration_seconds": 9.0
+    },
+    {
+      "id": "recap",
+      "kind": "recap",
+      "title": "Conclusion",
+      "narration": "In short, clip real like provides open source software tools. To dive in, explore clip real like starting with clip/clip dot py.",
+      "beats": [
+        {
+          "say": "In short, clip real like provides open source software tools.",
+          "caption": "Summary: clip_real_like provides open source software tools",
+          "focus": "recap",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
+        },
+        {
+          "say": "To dive in, explore clip real like starting with clip/clip dot py.",
+          "caption": "Next Step: inspect clip/clip.py",
+          "focus": "next_steps",
+          "sources": [
+            {
+              "file": "clip/clip.py",
+              "start_line": 1,
+              "end_line": 5,
+              "text": "Main interface functions for loading CLIP models and tokenizing text queries."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
+        }
+      ],
+      "on_screen": {
+        "type": "recap",
+        "content": "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network\n2. Primary module clip/clip.py\n3. Run conda install --yes -c pytorch pytorch=1.7.1",
+        "metadata": {
+          "takeaways": [
+            "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network",
+            "2. Primary module clip/clip.py",
+            "3. Run conda install --yes -c pytorch pytorch=1.7.1"
+          ],
+          "next_file": "clip/clip.py"
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+      },
+      "duration_seconds": 9.0
+    }
+  ]
+}

@@ -2,18 +2,18 @@
 
 --- 1. Subtitle & Cue Alignment Check ---
 Found 11 WebVTT cues.
-Total video duration: 55.898s
+Total video duration: 53.835s
 All cues sit strictly inside video duration: True
 Narration vs VTT alignment verified.
 
 --- 2. Sampled Video Frame Visual Validation ---
-Extracting 8 frames at timestamps: [6.21, 12.42, 18.63, 24.84, 31.05, 37.27, 43.48, 49.69]
-Timestamp 06.21s -> frame_00.png: 1280x720, distinct colors=10668 (valid=True)
-Timestamp 12.42s -> frame_01.png: 1280x720, distinct colors=8488 (valid=True)
-Timestamp 18.63s -> frame_02.png: 1280x720, distinct colors=8515 (valid=True)
-Timestamp 24.84s -> frame_03.png: 1280x720, distinct colors=8698 (valid=True)
-Timestamp 31.05s -> frame_04.png: 1280x720, distinct colors=22055 (valid=True)
-Timestamp 37.27s -> frame_05.png: 1280x720, distinct colors=8617 (valid=True)
-Timestamp 43.48s -> frame_06.png: 1280x720, distinct colors=8466 (valid=True)
-Timestamp 49.69s -> frame_07.png: 1280x720, distinct colors=12622 (valid=True)
+Extracting 8 frames at timestamps: [5.98, 11.96, 17.95, 23.93, 29.91, 35.89, 41.87, 47.85]
+Timestamp 05.98s -> frame_00.png: 1280x720, distinct colors=12179 (valid=True)
+Timestamp 11.96s -> frame_01.png: 1280x720, distinct colors=15678 (valid=True)
+Timestamp 17.95s -> frame_02.png: 1280x720, distinct colors=19185 (valid=True)
+Timestamp 23.93s -> frame_03.png: 1280x720, distinct colors=9977 (valid=True)
+Timestamp 29.91s -> frame_04.png: 1280x720, distinct colors=12918 (valid=True)
+Timestamp 35.89s -> frame_05.png: 1280x720, distinct colors=23869 (valid=True)
+Timestamp 41.87s -> frame_06.png: 1280x720, distinct colors=12146 (valid=True)
+Timestamp 47.85s -> frame_07.png: 1280x720, distinct colors=10580 (valid=True)
 Frame validation result: 8/8 frames valid and non-flat.

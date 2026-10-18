@@ -24,3 +24,13 @@ _assemble_tmp/
 !docs/sample/manifest.json
 !docs/sample/scenes.json
 
+!docs/sample_fixture/video.mp4
+!docs/sample_fixture/thumbnail.png
+!docs/sample_fixture/transcript.vtt
+!docs/sample_fixture/transcript.srt
+!docs/sample_fixture/chapters.json
+!docs/sample_fixture/index.jsonl
+!docs/sample_fixture/eval_report.json
+!docs/sample_fixture/manifest.json
+!docs/sample_fixture/scenes.json
+

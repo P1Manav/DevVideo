@@ -5,105 +5,157 @@
       "id": "title",
       "kind": "title",
       "title": "Overview",
-      "narration": "Welcome to vidsearch py. We explore vidsearch and lightweight in under one minute.",
+      "narration": "VidSearch is a lightweight multimodal video understanding and retrieval engine.",
       "beats": [
         {
-          "say": "Welcome to vidsearch py. We explore vidsearch and lightweight in under one minute.",
-          "caption": "vidsearch_py: vidsearch and lightweight",
+          "say": "VidSearch is a lightweight multimodal video understanding and retrieval engine.",
+          "caption": "VidSearch: VidSearch is a lightweight multimodal video understanding and retrieval",
           "focus": "vidsearch_py",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 9,
+              "end_line": 9,
+              "text": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
         }
       ],
       "on_screen": {
         "type": "title",
-        "content": "vidsearch_py\nlocal\nMarkdown",
+        "content": "vidsearch_py\n\nPython",
         "metadata": {
           "repo": "vidsearch_py",
-          "owner": "local",
-          "language": "Markdown"
+          "owner": null,
+          "language": "Python",
+          "tagline": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine. It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index, and searches video segments using natural language queries."
+        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
       },
-      "duration_seconds": 0.0
+      "duration_seconds": 4.5
     },
     {
       "id": "overview",
       "kind": "overview",
       "title": "Purpose",
-      "narration": "This project organizes install and dependencies. You can integrate these components into your developer workflows.",
+      "narration": "VidSearch is a lightweight multimodal video understanding and retrieval engine. It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index. It provides Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.",
       "beats": [
         {
-          "say": "This project organizes install and dependencies.",
-          "caption": "Focuses on install and dependencies",
-          "focus": "purpose",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "VidSearch is a lightweight multimodal video understanding and retrieval engine.",
+          "caption": "What it is: VidSearch is a lightweight multimodal video",
+          "focus": "concept",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 9,
+              "end_line": 9,
+              "text": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
         },
         {
-          "say": "You can integrate these components into your developer workflows.",
-          "caption": "Integrates into developer workflows",
-          "focus": "integration",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index.",
+          "caption": "Capabilities: It extracts key frames from video",
+          "focus": "operation",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 9,
+              "end_line": 9,
+              "text": "It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index, and searches video segments using natural language queries."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
+        },
+        {
+          "say": "It provides Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.",
+          "caption": "Features: Frame Extraction: vidsearch.frames samples video keyframes",
+          "focus": "features",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 27,
+              "end_line": 27,
+              "text": "1. **Frame Extraction**: `vidsearch.frames` samples video keyframes with ffmpeg."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
         }
       ],
       "on_screen": {
         "type": "overview",
-        "content": "vidsearch_py\n\nInstall the dependencies:",
+        "content": "Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.\nEmbedding: vidsearch.embed generates normalized vector embeddings.\nIndexing: vidsearch.index writes vectors into a Faiss cosine index.",
         "metadata": {
           "points": [
-            "Focuses on install",
-            "Structured dependencies"
+            "Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.",
+            "Embedding: vidsearch.embed generates normalized vector embeddings.",
+            "Indexing: vidsearch.index writes vectors into a Faiss cosine index."
           ]
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "Install the dependencies:"
+        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
       },
-      "duration_seconds": 0.0
+      "duration_seconds": 15.0
     },
     {
       "id": "diagram",
       "kind": "diagram",
       "title": "Architecture",
-      "narration": "The architecture is organized around 5 modules connecting vidsearch and cli. Execution flows from vidsearch/ main dot py into vidsearch/cli dot py.",
+      "narration": "vidsearch/cli dot py is the command-line interface for VidSearch video retrieval engine. It connects to vidsearch/search dot py, which query vector index and rank matching video segments.",
       "beats": [
         {
-          "say": "The architecture is organized around 5 modules connecting vidsearch and cli.",
-          "caption": "Core architecture: 5 modules",
-          "focus": "vidsearch/__main__.py",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "vidsearch/cli dot py is the command-line interface for VidSearch video retrieval engine.",
+          "caption": "vidsearch/cli.py: is the command-line interface for VidSearch",
+          "focus": "vidsearch/cli.py",
+          "sources": [
+            {
+              "file": "vidsearch/cli.py",
+              "start_line": 1,
+              "end_line": 5,
+              "text": "Command-line interface for VidSearch video retrieval engine."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
         },
         {
-          "say": "Execution flows from vidsearch/ main dot py into vidsearch/cli dot py.",
-          "caption": "Flow: vidsearch/__main__.py to vidsearch/cli.py",
-          "focus": "vidsearch/cli.py",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "It connects to vidsearch/search dot py, which query vector index and rank matching video segments.",
+          "caption": "vidsearch/search.py: query vector index and rank matching",
+          "focus": "vidsearch/search.py",
+          "sources": [
+            {
+              "file": "vidsearch/search.py",
+              "start_line": 1,
+              "end_line": 5,
+              "text": "Query vector index and rank matching video segments."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
         }
       ],
       "on_screen": {
         "type": "diagram",
-        "content": "vidsearch/__main__.py -> vidsearch/cli.py\nvidsearch/cli.py -> vidsearch/search.py\nvidsearch/embed.py -> vidsearch/frames.py\nvidsearch/search.py -> vidsearch/embed.py",
+        "content": "vidsearch/cli.py -> vidsearch/search.py\nvidsearch/embed.py -> vidsearch/frames.py\nvidsearch/search.py -> vidsearch/embed.py",
         "metadata": {
           "nodes": [
-            "vidsearch/__main__.py",
             "vidsearch/cli.py",
+            "vidsearch/search.py",
             "vidsearch/embed.py",
-            "vidsearch/frames.py",
-            "vidsearch/search.py"
+            "vidsearch/frames.py"
           ],
           "edges": [
-            {
-              "from": "vidsearch/__main__.py",
-              "to": "vidsearch/cli.py"
-            },
             {
               "from": "vidsearch/cli.py",
               "to": "vidsearch/search.py"
@@ -120,67 +172,99 @@
         }
       },
       "evidence": {
-        "file": "vidsearch/__main__.py",
-        "quote": "from vidsearch.cli import main"
+        "file": "vidsearch/cli.py",
+        "quote": "Command-line interface for VidSearch video retrieval engine."
       },
-      "duration_seconds": 0.0
+      "duration_seconds": 10.0
     },
     {
       "id": "code",
       "kind": "code",
-      "title": "Key Code",
-      "narration": "Let us look at def and parse in vidsearch/cli dot py. It provides the primary implementation logic for this module.",
+      "title": "Implementation",
+      "narration": "In vidsearch/cli dot py, main run CLI search execution. Inside main, it invokes parse args and search video index.",
       "beats": [
         {
-          "say": "Let us look at def and parse in vidsearch/cli dot py.",
-          "caption": "Inspecting parse_args in vidsearch/cli.py",
-          "focus": "7",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "In vidsearch/cli dot py, main run CLI search execution.",
+          "caption": "main: run CLI search execution",
+          "focus": "main",
+          "sources": [
+            {
+              "file": "vidsearch/cli.py",
+              "start_line": 17,
+              "end_line": 21,
+              "text": "Run CLI search execution."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
         },
         {
-          "say": "It provides the primary implementation logic for this module.",
-          "caption": "Parse CLI flags for indexing and querying videos.",
-          "focus": "14",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "Inside main, it invokes parse args and search video index.",
+          "caption": "Calls: parse_args and search_video_index",
+          "focus": "execution",
+          "sources": [
+            {
+              "file": "vidsearch/cli.py",
+              "start_line": 17,
+              "end_line": 22,
+              "text": "args = parse_args()"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.0
         }
       ],
       "on_screen": {
         "type": "code",
-        "content": "def parse_args():\n    \"\"\"Parse CLI flags for indexing and querying videos.\"\"\"\n    parser = argparse.ArgumentParser(description=\"VidSearch CLI query tool\")\n    parser.add_argument(\"--query\", type=str, required=True, help=\"Natural language search query\")\n    parser.add_argument(\"--index\", type=str, default=\"index.faiss\", help=\"Path to Faiss vector index\")\n    parser.add_argument(\"--fps\", type=float, default=1.0, help=\"Frames per second sampling rate\")\n    parser.add_argument(\"--top-k\", type=int, default=5, help=\"Number of top video segments to return\")\n    return parser.parse_args()",
+        "content": "def main():\n    \"\"\"Run CLI search execution.\"\"\"\n    args = parse_args()\n    results = search_video_index(args.query, index_path=args.index, top_k=args.top_k)\n    for rank, (timestamp, score) in enumerate(results, start=1):\n        print(f\"[{rank}] Match at {timestamp:.2f}s (score: {score:.3f})\")",
         "metadata": {
           "file": "vidsearch/cli.py",
-          "symbol": "parse_args",
-          "start_line": 7,
-          "end_line": 14
+          "symbol": "main",
+          "start_line": 17,
+          "end_line": 22
         }
       },
       "evidence": {
         "file": "vidsearch/cli.py",
-        "quote": "def parse_args():"
+        "quote": "Run CLI search execution."
       },
-      "duration_seconds": 0.0
+      "duration_seconds": 10.0
     },
     {
       "id": "terminal",
       "kind": "terminal",
-      "title": "Terminal",
-      "narration": "To install and run, execute pip with install in your shell. Run pip install -r requirements dot txt.",
+      "title": "Quickstart",
+      "narration": "Run pip install -r requirements dot txt to install. Next, execute the quickstart command to run the tool.",
       "beats": [
         {
-          "say": "To install and run, execute pip with install in your shell.",
-          "caption": "Run quickstart command in shell",
-          "focus": "prompt",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "Run pip install -r requirements dot txt to install.",
+          "caption": "Install: pip install -r requirements.txt",
+          "focus": "install",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 16,
+              "end_line": 16,
+              "text": "pip install -r requirements.txt"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
         },
         {
-          "say": "Run pip install -r requirements dot txt.",
-          "caption": "pip install -r requirements.txt",
-          "focus": "command",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "Next, execute the quickstart command to run the tool.",
+          "caption": "Run: python -m vidsearch.cli --query \"sunset",
+          "focus": "run",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 22,
+              "end_line": 22,
+              "text": "python -m vidsearch.cli --query \"sunset over ocean\" --index index.faiss --fps 1.0"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
         }
       ],
       "on_screen": {
@@ -194,95 +278,62 @@
         "file": "README.md",
         "quote": "pip install -r requirements.txt"
       },
-      "duration_seconds": 0.0
-    },
-    {
-      "id": "fit",
-      "kind": "fit",
-      "title": "Pipeline Fit",
-      "narration": "In video retrieval pipelines, this project utilizes vidsearch and lightweight. It powers multimodal indexing and querying pipelines.",
-      "beats": [
-        {
-          "say": "In video retrieval pipelines, this project utilizes vidsearch and lightweight.",
-          "caption": "Powers video pipelines: clips, embedding, embeddings",
-          "focus": "domain",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
-        },
-        {
-          "say": "It powers multimodal indexing and querying pipelines.",
-          "caption": "Delivers structured multimodal assets",
-          "focus": "artifacts",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
-        }
-      ],
-      "on_screen": {
-        "type": "fit",
-        "content": "Video Pipeline Fit\nRelevance Score: 1.00\nRelevant terms: clips, embedding, embeddings, faiss, ffmpeg, frame, frames, index, multimodal, retrieval, vector, vectors, video",
-        "metadata": {
-          "relevance_score": 1.0,
-          "terms": [
-            "clips",
-            "embedding",
-            "embeddings",
-            "faiss",
-            "ffmpeg",
-            "frame",
-            "frames",
-            "index",
-            "multimodal",
-            "retrieval",
-            "vector",
-            "vectors",
-            "video"
-          ]
-        }
-      },
-      "evidence": {
-        "file": "README.md",
-        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine. It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index, and searches video segments using natural language queries."
-      },
-      "duration_seconds": 0.0
+      "duration_seconds": 9.0
     },
     {
       "id": "recap",
       "kind": "recap",
-      "title": "Takeaways",
-      "narration": "To recap, vidsearch py provides structured solutions for pip and install. Next, check out README dot md to start developing.",
+      "title": "Conclusion",
+      "narration": "In short, VidSearch is a lightweight multimodal video understanding and retrieval engine. To dive in, explore vidsearch py starting with vidsearch/ main dot py.",
       "beats": [
         {
-          "say": "To recap, vidsearch py provides structured solutions for pip and install.",
-          "caption": "3 key takeaways for developers",
-          "focus": "takeaways",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "In short, VidSearch is a lightweight multimodal video understanding and retrieval engine.",
+          "caption": "Summary: VidSearch is a lightweight multimodal video",
+          "focus": "recap",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 9,
+              "end_line": 9,
+              "text": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
         },
         {
-          "say": "Next, check out README dot md to start developing.",
-          "caption": "Explore next: README.md",
-          "focus": "README.md",
-          "start_seconds": 0.0,
-          "end_seconds": 0.0
+          "say": "To dive in, explore vidsearch py starting with vidsearch/ main dot py.",
+          "caption": "Next Step: inspect vidsearch/__main__.py",
+          "focus": "next_steps",
+          "sources": [
+            {
+              "file": "vidsearch/__main__.py",
+              "start_line": 1,
+              "end_line": 1,
+              "text": "from vidsearch.cli import main"
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 4.5
         }
       ],
       "on_screen": {
         "type": "recap",
-        "content": "1. Core focus on pip\n2. Structured install workflow\n3. Explored via README.md",
+        "content": "1. VidSearch is a lightweight multimodal video understanding\n2. Entry point vidsearch/__main__.py\n3. Run pip install -r requirements.txt",
         "metadata": {
           "takeaways": [
-            "1. Core focus on pip",
-            "2. Structured install workflow",
-            "3. Explored via README.md"
+            "1. VidSearch is a lightweight multimodal video understanding",
+            "2. Entry point vidsearch/__main__.py",
+            "3. Run pip install -r requirements.txt"
           ],
-          "next_file": "README.md"
+          "next_file": "vidsearch/__main__.py"
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "pip install -r requirements.txt"
+        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
       },
-      "duration_seconds": 0.0
+      "duration_seconds": 9.0
     }
   ]
 }

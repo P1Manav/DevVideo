@@ -17,11 +17,22 @@ DevVideo implements a strict 7-stage linear pipeline reinforced by bounded verif
 7. **Companion Outputs & Search Demo**: Emits synchronized WebVTT/SRT subtitles, chapter markers, video thumbnails, and `index.jsonl` retrieval records queryable via `tools/search_demo.py` (a pure-Python TF-IDF retrieval tool).
 
 ## Why the Verification Loop & Hard Gates Matter
-LLMs and heuristic planners are inherently prone to subtle grounding errors, hallucinations, and formatting drift. DevVideo treats video generation as an engineering process governed by 9 runnable hard gates:
-- **Duration & A/V Sync**: Enforces final MP4 <= 60s and stream drift <= 0.3s.
-- **Audible Voice**: Uses ffmpeg `volumedetect` (`mean_volume > -50 dB`) to prevent silent media.
-- **Groundedness & Verbatim Code**: Asserts 100% of factual claims cite verified files with >= 20 characters and share >= 2 content tokens; code scenes must be exact line slices.
-- **Command Validity & Secret Leakage**: Guarantees on-screen shell commands exist in repository fences and scans outputs with an independent detector.
+Modern LLMs and heuristic planners are inherently prone to subtle grounding errors, hallucinations, and formatting drift. DevVideo treats video generation as an engineering process governed by 13 runnable hard gates and 1 voice presence check defined in `src/evals/registry.py`:
+- **duration**: Final MP4 duration <= 60.0s measured via ffprobe.
+- **av_sync**: Scene drift <= 0.15s, container stream drift <= 0.30s.
+- **audio_audible**: Audio loudness > -35.0 dB via ffmpeg `volumedetect`.
+- **groundedness**: 100% of scenes/beats cite verified source spans with >= 60% token grounding.
+- **code_verbatim**: On-screen code is an exact verbatim line range from cited source.
+- **rendered_code_matches**: 100% preservation of code characters and indentation in rendered output.
+- **command_validity**: Shell commands exist in repository code fences (N/A if 0 commands).
+- **secret_leaks**: 0 credentials detected via independent multi-pattern regex scanner.
+- **no_overflow**: 0 dropped lines or bounding box clipping across DOM and Pillow frames.
+- **frames_valid**: 100% of sampled video frames contain non-flat visual content.
+- **narration_quality**: 0 violations of style rules (no banned buzzwords, no dangling endings, verbs in every beat).
+- **specificity**: 100% of beats name concrete repository-specific identifiers or symbols.
+- **onscreen_text_integrity**: 0 dangling stopwords, 0 mid-word splits, and fully grounded bullet points.
+- **motion**: Dynamic visual interest (>= 24 content changes, max idle gap <= 5.0s).
+- **voice_present**: Verified speech engine present (non-blocking for headless environments).
 
 If any hard gate fails, publication is refused and artifacts are quarantined to `out/_rejected/`.
 

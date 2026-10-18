@@ -1,0 +1,39 @@
+{
+  "status": "published",
+  "voice": "pyttsx3",
+  "tool_git_sha": "1edd43e0071e131504cd0ed7a19d52e1ab1fcb73",
+  "input_repo_commit_sha": "1edd43e0071e131504cd0ed7a19d52e1ab1fcb73",
+  "repo_name": "clip_real_like",
+  "versions": {
+    "python": "3.10.6",
+    "ffmpeg": "7.1-essentials_build-www.gyan.dev",
+    "playwright": "installed"
+  },
+  "timings": {
+    "ingest": 0.05,
+    "analyze": 0.0,
+    "plan": 0.0,
+    "voice": 10.76,
+    "render": 10.97,
+    "assemble": 4.19,
+    "eval": 5.04,
+    "total": 31.06
+  },
+  "backend_requested": "mock",
+  "backend_used": "mock",
+  "tts_requested": "auto",
+  "tts_used": "pyttsx3",
+  "tts_backend": "pyttsx3",
+  "tts_fallback_reason": "auto selected pyttsx3: edge probe failed or unavailable",
+  "llm_requested": "mock",
+  "llm_used": "mock",
+  "llm_fallback_reason": "",
+  "renderer_requested": "playwright",
+  "renderer_used": "playwright",
+  "renderer_fallback_reason": "",
+  "video": "video.mp4",
+  "video_sha256": "a937f5db0fa77b3e184ba87132847cad2b91e0bd01b01a31d7127cc268898054",
+  "video_duration_seconds": 52.98,
+  "eval_report": "eval_report.json",
+  "all_gates_passed": true
+}

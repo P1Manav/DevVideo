@@ -3,38 +3,38 @@
 --- Running fixture: vidsearch_py (tests/fixtures/vidsearch_py) [LLM=auto, TTS=auto] ---
 Exit code: 0
 Status: published
-FFprobe Duration: 45.29s
+FFprobe Duration: 53.84s
 FFprobe Streams: video:h264, audio:aac
-Mean Volume: -21.0 dB
+Mean Volume: -20.9 dB
 All Gates Passed: True
-Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, command_validity, secret_leaks, no_overflow, frames_valid, voice_present, narration_quality, specificity, motion
+Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, voice_present, narration_quality, specificity, onscreen_text_integrity, motion
 
 --- Running fixture: js_tool (tests/fixtures/js_tool) [LLM=auto, TTS=silent] ---
 Exit code: 0
 Status: published-no-voice
-FFprobe Duration: 45.00s
+FFprobe Duration: 44.40s
 FFprobe Streams: video:h264, audio:aac
 Mean Volume: -91.0 dB
 All Gates Passed: True
-Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, motion
+Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, motion
 Failed Gates: voice_present
 
 --- Running fixture: docs_only (tests/fixtures/docs_only) [LLM=auto, TTS=silent] ---
 Exit code: 0
 Status: published-no-voice
-FFprobe Duration: 31.20s
+FFprobe Duration: 37.20s
 FFprobe Streams: video:h264, audio:aac
 Mean Volume: -91.0 dB
 All Gates Passed: True
-Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, motion
+Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, motion
 Failed Gates: voice_present
 
 --- Running fixture: html_readme (tests/fixtures/html_readme) [LLM=auto, TTS=silent] ---
 Exit code: 0
 Status: published-no-voice
-FFprobe Duration: 38.80s
+FFprobe Duration: 46.80s
 FFprobe Streams: video:h264, audio:aac
 Mean Volume: -91.0 dB
 All Gates Passed: True
-Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, motion
+Passed Gates: duration, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, motion
 Failed Gates: voice_present

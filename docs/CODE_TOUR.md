@@ -11,7 +11,13 @@ This document provides a concise 2–3 sentence interview walkthrough for each s
 "This module parses codebases into a structured semantic `RepoFacts` object without ever executing repository code. It uses Python AST parsing and JavaScript regex extraction to build internal module import graphs, extract verbatim line ranges for top symbols, and parse CLI flags. We built it to give planners real, grounded structural data instead of relying on vague LLM summaries."
 
 ### `src/schema.py`
-"This file defines our Pydantic data contracts for scenes, beats, on-screen visual assets, and timing models. It separates what is spoken from what is displayed on-screen, includes a phonetic speech normalizer for speech synthesis, and enforces strict bans on marketing buzzwords. We created it to ensure every single scene has explicit visual focus and timing boundaries."
+"This file defines our Pydantic data contracts for scenes, beats, on-screen visual assets, source spans, and timing models. It separates what is spoken from what is displayed on-screen, includes a phonetic speech normalizer for speech synthesis, and enforces strict provenance rules (max 3 source spans per beat, rejection of disallowed span formats). We created it to ensure every single scene has explicit visual focus, timing boundaries, and verifiable evidence."
+
+### `src/narrate.py`
+"This module implements the Explainer Writer that drafts deterministic, extractive narration strictly obeying quality rules R1 through R12. It compresses sentences at natural clause boundaries rather than truncation, eliminates dangling stopwords, requires verb tokens, and selects key public functions and internal architecture flows. We built it to guarantee natural, grammatical, and fully evidenced developer narration across any repository structure."
+
+### `src/visuals.py`
+"This file constructs grounded OnScreen specifications directly from `RepoFacts` so that visual contents cannot be authored or hallucinated by LLMs. It generates language chips, module graph diagrams, Pygments-highlighted code blocks, and structured takeaways with clean word-boundary truncation. We designed it to ensure visual cards strictly reflect repository facts without layout overflow."
 
 ### `src/plan.py`
 "This module contains our planning protocol and implementations: the deterministic `OfflinePlanner` and the prompt-based `ClaudePlanner`. The offline planner generates a fact-conditional 7-scene explainer directly from AST facts, while the Claude planner communicates safely via standard input inside a nonce-delimited data block. We separated planning from rendering so that LLMs only determine narrative structure while tools supply verified code and diagrams."
@@ -23,19 +29,22 @@ This document provides a concise 2–3 sentence interview walkthrough for each s
 "This is our lightweight subprocess adapter for the Claude CLI tool that passes prompts strictly via standard input. It prevents command-line argument length overflows on Windows and catches timeouts, missing binaries, and non-zero exit codes into typed exceptions. We wrote it to keep LLM integration completely optional, dependency-free, and subprocess-isolated."
 
 ### `src/tts.py`
-"This module orchestrates our speech synthesis chain by probing available backends at runtime in priority order from Edge TTS to espeak, SAPI5/pyttsx3, and silent fallback. It runs Windows pyttsx3 in an isolated subprocess to protect against COM thread deadlocks, normalizes all audio to 44.1 kHz PCM WAVs, and adds lead/tail acoustic pads. We enforced an atomic restart rule so that if any scene fails mid-run, the entire script restarts on the next backend to prevent mixed voices."
+"This module orchestrates our speech synthesis chain by probing available backends at runtime in priority order (`edge` -> `piper` -> `espeak` -> `pyttsx3` -> `silent`). It runs Windows pyttsx3 in an isolated subprocess to protect against COM thread deadlocks, normalizes all audio to 44.1 kHz PCM WAVs, and adds lead/tail acoustic pads. We enforced an atomic restart rule so that if any scene fails mid-run, the entire script restarts on the next backend to prevent mixed voices."
 
 ### `src/render.py`
 "This is our precision frame renderer that generates 1280x720 visual cards using a single persistent Playwright Chromium browser with JavaScript disabled. It draws SVG dependency graphs, highlights verbatim code lines with Pygments to preserve exact whitespace indentation, and animates terminal commands. It also includes an independent Pillow fallback engine that measures font bounding boxes and explicitly flags dropped or overflowing lines."
 
 ### `src/assemble.py`
-"This module handles media multiplexing and the creation of all multimodal companion outputs. It generates an FFmpeg concat-demuxer script with repeated final frame entries to guarantee perfect audio-video synchronization and muxes H.264 video with AAC audio. It also emits synchronized WebVTT subtitles, SRT transcripts, chapter markers, video thumbnails, and `index.jsonl` retrieval records."
+"This module handles media multiplexing and the creation of all multimodal companion outputs. It generates an FFmpeg concat-demuxer script with repeated final frame entries to guarantee perfect audio-video synchronization and muxes H.264 video with AAC audio. It also emits synchronized WebVTT subtitles, SRT transcripts, chapter markers, video thumbnails, and `index.jsonl` retrieval records with complete provenance fields."
 
 ### `src/repair.py`
 "This file implements a bounded automated repair manager that makes up to two attempts to fix minor defects before triggering gate rejections. It can step down text lines to resolve visual overflow, accelerate speech rates or drop low-priority recap scenes to respect duration budgets, and replace invalid commands with verified ones from the repository. We designed it to maximize pipeline completion rates while strictly respecting hard gate thresholds."
 
+### `src/evals/registry.py`
+"This module acts as the single source of truth for all 13 hard evaluation gates, defining their criteria, thresholds, and module locations. It provides a programmatic generator for the canonical markdown gates table in README.md, validated by regression tests. We centralized the registry so that evaluation logic and documentation never drift."
+
 ### `src/evals/gates.py`
-"This package contains the implementation of our nine runnable hard gates that dictate whether a video is published or rejected. It tests final duration via ffprobe, container stream drift, audio loudness via ffmpeg `volumedetect`, quote groundedness with lexical overlap, verbatim line matching, and command validity. We built it with independent secret regexes to ensure post-generation evaluation never trusts the ingest redaction logic."
+"This package implements the 13 runnable hard evaluation gates that dictate whether a video is published or rejected. It validates final duration (45-60s), container stream drift (<=0.3s), audio loudness (`volumedetect` > -50 dB), quote groundedness with exact line ranges, verbatim code slices, command validity, secret non-leakage, title language chips, 3-beat overview structures, internal module diagrams, honest fit scoring, fact-derived takeaways, and on-screen text integrity. If any gate fails, the video is quarantined with exit code 1."
 
 ### `src/evals/metrics.py`
 "This module computes soft informational metrics such as domain relevance, visual scene coverage, words-per-minute speech rates, and clarity scores. Domain relevance is calculated using strict word-boundary token matching to eliminate false positives on common words. We separated soft metrics from hard gates so that informational metrics never block video publication."

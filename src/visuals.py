@@ -11,6 +11,20 @@ from .schema import OnScreen, Scene, ScriptPlan
 
 logger = logging.getLogger(__name__)
 
+DANGLING_STOPWORDS = {
+    "a", "an", "the", "of", "on", "in", "to", "for", "with", "by", "from",
+    "and", "or", "but", "that", "which", "is", "are", "was", "be", "as",
+    "at", "than", "then", "if", "most", "more", "its", "into", "their", "our", "your",
+}
+
+
+def clean_takeaway_line(text: str, max_words: int = 8) -> str:
+    """Format a takeaway line cleanly without mid-word cuts or dangling stopwords."""
+    words = text.split()[:max_words]
+    while words and words[-1].lower().rstrip(".,;:!?") in DANGLING_STOPWORDS:
+        words.pop()
+    return " ".join(words).rstrip(".,;:!?")
+
 
 def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
     """Build grounded OnScreen object for a scene based on RepoFacts."""
@@ -162,9 +176,11 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
         if hasattr(facts, "readme") and getattr(facts.readme, "description_sentences", None):
             first = facts.readme.description_sentences[0]
             txt = first.text if hasattr(first, "text") else str(first)
-            takeaways.append(f"1. {txt[:60]}")
+            cleaned = clean_takeaway_line(txt, max_words=8)
+            takeaways.append(f"1. {cleaned}")
         elif getattr(facts.readme, "tagline", None):
-            takeaways.append(f"1. {facts.readme.tagline[:60]}")
+            cleaned = clean_takeaway_line(facts.readme.tagline, max_words=8)
+            takeaways.append(f"1. {cleaned}")
         else:
             takeaways.append(f"1. {facts.repo_name} core capabilities")
 
@@ -180,9 +196,11 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
 
         fences = getattr(facts.readme, "install_commands", []) or getattr(facts.readme, "usage_commands", []) if hasattr(facts, "readme") else []
         if fences:
-            takeaways.append(f"3. Run {fences[0][:45]}")
+            cleaned = clean_takeaway_line(fences[0], max_words=6)
+            takeaways.append(f"3. Run {cleaned}")
         elif hasattr(facts, "readme") and getattr(facts.readme, "features", None):
-            takeaways.append(f"3. {facts.readme.features[0][:50]}")
+            cleaned = clean_takeaway_line(facts.readme.features[0], max_words=8)
+            takeaways.append(f"3. {cleaned}")
         elif getattr(facts, "cli_flags", None):
             takeaways.append(f"3. Options {', '.join(facts.cli_flags[:2])}")
         else:

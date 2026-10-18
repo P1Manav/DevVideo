@@ -33,6 +33,7 @@ from .schema import (
     ScriptPlan,
     SourceSpan,
     check_for_banned_phrases,
+    is_disallowed_span,
     normalize_speech,
 )
 from .visuals import attach_visuals_to_script
@@ -194,6 +195,14 @@ def find_exact_line_range(raw_lines: list[str], text: str) -> tuple[int, int]:
             if len(w) > 4 and w.lower() in l.lower():
                 return idx + 1, idx + 1
     return 1, 1
+
+
+def clean_caption_text(text: str, max_words: int = 6) -> str:
+    """Format caption text cleanly by words without mid-word character truncations or dangling stopwords."""
+    words = text.split()[:max_words]
+    while words and words[-1].lower().rstrip(".,;:!?") in DANGLING_STOPWORDS:
+        words.pop()
+    return " ".join(words).rstrip(".,;:!?")
 
 
 def compress_sentence(sentence: str, max_words: int = 22) -> list[str]:
@@ -493,7 +502,7 @@ class ExplainerWriter:
             b1_sent = desc_sents[0].text
             comp_b1 = compress_sentence(b1_sent, max_words=18)
             say1 = comp_b1[0] if comp_b1 else b1_sent
-            caption1 = f"What it is: {say1.rstrip('.')[:35]}"
+            caption1 = f"What it is: {clean_caption_text(say1, 6)}"
 
             b2_sent = desc_sents[1].text
             comp_b2 = compress_sentence(b2_sent, max_words=18)
@@ -501,7 +510,7 @@ class ExplainerWriter:
             sp2 = desc_sents[1].start_line
             ep2 = desc_sents[1].end_line
             b2_quote = b2_sent
-            caption2 = f"Capabilities: {b2_sent[:35]}"
+            caption2 = f"Capabilities: {clean_caption_text(b2_sent, 6)}"
         else:
             b2_quote = b1_sent
             sp2, ep2 = sp1, ep1
@@ -515,14 +524,14 @@ class ExplainerWriter:
                         say1 = p1.strip().rstrip(".") + "."
                         if not has_verb(say1):
                             say1 = f"{self.facts.repo_name} is a {say1[0].lower() + say1[1:]}"
-                        caption1 = f"Overview: {say1.rstrip('.')[:35]}"
+                        caption1 = f"Overview: {clean_caption_text(say1, 6)}"
                         if pat.strip() == "without":
                             say2 = f"It operates without {p2.strip().rstrip('.')}."
                         elif pat.strip() == "to":
                             say2 = f"It operates to {p2.strip().rstrip('.')}."
                         else:
                             say2 = f"It provides {p2.strip().rstrip('.')}."
-                        caption2 = f"Capabilities: {p2.strip().rstrip('.')[:35]}"
+                        caption2 = f"Capabilities: {clean_caption_text(p2, 6)}"
                         split_found = True
                         break
             if not split_found:
@@ -533,13 +542,13 @@ class ExplainerWriter:
                     if not has_verb(say1):
                         say1 = f"{self.facts.repo_name} provides {say1[0].lower() + say1[1:]}"
                     say2 = f"It provides " + " ".join(words[mid:]).rstrip(".") + "."
-                    caption1 = f"Overview: {say1.rstrip('.')[:35]}"
-                    caption2 = f"Capabilities: {say2.rstrip('.')[:35]}"
+                    caption1 = f"Overview: {clean_caption_text(say1, 6)}"
+                    caption2 = f"Capabilities: {clean_caption_text(say2, 6)}"
                 else:
                     say1 = b1_sent
                     if not has_verb(say1):
                         say1 = f"{self.facts.repo_name} is {say1[0].lower() + say1[1:]}"
-                    caption1 = f"Overview: {say1.rstrip('.')[:35]}"
+                    caption1 = f"Overview: {clean_caption_text(say1, 6)}"
                     say2 = f"It implements {self.facts.repo_name}."
                     caption2 = f"Implementation: {self.facts.repo_name}"
 
@@ -566,7 +575,7 @@ class ExplainerWriter:
             fs = self.facts.readme.feature_sentences[0]
             fs_text = fs.text.rstrip('.')
             say3 = f"It provides {fs_text}."
-            caption3 = f"Features: {fs_text[:35]}"
+            caption3 = f"Features: {clean_caption_text(fs_text, 6)}"
             feat_span = SourceSpan(
                 file=self.readme_file,
                 start_line=fs.start_line,
@@ -576,20 +585,31 @@ class ExplainerWriter:
         elif self.facts.readme.features:
             feat = self.facts.readme.features[0].rstrip('.')
             say3 = f"It provides {feat}."
-            caption3 = f"Features: {feat[:35]}"
-            matching_l = next((l for l in self.facts.readme.raw_lines if feat.lower() in l.lower()), self.facts.readme.tagline or feat)
+            caption3 = f"Features: {clean_caption_text(feat, 6)}"
+            matching_l = next((l for l in self.facts.readme.raw_lines if feat.lower() in l.lower() and not is_disallowed_span(l.strip())), self.facts.readme.tagline or feat)
             sp, ep = find_exact_line_range(self.facts.readme.raw_lines, matching_l)
             feat_span = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=matching_l)
         elif self.facts.cli_flags:
             flags_str = " and ".join(self.facts.cli_flags[:2])
             say3 = f"It provides command line flags {flags_str}."
             caption3 = f"Flags: {flags_str}"
-            txt = self.facts.readme.tagline or (self.facts.readme.raw_lines[0] if self.facts.readme.raw_lines else self.facts.repo_name)
+            txt = self.facts.readme.tagline or next((l for l in self.facts.readme.raw_lines if not is_disallowed_span(l.strip())), self.facts.repo_name)
             sp, ep = find_exact_line_range(self.facts.readme.raw_lines, txt)
             feat_span = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=txt)
         else:
-            # Ensure span quote is a full line from raw_lines or >= 20 chars
-            fallback_line = next((l for l in self.facts.readme.raw_lines if len(l.strip()) >= 20), (self.facts.readme.raw_lines[0] if self.facts.readme.raw_lines else self.facts.repo_name))
+            # Prefer clean sentence from description_sentences
+            clean_candidates = [
+                s.text for s in getattr(self.facts.readme, "description_sentences", [])
+                if not is_disallowed_span(s.text)
+            ]
+            if not clean_candidates and self.facts.readme.tagline and not is_disallowed_span(self.facts.readme.tagline):
+                clean_candidates = [self.facts.readme.tagline]
+            if not clean_candidates:
+                clean_candidates = [
+                    l.strip() for l in self.facts.readme.raw_lines
+                    if len(l.strip()) >= 20 and not is_disallowed_span(l.strip())
+                ]
+            fallback_line = clean_candidates[0] if clean_candidates else (self.facts.readme.tagline or f"{self.facts.repo_name} core capabilities")
             sp, ep = find_exact_line_range(self.facts.readme.raw_lines, fallback_line)
             feat_span = SourceSpan(file=self.readme_file, start_line=sp, end_line=ep, text=fallback_line)
 
@@ -597,10 +617,10 @@ class ExplainerWriter:
             if len(quote_w) >= 3:
                 chosen = quote_w[-3:]
                 say3 = f"It provides {chosen[0]}, {chosen[1]}, and {chosen[2]}."
-                caption3 = f"Features: {' '.join(chosen)}"
+                caption3 = f"Capabilities: {' '.join(chosen)}"
             elif quote_w:
                 say3 = f"It provides {' and '.join(quote_w)}."
-                caption3 = f"Features: {' '.join(quote_w)}"
+                caption3 = f"Capabilities: {' '.join(quote_w)}"
             else:
                 say3 = f"It provides capabilities for {self.facts.repo_name}."
                 caption3 = f"Capabilities: {self.facts.repo_name}"
@@ -641,7 +661,7 @@ class ExplainerWriter:
         if m_doc1:
             role1 = convert_docstring_to_verb_phrase(m_doc1)
             say1 = f"{mod1} {role1}."
-            caption1 = f"{mod1}: {role1[:35]}"
+            caption1 = f"{mod1}: {clean_caption_text(role1, 6)}"
             m_doc_obj = next((m for m in self.facts.module_docstrings if m.file == mod1), None)
             span1 = m_doc_obj.span if m_doc_obj else SourceSpan(file=mod1, start_line=1, end_line=1, text=m_doc1)
         elif sym1:
@@ -677,7 +697,7 @@ class ExplainerWriter:
             if m_doc2:
                 role2 = convert_docstring_to_verb_phrase(m_doc2)
                 say2 = f"It connects to {mod2}, which {role2}."
-                caption2 = f"{mod2}: {role2[:35]}"
+                caption2 = f"{mod2}: {clean_caption_text(role2, 6)}"
                 m_doc_obj2 = next((m for m in self.facts.module_docstrings if m.file == mod2), None)
                 span2 = m_doc_obj2.span if m_doc_obj2 else SourceSpan(file=mod2, start_line=1, end_line=1, text=m_doc2)
             elif sym2:
@@ -728,7 +748,7 @@ class ExplainerWriter:
         if sym.docstring:
             doc_phrase = convert_docstring_to_verb_phrase(sym.docstring)
             say1 = f"In {sym.file}, {sym.name} {doc_phrase}."
-            caption1 = f"{sym.name}: {doc_phrase[:35]}"
+            caption1 = f"{sym.name}: {clean_caption_text(doc_phrase, 6)}"
             span1 = sym.docstring_span or SourceSpan(
                 file=sym.file,
                 start_line=sym.start_line,
@@ -837,7 +857,7 @@ class ExplainerWriter:
             span1 = SourceSpan(file=self.readme_file, start_line=i_line, end_line=i_line, text=install_cmd)
             beats.append(Beat(
                 say=tts_normalize_speech(say1),
-                caption=f"Install: {install_cmd[:35]}",
+                caption=f"Install: {clean_caption_text(install_cmd, 5)}",
                 focus="install",
                 sources=[span1],
                 start_seconds=0.25,
@@ -854,7 +874,7 @@ class ExplainerWriter:
             span2 = SourceSpan(file=self.readme_file, start_line=u_line, end_line=u_line, text=usage_cmd)
             beats.append(Beat(
                 say=tts_normalize_speech(say2),
-                caption=f"Run: {usage_cmd[:35]}",
+                caption=f"Run: {clean_caption_text(usage_cmd, 5)}",
                 focus="run",
                 sources=[span2],
                 start_seconds=0.25,
@@ -951,7 +971,7 @@ class ExplainerWriter:
         beats = [
             Beat(
                 say=tts_normalize_speech(say1),
-                caption=f"Summary: {summary_phrase[:40]}",
+                caption=f"Summary: {clean_caption_text(summary_phrase, 6)}",
                 focus="recap",
                 sources=[span1],
                 start_seconds=0.25,

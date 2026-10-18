@@ -1,0 +1,12 @@
+=== STEP: Frame & Subtitle Cue Audit ===
+Command: D:\Projects\aintropy_assignment_part2_task12\.venv_baseline\Scripts\python.exe docs/verification/verify_frames_and_cues.py
+Exit Code: 0
+Duration: 4.46s
+Timestamp: 2026-10-18T16:50:39.854796+00:00
+
+--- STDOUT ---
+Audit log saved to docs\verification\frame_and_cues_audit.txt
+
+
+--- STDERR ---
+

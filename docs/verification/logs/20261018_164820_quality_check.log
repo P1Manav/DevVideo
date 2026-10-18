@@ -1,0 +1,259 @@
+=== STEP: Quality Check Multi-Fixture Audit ===
+Command: D:\Projects\aintropy_assignment_part2_task12\.venv_baseline\Scripts\python.exe tools/quality_check.py
+Exit Code: 0
+Duration: 0.58s
+Timestamp: 2026-10-18T16:48:25.841929+00:00
+
+--- STDOUT ---
+================================================================
+DevVideo Narration & Script Quality Check Harness
+================================================================
+
+========================================================
+FIXTURE: vidsearch_py (6 scenes)
+========================================================
+
+[1] Scene 'title' (title):
+  Beat 1: "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+    Caption: "VidSearch: VidSearch is a lightweight multimodal video understanding and retrieval" | Focus: vidsearch_py
+    Source: README.md:9-9 -> "VidSearch is a lightweight multimodal video understanding an"
+
+[2] Scene 'overview' (overview):
+  Beat 1: "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+    Caption: "What it is: VidSearch is a lightweight multimodal video" | Focus: concept
+    Source: README.md:9-9 -> "VidSearch is a lightweight multimodal video understanding an"
+  Beat 2: "It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index."
+    Caption: "Capabilities: It extracts key frames from video" | Focus: operation
+    Source: README.md:9-9 -> "It extracts key frames from video clips using ffmpeg, comput"
+  Beat 3: "It provides Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg."
+    Caption: "Features: Frame Extraction: vidsearch.frames samples video keyframes" | Focus: features
+    Source: README.md:27-27 -> "1. **Frame Extraction**: `vidsearch.frames` samples video ke"
+
+[3] Scene 'diagram' (diagram):
+  Beat 1: "vidsearch/cli dot py is the command-line interface for VidSearch video retrieval engine."
+    Caption: "vidsearch/cli.py: is the command-line interface for VidSearch" | Focus: vidsearch/cli.py
+    Source: vidsearch/cli.py:1-5 -> "Command-line interface for VidSearch video retrieval engine."
+  Beat 2: "It connects to vidsearch/search dot py, which query vector index and rank matching video segments."
+    Caption: "vidsearch/search.py: query vector index and rank matching" | Focus: vidsearch/search.py
+    Source: vidsearch/search.py:1-5 -> "Query vector index and rank matching video segments."
+
+[4] Scene 'code' (code):
+  Beat 1: "In vidsearch/cli dot py, main run CLI search execution."
+    Caption: "main: run CLI search execution" | Focus: main
+    Source: vidsearch/cli.py:17-21 -> "Run CLI search execution."
+  Beat 2: "Inside main, it invokes parse args and search video index."
+    Caption: "Calls: parse_args and search_video_index" | Focus: execution
+    Source: vidsearch/cli.py:17-22 -> "args = parse_args()"
+
+[5] Scene 'terminal' (terminal):
+  Beat 1: "Run pip install -r requirements dot txt to install."
+    Caption: "Install: pip install -r requirements.txt" | Focus: install
+    Source: README.md:16-16 -> "pip install -r requirements.txt"
+  Beat 2: "Next, execute the quickstart command to run the tool."
+    Caption: "Run: python -m vidsearch.cli --query "sunset" | Focus: run
+    Source: README.md:22-22 -> "python -m vidsearch.cli --query "sunset over ocean" --index "
+
+[6] Scene 'recap' (recap):
+  Beat 1: "In short, VidSearch is a lightweight multimodal video understanding and retrieval engine."
+    Caption: "Summary: VidSearch is a lightweight multimodal video" | Focus: recap
+    Source: README.md:9-9 -> "VidSearch is a lightweight multimodal video understanding an"
+  Beat 2: "To dive in, explore vidsearch py starting with vidsearch/ main dot py."
+    Caption: "Next Step: inspect vidsearch/__main__.py" | Focus: next_steps
+    Source: vidsearch/__main__.py:1-1 -> "from vidsearch.cli import main"
+
+>>> RESULT [vidsearch_py]: PASSED (All quality gates green)
+
+========================================================
+FIXTURE: clip_like (6 scenes)
+========================================================
+
+[1] Scene 'title' (title):
+  Beat 1: "clip like provides Python functionality."
+    Caption: "clip_like: clip_like provides Python functionality" | Focus: clip_like
+    Source: README.md:3-3 -> "CLIP (Contrastive Language-Image Pre-Training) is a neural n"
+
+[2] Scene 'overview' (overview):
+  Beat 1: "CLIP , Contrastive Language-Image Pre-Training, is a neural network trained on a variety of image, text pairs."
+    Caption: "What it is: CLIP , Contrastive Language-Image Pre-Training" | Focus: concept
+    Source: README.md:3-3 -> "CLIP (Contrastive Language-Image Pre-Training) is a neural n"
+  Beat 2: "It can be instructed in natural language to predict the most relevant text snippet, given an image."
+    Caption: "Capabilities: It can be instructed in natural" | Focus: operation
+    Source: README.md:3-3 -> "It can be instructed in natural language to predict the most"
+  Beat 3: "It provides Zero-shot classification matching ResNet50 performance on ImageNet."
+    Caption: "Features: Zero-shot classification matching ResNet50 performance" | Focus: features
+    Source: README.md:6-6 -> "- Zero-shot classification matching ResNet50 performance on "
+
+[3] Scene 'diagram' (diagram):
+  Beat 1: "clip tool/cli dot py is the command-line interface for querying images with CLIP embeddings."
+    Caption: "clip_tool/cli.py: is the command-line interface for querying" | Focus: clip_tool/cli.py
+    Source: clip_tool/cli.py:1-5 -> "Command line interface for querying images with CLIP embeddi"
+
+[4] Scene 'code' (code):
+  Beat 1: "In clip tool/cli dot py, main provides main entry point orchestrating model loading and similarity comparison."
+    Caption: "main: provides main entry point orchestrating model" | Focus: main
+    Source: clip_tool/cli.py:16-20 -> "Main entry point orchestrating model loading and similarity "
+  Beat 2: "Inside main, it invokes parse args and load model."
+    Caption: "Calls: parse_args and load_model" | Focus: execution
+    Source: clip_tool/cli.py:16-22 -> "args = parse_args()"
+
+[5] Scene 'terminal' (terminal):
+  Beat 1: "Run pip install -r requirements dot txt to install."
+    Caption: "Install: pip install -r requirements.txt" | Focus: install
+    Source: README.md:11-11 -> "pip install -r requirements.txt"
+  Beat 2: "Next, execute the quickstart command to run the tool."
+    Caption: "Run: python -m clip_tool.cli --image input.png" | Focus: run
+    Source: README.md:12-12 -> "python -m clip_tool.cli --image input.png --query "a dog pla"
+
+[6] Scene 'recap' (recap):
+  Beat 1: "In short, clip like provides open source software tools."
+    Caption: "Summary: clip_like provides open source software tools" | Focus: recap
+    Source: README.md:3-3 -> "CLIP (Contrastive Language-Image Pre-Training) is a neural n"
+  Beat 2: "To dive in, explore clip like starting with clip tool/cli dot py."
+    Caption: "Next Step: inspect clip_tool/cli.py" | Focus: next_steps
+    Source: clip_tool/cli.py:1-5 -> "Command line interface for querying images with CLIP embeddi"
+
+>>> RESULT [clip_like]: PASSED (All quality gates green)
+
+========================================================
+FIXTURE: html_readme (6 scenes)
+========================================================
+
+[1] Scene 'title' (title):
+  Beat 1: "HTML Formatted Project. It extracts key concepts cleanly without leaking angle brackets or HTML tags into narration."
+    Caption: "HTML Formatted Project: It extracts key concepts cleanly without leaking" | Focus: html_readme
+    Source: README.md:11-11 -> "It extracts key concepts cleanly without leaking angle brack"
+
+[2] Scene 'overview' (overview):
+  Beat 1: "It extracts key concepts cleanly."
+    Caption: "Overview: It extracts key concepts cleanly" | Focus: concept
+    Source: README.md:11-11 -> "It extracts key concepts cleanly without leaking angle brack"
+  Beat 2: "It operates without leaking angle brackets or HTML tags into narration."
+    Caption: "Capabilities: leaking angle brackets or HTML tags" | Focus: operation
+    Source: README.md:11-11 -> "It extracts key concepts cleanly without leaking angle brack"
+  Beat 3: "It provides stripping, markdown, and extraction."
+    Caption: "Capabilities: stripping markdown extraction" | Focus: features
+    Source: README.md:10-10 -> "This project demonstrates robust HTML stripping and markdown"
+
+[3] Scene 'code' (code):
+  Beat 1: "In app dot py, run app execute main application loop."
+    Caption: "run_app: execute main application loop" | Focus: run_app
+    Source: app.py:3-5 -> "Execute main application loop."
+  Beat 2: "In run app, it executes and handles main."
+    Caption: "run_app handles main" | Focus: execution
+    Source: app.py:3-5 -> """"Execute main application loop.""""
+
+[4] Scene 'terminal' (terminal):
+  Beat 1: "Then execute python app dot py run flag."
+    Caption: "Run: python app.py --run" | Focus: run
+    Source: README.md:17-17 -> "python app.py --run"
+
+[5] Scene 'fit' (fit):
+  Beat 1: "html readme is not video-specific, but this video ships a transcript, chapters, and a retrieval index."
+    Caption: "Deliverables: transcript, chapters, and retrieval index" | Focus: artifacts
+    Source: README.md:3-3 -> "HTML Formatted Project"
+
+[6] Scene 'recap' (recap):
+  Beat 1: "In short, It extracts key concepts cleanly without leaking angle brackets or HTML tags into narration."
+    Caption: "Summary: It extracts key concepts cleanly without" | Focus: recap
+    Source: README.md:11-11 -> "It extracts key concepts cleanly without leaking angle brack"
+  Beat 2: "To dive in, explore html readme starting with app dot py."
+    Caption: "Next Step: inspect app.py" | Focus: next_steps
+    Source: app.py:1-5 -> "Entrypoint application for HTML readme test."
+
+>>> RESULT [html_readme]: PASSED (All quality gates green)
+
+========================================================
+FIXTURE: js_tool (6 scenes)
+========================================================
+
+[1] Scene 'title' (title):
+  Beat 1: "js-video-tagger. Fast CLI utility to tag and catalog video frame assets."
+    Caption: "js-video-tagger: Fast CLI utility to tag and catalog video frame" | Focus: js_tool
+    Source: README.md:3-3 -> "Fast CLI utility to tag and catalog video frame assets."
+
+[2] Scene 'overview' (overview):
+  Beat 1: "js tool is a fast CLI utility."
+    Caption: "Overview: js_tool is a fast CLI utility" | Focus: concept
+    Source: README.md:3-3 -> "Fast CLI utility to tag and catalog video frame assets."
+  Beat 2: "It operates to tag and catalog video frame assets."
+    Caption: "Capabilities: tag and catalog video frame assets" | Focus: operation
+    Source: README.md:3-3 -> "Fast CLI utility to tag and catalog video frame assets."
+  Beat 3: "It provides video, frame, and assets."
+    Caption: "Capabilities: video frame assets" | Focus: features
+    Source: README.md:3-3 -> "Fast CLI utility to tag and catalog video frame assets."
+
+[3] Scene 'diagram' (diagram):
+  Beat 1: "bin/main dot js imports from src/index dot js."
+    Caption: "bin/main.js: imports src/index.js" | Focus: bin/main.js
+    Source: bin/main.js:2-2 -> "require("../src/index.js")"
+  Beat 2: "It connects to src/index dot js, which defines runTagger."
+    Caption: "src/index.js: defines runTagger" | Focus: src/index.js
+    Source: src/index.js:3-3 -> "function runTagger() {"
+
+[4] Scene 'code' (code):
+  Beat 1: "In src/index dot js, runTagger is defined for execution."
+    Caption: "runTagger in src/index.js" | Focus: runTagger
+    Source: src/index.js:3-3 -> "function runTagger() {"
+  Beat 2: "In runTagger, it executes and handles function."
+    Caption: "runTagger handles function" | Focus: execution
+    Source: src/index.js:3-3 -> "function runTagger() {"
+
+[5] Scene 'terminal' (terminal):
+  Beat 1: "Run npm install -g js-video-tagger to install."
+    Caption: "Install: npm install -g js-video-tagger" | Focus: install
+    Source: README.md:8-8 -> "npm install -g js-video-tagger"
+  Beat 2: "Then execute jstool tag flag highlight."
+    Caption: "Run: jstool --tag highlight" | Focus: run
+    Source: README.md:14-14 -> "jstool --tag highlight"
+
+[6] Scene 'recap' (recap):
+  Beat 1: "In short, Fast CLI utility to tag and catalog video frame assets."
+    Caption: "Summary: Fast CLI utility to tag" | Focus: recap
+    Source: README.md:3-3 -> "Fast CLI utility to tag and catalog video frame assets."
+  Beat 2: "To dive in, explore js tool starting with bin/main dot js."
+    Caption: "Next Step: inspect bin/main.js" | Focus: next_steps
+    Source: bin/main.js:2-2 -> "const { runTagger } = require("../src/index.js");"
+
+>>> RESULT [js_tool]: PASSED (All quality gates green)
+
+========================================================
+FIXTURE: docs_only (4 scenes)
+========================================================
+
+[1] Scene 'title' (title):
+  Beat 1: "Video Retrieval Guide. A conceptual guide and documentation book explaining vector retrieval principles for computer vision researchers."
+    Caption: "Video Retrieval Guide: A conceptual guide and documentation book explaining" | Focus: docs_only
+    Source: README.md:3-3 -> "A conceptual guide and documentation book explaining vector "
+
+[2] Scene 'overview' (overview):
+  Beat 1: "A conceptual guide and documentation book explaining vector retrieval principles for computer vision researchers."
+    Caption: "What it is: A conceptual guide and documentation book" | Focus: concept
+    Source: README.md:3-3 -> "A conceptual guide and documentation book explaining vector "
+  Beat 2: "This repository contains specifications, architecture notes, and algorithmic guidelines."
+    Caption: "Capabilities: This repository contains specifications, architecture notes" | Focus: operation
+    Source: README.md:7-7 -> "This repository contains specifications, architecture notes,"
+  Beat 3: "It provides Introduction to dense representations."
+    Caption: "Features: Introduction to dense representations" | Focus: features
+    Source: README.md:12-12 -> "- Introduction to dense representations"
+
+[3] Scene 'fit' (fit):
+  Beat 1: "docs only is not video-specific, but this video ships a transcript, chapters, and a retrieval index."
+    Caption: "Deliverables: transcript, chapters, and retrieval index" | Focus: artifacts
+    Source: README.md:1-1 -> "Video Retrieval Guide"
+
+[4] Scene 'recap' (recap):
+  Beat 1: "In short, A conceptual guide and documentation book explaining vector retrieval principles for computer vision researchers."
+    Caption: "Summary: A conceptual guide and documentation book" | Focus: recap
+    Source: README.md:3-3 -> "A conceptual guide and documentation book explaining vector "
+  Beat 2: "To dive in, explore docs only starting with README.md."
+    Caption: "Next Step: inspect README.md" | Focus: next_steps
+    Source: README.md:3-3 -> "A conceptual guide and documentation book explaining vector "
+
+>>> RESULT [docs_only]: PASSED (All quality gates green)
+
+----------------------------------------------------------------
+[OK] All 5 fixtures PASSED narration quality check!
+
+
+--- STDERR ---
+

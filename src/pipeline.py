@@ -113,6 +113,7 @@ def run_pipeline(
     Run the end-to-end explainer video generation pipeline.
     """
     start_time = time.time()
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     result = PipelineResult()
 

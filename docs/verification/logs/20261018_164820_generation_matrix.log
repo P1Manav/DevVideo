@@ -1,0 +1,39 @@
+=== STEP: Multi-Fixture Generation Matrix ===
+Command: D:\Projects\aintropy_assignment_part2_task12\.venv_baseline\Scripts\python.exe docs/verification/verify_matrix.py
+Exit Code: 0
+Duration: 129.55s
+Timestamp: 2026-10-18T16:50:35.397790+00:00
+
+--- STDOUT ---
+Matrix verification saved to docs\verification\generation_matrix.txt
+
+
+--- STDERR ---
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+
