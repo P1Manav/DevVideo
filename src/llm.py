@@ -79,30 +79,30 @@ class MockLLM:
                 {
                     "id": "intro",
                     "title": "Overview",
-                    "narration": "Welcome to this walkthrough of the fixture repository.",
+                    "narration": "This is a sample project for testing the developer video generator.",
                     "on_screen": {"type": "title", "content": "Fixture Repo\nDeveloper Video Generator"},
-                    "evidence": {"file": "README.md", "quote": "fixture repo"}
+                    "evidence": {"file": "README.md", "quote": "This is a sample project for testing the developer video generator."}
                 },
                 {
                     "id": "architecture",
                     "title": "Architecture",
-                    "narration": "The repository organizes components for ingestion, rendering, and assembly.",
+                    "narration": "It represents a fixture repo for AI video understanding and retrieval systems.",
                     "on_screen": {"type": "diagram", "content": "src/main.py -> src/render.py"},
-                    "evidence": {"file": "README.md", "quote": "sample project"}
+                    "evidence": {"file": "README.md", "quote": "It represents a fixture repo for AI video understanding and retrieval systems."}
                 },
                 {
                     "id": "usage",
                     "title": "Quickstart",
-                    "narration": "Install requirements and run the main entrypoint command.",
+                    "narration": "Install dependencies with pip install to run this sample project.",
                     "on_screen": {"type": "terminal", "content": "pip install -r requirements.txt"},
-                    "evidence": {"file": "docs/usage.md", "quote": "install"}
+                    "evidence": {"file": "docs/usage.md", "quote": "pip install -r requirements.txt"}
                 },
                 {
                     "id": "conclusion",
                     "title": "Takeaways",
-                    "narration": "This project produces structured retrieval assets including transcripts and chapters.",
+                    "narration": "This fixture repo contains sample documentation and code for testing purposes.",
                     "on_screen": {"type": "recap", "content": "Structured Video Assets"},
-                    "evidence": {"file": "README.md", "quote": "fixture repo"}
+                    "evidence": {"file": "README.md", "quote": "This fixture repo contains sample documentation and code for testing purposes."}
                 },
             ]
         })

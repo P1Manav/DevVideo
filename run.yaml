@@ -2,18 +2,18 @@
 # These are run exactly as written, in order, from a fresh checkout.
 
 setup_commands:
-  - "pip install -r requirements.txt"
+  - "pip install -r requirements.txt -r requirements-dev.txt"
   - "playwright install chromium --with-deps"
+  - "which espeak-ng >/dev/null 2>&1 || which ffmpeg >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq espeak-ng ffmpeg) || true"
 
 run_commands:
   - "python src/main.py --help"
-  - "python src/main.py generate tests/fixture_repo --out out/ --llm offline --tts silent"
+  - "python src/main.py generate tests/fixtures/vidsearch_py --out out/"
 
 test_commands:
-  - "pytest tests/ -v --tb=short"
+  - "pytest tests/ -v"
 
 notes: >
-  The default run uses mock/offline LLM + silent TTS + Playwright rendering (with Pillow
-  fallback), so it needs NO API keys and NO internet beyond setup. ffmpeg must be installed.
-  For real TTS, set TTS_BACKEND=edge (needs internet) or TTS_BACKEND=espeak (needs espeak-ng).
-  For real LLM, set LLM_BACKEND=claude and ensure the claude CLI is on PATH with CLAUDE_KEY set.
+  DevVideo runs out-of-the-box with default backends (auto LLM selects offline planner when Claude
+  CLI/key is absent; auto TTS selects edge, espeak-ng, or pyttsx3, and falls back gracefully).
+  Output includes full explainer video with voice, subtitles, chapters, and retrieval index.

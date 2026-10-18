@@ -135,10 +135,16 @@ class EdgeTTS:
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
             tmp_path = Path(tmp.name)
         try:
-            async def _probe():
-                comm = edge_tts.Communicate("Hello", self.voice)
-                await asyncio.wait_for(comm.save(str(tmp_path)), timeout=12.0)
-            asyncio.run(_probe())
+            def _run_probe():
+                async def _inner():
+                    comm = edge_tts.Communicate("Hello", self.voice)
+                    await asyncio.wait_for(comm.save(str(tmp_path)), timeout=12.0)
+                asyncio.run(_inner())
+
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(_run_probe)
+                fut.result(timeout=15.0)
             return tmp_path.exists() and tmp_path.stat().st_size > 0
         except Exception as e:
             logger.debug(f"Edge TTS probe failed: {e}")

@@ -1,37 +1,40 @@
 """
-Assembler: stitch scene PNGs + audio into a final MP4 video using ffmpeg.
+Assembler module: stitches frame PNGs + audio WAVs into final MP4 explainer video.
 
-Scene duration = audio length + small padding.
-If total > 55s, raises so the pipeline can adjust.
+Features:
+- Concat-demuxer from (frame, duration) lists with repeated last entry
+- Audio concatenation from scene WAVs with pads into narration.wav
+- ffmpeg mux: libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -r 30 -movflags +faststart, aac 128k
+- Generates subtitles (VTT + SRT), chapters.json, index.jsonl, and thumbnail.png
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
+from .schema import Beat, Scene
 from .tts import get_audio_duration
 
 logger = logging.getLogger(__name__)
 
-MAX_VIDEO_DURATION = 60.0
-TARGET_MAX_DURATION = 55.0  # soft target
-
 
 @dataclass
 class SceneAsset:
-    """One scene's rendered assets."""
+    """Compatibility asset container for callers."""
     scene_id: str
     png_path: Path
     audio_path: Path
-    duration: float = 0.0  # set after audio is measured
+    duration: float = 0.0
 
 
 def measure_scene_durations(scenes: list[SceneAsset], pad: float = 0.3) -> float:
-    """Measure audio durations and set scene.duration. Returns total."""
+    """Compatibility function: measure audio durations and set scene.duration."""
     total = 0.0
     for scene in scenes:
         audio_dur = get_audio_duration(scene.audio_path)
@@ -40,104 +43,205 @@ def measure_scene_durations(scenes: list[SceneAsset], pad: float = 0.3) -> float
     return total
 
 
-def assemble_video(
-    scenes: list[SceneAsset],
-    output_path: Path,
-    fps: int = 1,
+def concat_audio_files(wav_paths: list[Path], output_wav: Path) -> float:
+    """Concatenate scene WAV files into a single narration.wav using ffmpeg."""
+    if not wav_paths:
+        return 0.0
+    if len(wav_paths) == 1:
+        shutil.copyfile(wav_paths[0], output_wav)
+        return get_audio_duration(output_wav)
+
+    output_wav.parent.mkdir(parents=True, exist_ok=True)
+    list_file = output_wav.parent / "_audio_concat.txt"
+    try:
+        with open(list_file, "w", encoding="utf-8") as f:
+            for wp in wav_paths:
+                f.write(f"file '{wp.resolve().as_posix()}'\n")
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(list_file),
+            "-c:a", "pcm_s16le",
+            str(output_wav),
+        ]
+        res = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+        if res.returncode != 0:
+            raise RuntimeError(f"ffmpeg audio concat failed: {res.stderr[:300]}")
+    finally:
+        list_file.unlink(missing_ok=True)
+
+    return get_audio_duration(output_wav)
+
+
+def assemble_video_from_timeline(
+    timeline: list[tuple[Path, float]],
+    audio_path: Path,
+    output_mp4: Path,
 ) -> float:
     """
-    Stitch scenes into a single MP4 using ffmpeg concat.
-
-    Each scene becomes:
-    - A video segment: the PNG shown for `scene.duration` seconds
-    - An audio segment: the WAV audio
-
-    Returns the final video duration.
+    Stitch (frame_path, duration) timeline and narration audio into MP4.
+    Uses concat demuxer repeating the last file entry for correct final duration.
     """
     if not shutil.which("ffmpeg"):
         raise RuntimeError("ffmpeg not found on PATH")
 
-    work_dir = output_path.parent / "_assemble_tmp"
-    work_dir.mkdir(exist_ok=True)
+    if not timeline:
+        raise ValueError("Empty timeline provided to assemble_video")
 
-    segment_paths = []
+    output_mp4.parent.mkdir(parents=True, exist_ok=True)
+    concat_file = output_mp4.parent / "_video_concat.txt"
 
-    for i, scene in enumerate(scenes):
-        seg_path = work_dir / f"seg_{i:02d}.mp4"
+    try:
+        with open(concat_file, "w", encoding="utf-8") as f:
+            for frame_path, dur in timeline:
+                f.write(f"file '{frame_path.resolve().as_posix()}'\n")
+                f.write(f"duration {dur:.3f}\n")
+            # Repeat last file entry without duration (required by ffmpeg concat demuxer)
+            f.write(f"file '{timeline[-1][0].resolve().as_posix()}'\n")
 
-        # Create video segment: still image + audio
         cmd = [
             "ffmpeg", "-y",
-            "-loop", "1",
-            "-i", str(scene.png_path),
-            "-i", str(scene.audio_path),
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(concat_file),
+            "-i", str(audio_path),
             "-c:v", "libx264",
-            "-tune", "stillimage",
+            "-preset", "veryfast",
+            "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            "-r", "30",
+            "-movflags", "+faststart",
             "-c:a", "aac",
             "-b:a", "128k",
-            "-pix_fmt", "yuv420p",
             "-shortest",
-            "-t", f"{scene.duration:.2f}",
-            str(seg_path),
+            str(output_mp4),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"ffmpeg segment {i} failed: {result.stderr[:500]}"
-            )
+        res = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120)
+        if res.returncode != 0:
+            raise RuntimeError(f"ffmpeg video mux failed: {res.stderr[:400]}")
+    finally:
+        concat_file.unlink(missing_ok=True)
 
-        segment_paths.append(seg_path)
-
-    # Write concat list
-    concat_file = work_dir / "concat.txt"
-    with open(concat_file, "w") as f:
-        for sp in segment_paths:
-            f.write(f"file '{sp.resolve()}'\n")
-
-    # Concatenate all segments
-    cmd = [
-        "ffmpeg", "-y",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", str(concat_file),
-        "-c", "copy",
-        str(output_path),
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"ffmpeg concat failed: {result.stderr[:500]}"
-        )
-
-    # Clean up temp files
-    shutil.rmtree(work_dir, ignore_errors=True)
-
-    # Get final duration
-    final_dur = _get_video_duration(output_path)
-    logger.info(f"Assembled video: {final_dur:.1f}s -> {output_path}")
-
+    final_dur = get_audio_duration(output_mp4)
+    logger.info(f"Assembled video {final_dur:.2f}s -> {output_mp4}")
     return final_dur
 
 
-def _get_video_duration(path: Path) -> float:
-    """Get video duration using ffprobe."""
-    if not shutil.which("ffprobe"):
-        # Estimate from scene durations
-        return 0.0
+def assemble_video(scenes: list[SceneAsset], output_path: Path, fps: int = 1) -> float:
+    """Compatibility wrapper for legacy callers."""
+    timeline = [(s.png_path, s.duration) for s in scenes]
+    wav_paths = [s.audio_path for s in scenes]
+    concat_wav = output_path.parent / "_narration_tmp.wav"
+    try:
+        concat_audio_files(wav_paths, concat_wav)
+        return assemble_video_from_timeline(timeline, concat_wav, output_path)
+    finally:
+        concat_wav.unlink(missing_ok=True)
 
-    result = subprocess.run(
-        [
-            "ffprobe", "-v", "quiet",
-            "-show_entries", "format=duration",
-            "-of", "csv=p=0",
-            str(path),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    if result.returncode == 0 and result.stdout.strip():
-        return float(result.stdout.strip())
-    return 0.0
+
+def format_timestamp(seconds: float, vtt: bool = True) -> str:
+    """Format seconds into HH:MM:SS.mmm (VTT) or HH:MM:SS,mmm (SRT)."""
+    hrs = int(seconds // 3600)
+    mins = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    msec = int(round((seconds - int(seconds)) * 1000))
+    sep = "." if vtt else ","
+    return f"{hrs:02d}:{mins:02d}:{secs:02d}{sep}{msec:03d}"
+
+
+def generate_subtitles(scenes: list[Scene], vtt_path: Path, srt_path: Path) -> None:
+    """Generate synchronized, monotonic WebVTT and SubRip subtitle files."""
+    vtt_lines = ["WEBVTT\n"]
+    srt_lines: list[str] = []
+    cue_idx = 1
+    current_time = 0.0
+
+    for scene in scenes:
+        for beat in scene.beats:
+            b_start_offset = beat.start_seconds or 0.0
+            b_end_offset = beat.end_seconds or (b_start_offset + 2.0)
+            b_dur = max(0.5, b_end_offset - b_start_offset)
+            b_start = current_time + b_start_offset
+            b_end = current_time + b_end_offset
+            if b_end <= b_start:
+                b_end = b_start + b_dur
+
+            text = beat.caption or beat.say
+
+            vtt_lines.append(f"{format_timestamp(b_start, vtt=True)} --> {format_timestamp(b_end, vtt=True)}\n{text}\n")
+
+            srt_lines.append(f"{cue_idx}\n{format_timestamp(b_start, vtt=False)} --> {format_timestamp(b_end, vtt=False)}\n{text}\n")
+            cue_idx += 1
+
+        current_time += scene.duration_seconds
+
+    vtt_path.parent.mkdir(parents=True, exist_ok=True)
+    vtt_path.write_text("\n".join(vtt_lines), encoding="utf-8")
+    srt_path.parent.mkdir(parents=True, exist_ok=True)
+    srt_path.write_text("\n".join(srt_lines), encoding="utf-8")
+
+
+def generate_chapters(scenes: list[Scene], chapters_path: Path) -> None:
+    """Generate chapters.json with chapter titles and timestamps."""
+    chapters = []
+    current_time = 0.0
+    for scene in scenes:
+        start = round(current_time, 2)
+        end = round(current_time + scene.duration_seconds, 2)
+        chapters.append({
+            "title": scene.title or scene.id.capitalize(),
+            "kind": scene.kind,
+            "start_time": start,
+            "end_time": end,
+        })
+        current_time += scene.duration_seconds
+
+    chapters_path.parent.mkdir(parents=True, exist_ok=True)
+    chapters_path.write_text(json.dumps(chapters, indent=2), encoding="utf-8")
+
+
+def generate_index_jsonl(scenes: list[Scene], index_path: Path) -> None:
+    """Generate index.jsonl with one searchable record per beat."""
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    current_time = 0.0
+    with open(index_path, "w", encoding="utf-8") as f:
+        for scene in scenes:
+            for i, beat in enumerate(scene.beats):
+                b_start = round(current_time + (beat.start_seconds or 0.0), 2)
+                b_end = round(current_time + (beat.end_seconds or (beat.start_seconds or 0.0) + 2.0), 2)
+                record = {
+                    "beat_id": f"{scene.id}_{i}",
+                    "scene_id": scene.id,
+                    "scene_kind": scene.kind,
+                    "text": beat.say,
+                    "caption": beat.caption,
+                    "focus": beat.focus,
+                    "start_seconds": b_start,
+                    "end_seconds": b_end,
+                    "evidence_file": scene.evidence.file if scene.evidence else "",
+                    "evidence_quote": scene.evidence.quote if scene.evidence else "",
+                }
+                f.write(json.dumps(record) + "\n")
+            current_time += scene.duration_seconds
+
+
+def generate_thumbnail(video_mp4: Path, fallback_frame: Path | None, thumbnail_path: Path) -> None:
+    """Extract a thumbnail from the generated video or copy fallback frame."""
+    thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+    if shutil.which("ffmpeg") and video_mp4.exists():
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", "00:00:02.500",
+            "-i", str(video_mp4),
+            "-vframes", "1",
+            str(thumbnail_path),
+        ]
+        res = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
+        if res.returncode == 0 and thumbnail_path.exists() and thumbnail_path.stat().st_size > 0:
+            return
+
+    if fallback_frame and fallback_frame.exists():
+        shutil.copyfile(fallback_frame, thumbnail_path)

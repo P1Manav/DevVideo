@@ -69,12 +69,15 @@ class TopSymbol(BaseModel):
     docstring: str = ""
     start_line: int
     end_line: int
+    def_line: str = ""
+    code_excerpt: str = ""
 
 
 class ImportEdge(BaseModel):
     """Directed dependency edge between internal modules."""
     source: str
     target: str
+    raw_line: str = ""
 
 
 class CleanedReadme(BaseModel):
@@ -83,6 +86,7 @@ class CleanedReadme(BaseModel):
     description: str = ""
     sections: dict[str, str] = Field(default_factory=dict)
     code_fences: list[str] = Field(default_factory=list)
+    raw_lines: list[str] = Field(default_factory=list)
 
 
 class RepoFacts(BaseModel):
@@ -98,6 +102,7 @@ class RepoFacts(BaseModel):
     cli_flags: list[str] = Field(default_factory=list)
     dependencies: list[str] = Field(default_factory=list)
     readme: CleanedReadme = Field(default_factory=CleanedReadme)
+    readme_file: str = ""
     relevance_score: float = 0.0
     matched_relevance_terms: list[str] = Field(default_factory=list)
     is_video_relevant: bool = False
@@ -165,9 +170,10 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
                 sec_lines.append(line)
     sections[current_sec] = "\n".join(sec_lines).strip()
 
-    # Extract description from intro or first non-title paragraph
+    # Extract description from intro section or first non-title paragraph
     description = ""
-    intro_lines = [l.strip() for l in sec_lines if l.strip() and l.strip() != title and not l.strip().startswith("#")]
+    intro_text = sections.get("intro", "")
+    intro_lines = [l.strip() for l in intro_text.splitlines() if l.strip() and l.strip() != title and not l.strip().startswith("#")]
     if intro_lines:
         description = intro_lines[0]
     elif len(non_empty_lines) > 1:
@@ -176,11 +182,17 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
                 description = l
                 break
 
+    valid_raw_lines = [
+        l.strip() for l in raw_text.splitlines()
+        if l.strip() and not l.strip().startswith("<") and not l.strip().startswith("[![") and not l.strip().startswith("```")
+    ]
+
     return CleanedReadme(
         title=title,
         description=description,
         sections=sections,
         code_fences=fences,
+        raw_lines=valid_raw_lines,
     )
 
 
@@ -227,32 +239,39 @@ def extract_python_facts(
         logger.debug(f"AST parsing skipped for {rel_path}: {e}")
         return edges, symbols, flags
 
+    code_lines = code.splitlines()
+
     # 1. Imports
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 mod_name = alias.name.replace(".", "/")
-                # Check if this matches an internal python file
+                raw_l = code_lines[node.lineno - 1].strip() if 0 <= node.lineno - 1 < len(code_lines) else ""
                 for f in all_py_files:
                     if f.startswith(mod_name) or mod_name in f:
                         if f != rel_path:
-                            edges.append(ImportEdge(source=rel_path, target=f))
+                            edges.append(ImportEdge(source=rel_path, target=f, raw_line=raw_l))
         elif isinstance(node, ast.ImportFrom):
             if node.module:
                 mod_name = node.module.replace(".", "/")
+                raw_l = code_lines[node.lineno - 1].strip() if 0 <= node.lineno - 1 < len(code_lines) else ""
                 for f in all_py_files:
                     if f.startswith(mod_name) or mod_name in f:
                         if f != rel_path:
-                            edges.append(ImportEdge(source=rel_path, target=f))
+                            edges.append(ImportEdge(source=rel_path, target=f, raw_line=raw_l))
 
     # 2. Top-level functions & classes
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             name = node.name
             if not name.startswith("_") or name == "__main__":
                 doc = ast.get_docstring(node) or ""
                 first_line_doc = doc.splitlines()[0].strip() if doc else ""
                 end_lineno = getattr(node, "end_lineno", node.lineno)
+                s_idx = max(0, node.lineno - 1)
+                e_idx = min(s_idx + 12, end_lineno)
+                excerpt = "\n".join(code_lines[s_idx:e_idx])
+                def_l = code_lines[s_idx].strip() if s_idx < len(code_lines) else ""
                 symbols.append(TopSymbol(
                     name=name,
                     kind="function",
@@ -260,6 +279,8 @@ def extract_python_facts(
                     docstring=first_line_doc,
                     start_line=node.lineno,
                     end_line=end_lineno,
+                    def_line=def_l,
+                    code_excerpt=excerpt,
                 ))
         elif isinstance(node, ast.ClassDef):
             name = node.name
@@ -267,6 +288,10 @@ def extract_python_facts(
                 doc = ast.get_docstring(node) or ""
                 first_line_doc = doc.splitlines()[0].strip() if doc else ""
                 end_lineno = getattr(node, "end_lineno", node.lineno)
+                s_idx = max(0, node.lineno - 1)
+                e_idx = min(s_idx + 12, end_lineno)
+                excerpt = "\n".join(code_lines[s_idx:e_idx])
+                def_l = code_lines[s_idx].strip() if s_idx < len(code_lines) else ""
                 symbols.append(TopSymbol(
                     name=name,
                     kind="class",
@@ -274,6 +299,8 @@ def extract_python_facts(
                     docstring=first_line_doc,
                     start_line=node.lineno,
                     end_line=end_lineno,
+                    def_line=def_l,
+                    code_excerpt=excerpt,
                 ))
 
     # 3. CLI flags from argparse / click / typer
@@ -313,7 +340,7 @@ def extract_js_facts(
             for known in all_js_files:
                 if known == norm or known.startswith(norm + ".") or norm in known:
                     if known != rel_path:
-                        edges.append(ImportEdge(source=rel_path, target=known))
+                        edges.append(ImportEdge(source=rel_path, target=known, raw_line=m.group(0)))
 
     return edges
 
@@ -355,9 +382,11 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
 
     # 3. Clean README
     readme_content = ""
+    readme_file = ""
     for name in ("README.md", "readme.md", "README.rst", "README.txt"):
         if name in files:
             readme_content = files[name]
+            readme_file = name
             break
     cleaned_readme = clean_readme(readme_content)
 
@@ -454,7 +483,11 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
         cli_flags=unique_flags,
         dependencies=sorted(set(deps)),
         readme=cleaned_readme,
+        readme_file=readme_file,
         relevance_score=rel_score,
         matched_relevance_terms=matched_terms,
         is_video_relevant=(rel_score >= 0.35),
     )
+
+
+analyze_repository = analyze_repo

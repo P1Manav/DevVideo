@@ -1,12 +1,17 @@
-name: Release - Build & Package
+name: Release - Generate Video & Assets
 
 on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      repo_url:
+        description: "Target repository to generate video for (GitHub URL or fixture path)"
+        required: false
+        default: "tests/fixtures/vidsearch_py"
 
 jobs:
-  build-and-package:
+  release-generate:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,30 +23,65 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Install build tools
+      - name: Install system dependencies (ffmpeg, espeak-ng)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Build Python wheel and sdist
-        run: python -m build
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Generate explainer video
+        run: |
+          TARGET="${{ inputs.repo_url || 'tests/fixtures/vidsearch_py' }}"
+          python -m src.cli generate "$TARGET" --out out/
+          test -s out/video.mp4 || { echo "Video generation failed"; exit 1; }
 
       - name: Build Docker image
         run: |
           docker build -t devvideo:${{ github.ref_name || 'latest' }} .
 
-      - name: Verify Docker container generates video
+      - name: Verify Docker container with non-root user permissions
         run: |
-          mkdir -p out
-          docker run --rm -v $(pwd)/out:/app/out devvideo:${{ github.ref_name || 'latest' }} generate tests/fixture_repo --out out/ --llm offline --tts silent
-          test -s out/video.mp4 || { echo "Docker container failed to generate video"; exit 1; }
+          mkdir -p docker_out docker_tmp
+          chmod 777 docker_out docker_tmp
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e TMPDIR=/tmp \
+            -v $(pwd)/docker_tmp:/tmp \
+            -v $(pwd)/docker_out:/app/out \
+            devvideo:${{ github.ref_name || 'latest' }} generate tests/fixtures/vidsearch_py --out out/
+          test -s docker_out/video.mp4 || { echo "Docker container failed to generate video"; exit 1; }
 
-      - name: Upload dist to Release
+      - name: Upload Workflow Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: devvideo-release-bundle
+          path: |
+            out/video.mp4
+            out/transcript.vtt
+            out/chapters.json
+            out/index.jsonl
+            out/thumbnail.png
+            out/eval_report.json
+            out/manifest.json
+
+      - name: Upload Release Assets
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            out/video.mp4
+            out/transcript.vtt
+            out/chapters.json
+            out/index.jsonl
+            out/thumbnail.png
+            out/eval_report.json
+            out/manifest.json

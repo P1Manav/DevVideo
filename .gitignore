@@ -14,6 +14,12 @@ _assemble_tmp/
 
 # Explicitly track committed sample deliverables only
 !docs/sample/video.mp4
+!docs/sample/thumbnail.png
+!docs/sample/transcript.vtt
+!docs/sample/transcript.srt
+!docs/sample/chapters.json
+!docs/sample/index.jsonl
 !docs/sample/eval_report.json
 !docs/sample/manifest.json
 !docs/sample/scenes.json
+

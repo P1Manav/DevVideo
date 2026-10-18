@@ -16,7 +16,8 @@ import re
 from typing import Any
 
 from .analyze import RepoFacts
-from .plan import OfflinePlanner, Planner
+from .evals.gates import _extract_content_tokens
+from .plan import OfflinePlanner, Planner, _extract_tokens
 from .schema import (
     Beat,
     Evidence,
@@ -44,17 +45,6 @@ class ScriptRejected(RuntimeError):
         super().__init__("; ".join(reasons))
         self.reasons = reasons
         self.last_script = last_script
-
-
-def _extract_content_tokens(text: str) -> set[str]:
-    """Extract identifier and noun tokens (len >= 3) ignoring stop words."""
-    stopwords = {
-        "the", "and", "for", "with", "this", "that", "from", "into", "here",
-        "what", "need", "know", "under", "minute", "welcome", "your", "can",
-        "you", "about", "project", "provides", "explore", "start",
-    }
-    words = re.findall(r"\b[A-Za-z0-9_-]{3,}\b", text.lower())
-    return {w for w in words if w not in stopwords}
 
 
 def verify_script_plan(
@@ -149,35 +139,50 @@ def build_degraded_plan(facts: RepoFacts, repo_files: dict[str, str]) -> ScriptP
     """
     repo = facts.repo_name
     first_file = next(iter(repo_files.keys()), "README.md")
-    content = repo_files.get(first_file, "Project content")
-    quote = content.splitlines()[0].strip() if content.splitlines() else "content"
-    if not quote:
-        quote = "content"
+    content = repo_files.get(first_file, "Project source code components")
+    lines = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith("<")]
+
+    cand = next((l for l in lines if len(_extract_tokens(l)) >= 2), None)
+    quote = cand if cand else (lines[0] if lines else "source components")
+
+    q_toks = _extract_tokens(quote)
+    t1 = q_toks[0] if q_toks else repo.lower()
+    t2 = q_toks[1] if len(q_toks) > 1 else "source"
 
     scenes = [
         Scene(
             id="title",
             kind="title",
             title="Overview",
-            beats=[Beat(say=f"Welcome to {normalize_speech(repo)}.", caption=f"{repo} overview")],
+            beats=[Beat(
+                say=f"Welcome to {normalize_speech(repo)}. We explore {normalize_speech(t1)} and {normalize_speech(t2)} in under one minute.",
+                caption=f"{repo}: {t1} and {t2}",
+                focus=repo,
+            )],
             on_screen=OnScreen(type="title", content=f"{repo}\nDeveloper Overview"),
-            evidence=Evidence(file=first_file, quote=quote[:30]),
+            evidence=Evidence(file=first_file, quote=quote),
         ),
         Scene(
             id="overview",
             kind="overview",
             title="Purpose",
-            beats=[Beat(say="This repository provides source components for developers.", caption="Component overview")],
+            beats=[
+                Beat(say=f"This repository organizes {normalize_speech(t1)} and {normalize_speech(t2)}.", caption=f"Focuses on {t1}"),
+                Beat(say="You can inspect its components for developer workflows.", caption="Component overview"),
+            ],
             on_screen=OnScreen(type="overview", content=f"{repo}\nSource components"),
-            evidence=Evidence(file=first_file, quote=quote[:30]),
+            evidence=Evidence(file=first_file, quote=quote),
         ),
         Scene(
             id="recap",
             kind="recap",
             title="Takeaways",
-            beats=[Beat(say=f"Explore the repository starting from {normalize_speech(first_file)}.", caption=f"Explore {first_file}")],
+            beats=[
+                Beat(say=f"To recap, {normalize_speech(repo)} structures {normalize_speech(t1)} and {normalize_speech(t2)}.", caption="Takeaways"),
+                Beat(say=f"Explore the repository starting from {normalize_speech(first_file)}.", caption=f"Explore {first_file}"),
+            ],
             on_screen=OnScreen(type="recap", content=f"Next step: view {first_file}"),
-            evidence=Evidence(file=first_file, quote=quote[:30]),
+            evidence=Evidence(file=first_file, quote=quote),
         ),
     ]
     return ScriptPlan(repo_name=repo, scenes=scenes)

@@ -31,6 +31,25 @@ from .schema import (
 
 logger = logging.getLogger(__name__)
 
+_STOPWORDS = {
+    "a", "an", "the", "and", "or", "in", "on", "at", "to", "for", "of", "with",
+    "by", "from", "is", "are", "was", "were", "this", "that", "these", "those",
+    "it", "its", "as", "be", "have", "has", "do", "does", "not", "but", "so",
+}
+
+
+def _extract_tokens(text: str) -> list[str]:
+    """Extract lowercased alphanumeric tokens of length >= 3 excluding stopwords."""
+    norm = text.replace("_", " ").lower()
+    words = re.findall(r"\b[A-Za-z0-9]{3,}\b", norm)
+    seen = set()
+    res = []
+    for w in words:
+        if w not in _STOPWORDS and w not in seen:
+            seen.add(w)
+            res.append(w)
+    return res
+
 
 class Planner(Protocol):
     """Protocol for script planners."""
@@ -117,20 +136,29 @@ class OfflinePlanner:
         owner = facts.owner or "developer"
         top_lang = next(iter(facts.languages_by_bytes.keys()), "Python")
 
-        # Determine evidence sources
-        readme_file = "README.md"
-        first_file = next(iter(facts.tree), "README.md")
-        if "/" in first_file:
-            first_file = first_file.rstrip("/")
+        readme_file = facts.readme_file or (next((f for f in facts.tree if not f.endswith("/")), "README.md"))
+
+        good_readme_lines = [l for l in facts.readme.raw_lines if len(_extract_tokens(l)) >= 2]
+        if not good_readme_lines:
+            if facts.readme.raw_lines:
+                good_readme_lines = list(facts.readme.raw_lines)
+            elif facts.readme.description:
+                good_readme_lines = [facts.readme.description]
+            elif facts.readme.title:
+                good_readme_lines = [facts.readme.title]
+            else:
+                good_readme_lines = [f"{repo} source repository code"]
 
         # -------------------------------------------------------------
         # Scene 1: Title
         # -------------------------------------------------------------
-        tagline = facts.readme.description[:120] if facts.readme.description else f"{repo} development toolkit"
-        title_quote = facts.readme.title if facts.readme.title else repo
+        title_quote = good_readme_lines[0]
+        q_toks = _extract_tokens(title_quote)
+        t1 = q_toks[0] if q_toks else repo.lower()
+        t2 = q_toks[1] if len(q_toks) > 1 else "code"
 
-        s1_say = f"Welcome to {normalize_speech(title_quote)}. Here is what you need to know in under one minute."
-        s1_cap = f"Introducing {repo}: {tagline}"
+        s1_say = f"Welcome to {normalize_speech(repo)}. We explore {normalize_speech(t1)} and {normalize_speech(t2)} in under one minute."
+        s1_cap = f"{repo}: {t1} and {t2}"
         scenes.append(Scene(
             id="title",
             kind="title",
@@ -147,22 +175,25 @@ class OfflinePlanner:
         # -------------------------------------------------------------
         # Scene 2: Overview
         # -------------------------------------------------------------
-        overview_body = facts.readme.description or f"{repo} organizes source modules for direct developer use."
-        ov_quote = overview_body[:80] if overview_body else title_quote
-        ov_say_1 = f"This project provides {normalize_speech(overview_body[:100])}."
-        ov_say_2 = "You can integrate it directly into your local development workflows."
+        ov_quote = good_readme_lines[1] if len(good_readme_lines) > 1 else good_readme_lines[0]
+        q_toks = _extract_tokens(ov_quote)
+        t1 = q_toks[0] if q_toks else repo.lower()
+        t2 = q_toks[1] if len(q_toks) > 1 else "workflows"
+
+        ov_say_1 = f"This project organizes {normalize_speech(t1)} and {normalize_speech(t2)}."
+        ov_say_2 = "You can integrate these components into your developer workflows."
         scenes.append(Scene(
             id="overview",
             kind="overview",
             title="Purpose",
             beats=[
-                Beat(say=ov_say_1, caption=overview_body[:90], focus="purpose"),
+                Beat(say=ov_say_1, caption=f"Focuses on {t1} and {t2}", focus="purpose"),
                 Beat(say=ov_say_2, caption="Integrates into developer workflows", focus="integration"),
             ],
             on_screen=OnScreen(
                 type="overview",
-                content=f"{repo}\n\n{overview_body}",
-                metadata={"points": [overview_body[:80], "Clear developer interface"]},
+                content=f"{repo}\n\n{ov_quote[:120]}",
+                metadata={"points": [f"Focuses on {t1}", f"Structured {t2}"]},
             ),
             evidence=Evidence(file=readme_file, quote=ov_quote),
         ))
@@ -175,11 +206,15 @@ class OfflinePlanner:
             nodes = sorted(list({e.source for e in top_edges} | {e.target for e in top_edges}))[:8]
             edge_strs = [f"{e.source} -> {e.target}" for e in top_edges]
             diag_content = "\n".join(edge_strs)
-            diag_file = top_edges[0].source
-            target_base = top_edges[0].target.split("/")[-1].replace(".py", "").replace(".js", "")
-            diag_quote = target_base if len(target_base) >= 3 else "import"
 
-            d_say_1 = f"The architecture is organized around {len(nodes)} core modules."
+            edge_cand = next((e for e in top_edges if len(_extract_tokens(e.raw_line)) >= 2), top_edges[0])
+            diag_file = edge_cand.source
+            diag_quote = edge_cand.raw_line if edge_cand.raw_line else edge_cand.target
+            q_toks = _extract_tokens(diag_quote)
+            t1 = q_toks[0] if q_toks else "modules"
+            t2 = q_toks[1] if len(q_toks) > 1 else "architecture"
+
+            d_say_1 = f"The architecture is organized around {len(nodes)} modules connecting {normalize_speech(t1)} and {normalize_speech(t2)}."
             d_say_2 = f"Execution flows from {normalize_speech(top_edges[0].source)} into {normalize_speech(top_edges[0].target)}."
             scenes.append(Scene(
                 id="diagram",
@@ -201,11 +236,17 @@ class OfflinePlanner:
         # Scene 4: Code (Key Public Function or Entry)
         # -------------------------------------------------------------
         if facts.top_symbols:
-            sym = facts.top_symbols[0]
-            code_line = f"def {sym.name}():" if sym.kind == "function" else f"class {sym.name}:"
-            code_quote = sym.name
-            code_say_1 = f"Let us look at {normalize_speech(sym.name)} in {normalize_speech(sym.file)}."
-            code_say_2 = f"It {normalize_speech(sym.docstring)}" if sym.docstring else "It defines the main functional entrypoint."
+            sym = next((s for s in facts.top_symbols if s.code_excerpt and s.def_line), facts.top_symbols[0])
+            code_file = sym.file
+            code_quote = sym.def_line if sym.def_line else (sym.code_excerpt.splitlines()[0] if sym.code_excerpt else sym.name)
+            code_content = sym.code_excerpt if sym.code_excerpt else f"def {sym.name}():\n    pass"
+
+            q_toks = _extract_tokens(code_quote)
+            t1 = q_toks[0] if q_toks else sym.name.lower()
+            t2 = q_toks[1] if len(q_toks) > 1 else "logic"
+
+            code_say_1 = f"Let us look at {normalize_speech(t1)} and {normalize_speech(t2)} in {normalize_speech(sym.file)}."
+            code_say_2 = "It provides the primary implementation logic for this module."
             scenes.append(Scene(
                 id="code",
                 kind="code",
@@ -216,7 +257,7 @@ class OfflinePlanner:
                 ],
                 on_screen=OnScreen(
                     type="code",
-                    content=f"# {sym.file}:{sym.start_line}-{sym.end_line}\n{code_line}\n    # {sym.docstring or 'Entry point'}\n    ...",
+                    content=code_content,
                     metadata={
                         "file": sym.file,
                         "symbol": sym.name,
@@ -224,64 +265,71 @@ class OfflinePlanner:
                         "end_line": min(sym.start_line + 12, sym.end_line),
                     },
                 ),
-                evidence=Evidence(file=sym.file, quote=code_quote),
+                evidence=Evidence(file=code_file, quote=code_quote),
             ))
 
         # -------------------------------------------------------------
         # Scene 5: Terminal (Quickstart Command)
         # -------------------------------------------------------------
-        command = ""
-        cmd_file = readme_file
-        if facts.readme.code_fences:
-            for fence in facts.readme.code_fences:
-                for line in fence.splitlines():
-                    clean_l = line.strip().lstrip("$ ")
-                    if any(clean_l.startswith(pfx) for pfx in ("pip", "python", "npm", "npx", "cargo", "go", "make", "docker")):
-                        command = clean_l
-                        break
-                if command:
+        valid_cmd = ""
+        for fence in facts.readme.code_fences:
+            for line in fence.splitlines():
+                clean_l = line.strip().lstrip("$ ")
+                if any(clean_l.startswith(pfx) for pfx in ("pip", "python", "npm", "npx", "cargo", "go", "make", "docker")):
+                    for rl in facts.readme.raw_lines:
+                        if clean_l in rl:
+                            valid_cmd = clean_l
+                            break
+                if valid_cmd:
                     break
+            if valid_cmd:
+                break
 
-        if not command and facts.entry_points:
-            command = f"python -m {facts.entry_points[0].replace('/', '.').replace('.py', '')}"
-            cmd_file = facts.entry_points[0]
-
-        if not command:
-            command = f"pip install -e ."
-
-        cmd_quote = command.split()[0] if command else "install"
-        t_say_1 = "To run this project, execute the quickstart command in your shell."
-        t_say_2 = f"Run {normalize_speech(command)}."
-        scenes.append(Scene(
-            id="terminal",
-            kind="terminal",
-            title="Terminal",
-            beats=[
-                Beat(say=t_say_1, caption="Run quickstart command in shell", focus="prompt"),
-                Beat(say=t_say_2, caption=command[:80], focus="command"),
-            ],
-            on_screen=OnScreen(
-                type="terminal",
-                content=f"$ {command}",
-                metadata={"command": command},
-            ),
-            evidence=Evidence(file=cmd_file, quote=cmd_quote if cmd_quote in command else command[:10]),
-        ))
+        if valid_cmd:
+            cmd_quote = valid_cmd
+            q_toks = _extract_tokens(cmd_quote)
+            t1 = q_toks[0] if q_toks else "command"
+            t2 = q_toks[1] if len(q_toks) > 1 else "quickstart"
+            t_say_1 = f"To install and run, execute {normalize_speech(t1)} with {normalize_speech(t2)} in your shell."
+            t_say_2 = f"Run {normalize_speech(valid_cmd)}."
+            scenes.append(Scene(
+                id="terminal",
+                kind="terminal",
+                title="Terminal",
+                beats=[
+                    Beat(say=t_say_1, caption="Run quickstart command in shell", focus="prompt"),
+                    Beat(say=t_say_2, caption=valid_cmd[:80], focus="command"),
+                ],
+                on_screen=OnScreen(
+                    type="terminal",
+                    content=f"$ {valid_cmd}",
+                    metadata={"command": valid_cmd},
+                ),
+                evidence=Evidence(file=readme_file, quote=cmd_quote),
+            ))
 
         # -------------------------------------------------------------
         # Scene 6: Fit (Video Understanding / Retrieval Alignment)
         # -------------------------------------------------------------
         if facts.is_video_relevant:
             matched_str = ", ".join(facts.matched_relevance_terms[:3])
-            fit_say_1 = f"In AI video pipelines, this repository powers indexing and retrieval using {normalize_speech(matched_str)}."
-            fit_say_2 = "It processes source video assets into searchable representation vectors."
+            fit_line = next((l for l in good_readme_lines if any(t in l.lower() for t in facts.matched_relevance_terms)), good_readme_lines[0])
+            fit_quote = fit_line
+            q_toks = _extract_tokens(fit_quote)
+            t1 = q_toks[0] if q_toks else "video"
+            t2 = q_toks[1] if len(q_toks) > 1 else "pipeline"
+            fit_say_1 = f"In video retrieval pipelines, this project utilizes {normalize_speech(t1)} and {normalize_speech(t2)}."
+            fit_say_2 = "It powers multimodal indexing and querying pipelines."
             fit_cap = f"Powers video pipelines: {matched_str}"
-            fit_quote = facts.matched_relevance_terms[0] if facts.matched_relevance_terms else title_quote
         else:
-            fit_say_1 = f"{normalize_speech(title_quote)} is a general-purpose project and is not video-specific."
+            fit_line = good_readme_lines[-1] if len(good_readme_lines) >= 3 else good_readme_lines[0]
+            fit_quote = fit_line
+            q_toks = _extract_tokens(fit_quote)
+            t1 = q_toks[0] if q_toks else repo.lower()
+            t2 = q_toks[1] if len(q_toks) > 1 else "general"
+            fit_say_1 = f"While {normalize_speech(repo)} focuses on {normalize_speech(t1)} and {normalize_speech(t2)}, it is not video-specific."
             fit_say_2 = "This generated video ships with retrieval transcripts, chapters, and index records for video search engines."
             fit_cap = "Outputs transcript.vtt, chapters.json, and index.jsonl"
-            fit_quote = title_quote
 
         scenes.append(Scene(
             id="fit",
@@ -302,13 +350,22 @@ class OfflinePlanner:
         # -------------------------------------------------------------
         # Scene 7: Recap
         # -------------------------------------------------------------
+        rc_line = good_readme_lines[2] if len(good_readme_lines) >= 3 else good_readme_lines[0]
+        rc_quote = rc_line
+        q_toks = _extract_tokens(rc_quote)
+        t1 = q_toks[0] if q_toks else repo.lower()
+        t2 = q_toks[1] if len(q_toks) > 1 else "codebase"
+        first_file = next(iter(facts.tree), "README.md")
+        if "/" in first_file:
+            first_file = first_file.rstrip("/")
+
+        rc_say_1 = f"To recap, {normalize_speech(repo)} provides structured solutions for {normalize_speech(t1)} and {normalize_speech(t2)}."
+        rc_say_2 = f"Next, check out {normalize_speech(first_file)} to start developing."
         takeaways = [
-            f"1. {repo} solves {facts.readme.description[:40] or 'core tasks'}",
-            f"2. Quickstart via {command[:30]}",
+            f"1. Core focus on {t1}",
+            f"2. Structured {t2} workflow",
             f"3. Explored via {first_file}",
         ]
-        rc_say_1 = f"To recap: {normalize_speech(title_quote)} provides clear components for your workflow."
-        rc_say_2 = f"Next, check out {normalize_speech(first_file)} to start developing."
         scenes.append(Scene(
             id="recap",
             kind="recap",
@@ -322,7 +379,7 @@ class OfflinePlanner:
                 content="\n".join(takeaways),
                 metadata={"takeaways": takeaways, "next_file": first_file},
             ),
-            evidence=Evidence(file=readme_file, quote=title_quote),
+            evidence=Evidence(file=readme_file, quote=rc_quote),
         ))
 
         # Ensure no banned buzzwords in any beat

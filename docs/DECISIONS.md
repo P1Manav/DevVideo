@@ -15,3 +15,10 @@ This log documents non-obvious design and engineering decisions made during the 
 - renderer_v2_architecture: Implemented HTML/SVG frame generator with single persistent Playwright Chromium browser (JS disabled); vendored Inter and JetBrains Mono OFL fonts; added chapter ribbon, glassmorphic caption card, and progress rail.
 - indentation_and_pygments_p5: Integrated Pygments line-by-line syntax highlighting to preserve verbatim indentation, fixing P5 template whitespace distortion.
 - pillow_overflow_detection_r7: Hardened Pillow fallback with strict text bounding metrics and explicit overflow flagging whenever lines exceed card capacity or are dropped past 15.
+- assemble_demuxer_repeat_last: Built ffmpeg concat-demuxer repeating the final frame entry so that video stream duration matches total audio duration precisely, eliminating demuxer truncation.
+- evals_modular_package: Replaced monolithic evals.py with a typed src/evals/ package containing 9 deterministic hard gates, independent secret regex scanning, DOM/Pillow overflow verification, and soft metrics with clarity evaluated only when Claude was active.
+- search_demo_tfidf: Implemented pure-Python TF-IDF retrieval tool in tools/search_demo.py (<80 lines) querying index.jsonl with cosine similarity over terms.
+- bounded_repair_manager: Implemented bounded 2-attempt automated repairs for duration speedup / scene dropping, overflow line reduction, and command replacement before triggering rejection.
+- pipeline_quarantine_manifest: Configured pipeline to write manifest.json and dispatch webhooks on ALL outcomes (published, rejected, failed); quarantined failed-gate videos to out/_rejected/.
+- docker_and_ci_hardening: Configured Dockerfile with non-root UID 10001 devvideo user, HOME=/home/devvideo, and playwright browser path; added must_run marker in pytest enforcing CI failure on unexpected test skips.
+

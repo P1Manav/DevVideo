@@ -10,6 +10,8 @@ on:
 jobs:
   test-and-generate:
     runs-on: ubuntu-latest
+    env:
+      CI: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +22,7 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install system dependencies (ffmpeg, espeak)
+      - name: Install system dependencies (ffmpeg, espeak-ng)
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng
@@ -28,23 +30,26 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Install Playwright browsers with system deps
         run: playwright install chromium --with-deps
 
-      - name: Run pytest test suite (full verification)
-        run: pytest tests/ -v --tb=short
+      - name: Run pytest test suite (full verification with must_run gates)
+        run: pytest tests/ -v
 
-      - name: Run video generator on fixture repo (offline planner, silent TTS)
+      - name: Run video generator on vidsearch_py (default backends)
         run: |
-          python -m src.main generate tests/fixture_repo --out out/ --llm offline --tts silent
+          python -m src.cli generate tests/fixtures/vidsearch_py --out out/
 
-      - name: Verify outputs (non-empty MP4 and all eval gates passed)
+      - name: Verify outputs (MP4 with audible voice, companion assets, eval gates passed)
         run: |
           test -s out/video.mp4 || { echo "ERROR: out/video.mp4 is missing or empty"; exit 1; }
+          test -s out/transcript.vtt || { echo "ERROR: out/transcript.vtt missing"; exit 1; }
+          test -s out/chapters.json || { echo "ERROR: out/chapters.json missing"; exit 1; }
+          test -s out/index.jsonl || { echo "ERROR: out/index.jsonl missing"; exit 1; }
           python -c "import json; r = json.load(open('out/eval_report.json')); assert r['all_gates_passed'] is True, f'Gates failed: {r}'"
-          echo "[OK] out/video.mp4 and out/eval_report.json successfully verified"
+          echo "[OK] out/video.mp4 and all companion outputs verified successfully"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -53,6 +58,10 @@ jobs:
           name: devvideo-ci-artifacts
           path: |
             out/video.mp4
+            out/transcript.vtt
+            out/chapters.json
+            out/index.jsonl
+            out/thumbnail.png
             out/eval_report.json
             out/manifest.json
             out/scenes.json
