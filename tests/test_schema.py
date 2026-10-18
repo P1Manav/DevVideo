@@ -87,3 +87,52 @@ class TestScriptPlan:
         )
         duration = script.estimated_duration_seconds()
         assert 35 <= duration <= 45
+
+
+class TestProvenanceSchema:
+    def test_beat_with_sources(self):
+        from src.schema import Beat, SourceSpan
+        span = SourceSpan(file="src/cli.py", start_line=10, end_line=15, text="parser.add_argument('--query')")
+        beat = Beat(say="We add query flag", caption="Query flag", focus="10-15", sources=[span])
+        assert len(beat.sources) == 1
+        assert beat.sources[0].file == "src/cli.py"
+
+    def test_factual_scene_without_sources_raises_error(self):
+        from src.schema import Beat
+        with pytest.raises(ValidationError):
+            Scene(
+                id="code",
+                kind="code",
+                narration="This is a test narration for the code scene here.",
+                beats=[Beat(say="We add query flag", caption="Query flag", sources=[])],
+            )
+
+    def test_title_and_recap_without_sources_pass(self):
+        from src.schema import Beat
+        title_scene = Scene(
+            id="title",
+            kind="title",
+            narration="Welcome to test repo explainer video.",
+            beats=[Beat(say="Welcome to test repo explainer video.", caption="Welcome", sources=[])],
+        )
+        assert title_scene.kind == "title"
+        recap_scene = Scene(
+            id="recap",
+            kind="recap",
+            narration="To recap, this is the summary of test repo.",
+            beats=[Beat(say="To recap, this is the summary of test repo.", caption="Recap", sources=[])],
+        )
+        assert recap_scene.kind == "recap"
+
+    def test_source_migration_from_evidence(self):
+        scene = Scene(
+            id="diagram",
+            kind="diagram",
+            narration="The architecture connects five modules together.",
+            evidence=Evidence(file="main.py", quote="import cli"),
+        )
+        assert len(scene.beats) == 1
+        assert len(scene.beats[0].sources) == 1
+        assert scene.beats[0].sources[0].file == "main.py"
+        assert scene.beats[0].sources[0].text == "import cli"
+
