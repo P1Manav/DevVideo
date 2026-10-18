@@ -407,3 +407,12 @@ class TestOnscreenTextIntegrityGate:
         gate = check_onscreen_text_integrity_gate(script, facts=DummyFacts())
         assert not gate.passed
         assert "dangling stopword" in gate.details
+
+
+def test_readme_gates_table_in_sync():
+    """Verify that the gates table in README.md matches generate_gates_markdown_table() exactly."""
+    from src.evals.registry import generate_gates_markdown_table
+    readme_path = Path(__file__).parent.parent / "README.md"
+    readme_text = readme_path.read_text(encoding="utf-8")
+    expected_table = generate_gates_markdown_table()
+    assert expected_table in readme_text, "README.md gates table is out of sync with src.evals.registry"

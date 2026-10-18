@@ -106,19 +106,25 @@ flowchart TD
 
 ## Hard Evaluation Gates
 
-Videos are only published if all 9 hard gates pass:
+Videos are only published if all 13 hard evaluation gates pass:
 
 | Gate | Target / Threshold | Description | Code Location |
 |------|-------------------|-------------|---------------|
-| `duration` | `<= 60.0s` | Container duration measured via `ffprobe` on final MP4. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L49-L85) |
-| `av_sync` | Scene `<= 0.15s`, Stream `<= 0.30s` | Maximum drift between audio and video across scenes and streams. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L88-L125) |
-| `audio_audible` | `> -50.0 dB` | Audio stream presence and loudness measured via ffmpeg `volumedetect`. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L128-L182) |
-| `groundedness` | `100%` | Every scene cites a file with quote >= 20 chars and shares >= 2 content tokens. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L190-L250) |
-| `code_verbatim` | `100%` | Code scene content is an exact verbatim line range from cited source. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L252-L282) |
-| `command_validity` | `100%` | Shell commands shown exist verbatim in repo code fences (N/A if 0 commands). | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L299-L345) |
-| `secret_leaks` | `0` | Zero credentials detected via independent multi-pattern scanner. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L348-L382) |
-| `no_overflow` | `0` | No dropped lines or bounding box clipping measured in DOM or Pillow. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L385-L415) |
-| `frames_valid` | `100%` | Sampled video frames contain non-flat visual content. | [gates.py](file:///d:/Projects/aintropy_assignment_part2_task12/src/evals/gates.py#L418-L440) |
+| `duration` | `<= 60.0s` | Container duration measured via ffprobe on final MP4. | [gates.py](src/evals/gates.py) |
+| `av_sync` | `Scene <= 0.15s, Stream <= 0.30s` | Maximum drift between audio and video across scenes and streams. | [gates.py](src/evals/gates.py) |
+| `audio_audible` | `> -35.0 dB` | Audio stream presence and loudness measured via ffmpeg volumedetect. | [gates.py](src/evals/gates.py) |
+| `groundedness` | `100%` | Every scene and beat cites valid source spans with >= 60% token grounding. | [gates.py](src/evals/gates.py) |
+| `code_verbatim` | `100%` | Code scene content is an exact verbatim line range from cited source. | [gates.py](src/evals/gates.py) |
+| `rendered_code_matches` | `100%` | All characters and indentation in code excerpt are preserved on-screen. | [gates.py](src/evals/gates.py) |
+| `command_validity` | `100%` | Shell commands shown exist verbatim in repo code fences (N/A if 0 commands). | [gates.py](src/evals/gates.py) |
+| `secret_leaks` | `0` | Zero credentials detected via independent multi-pattern scanner. | [gates.py](src/evals/gates.py) |
+| `no_overflow` | `0` | No dropped lines or bounding box clipping measured in DOM or Pillow. | [gates.py](src/evals/gates.py) |
+| `frames_valid` | `100%` | Sampled video frames contain non-flat visual content. | [gates.py](src/evals/gates.py) |
+| `narration_quality` | `0 violations` | No banned buzzwords, no dangling endings, verbs present in every beat. | [gates.py](src/evals/gates.py) |
+| `specificity` | `100%` | Every beat names >= 1 concrete repo-specific identifier or symbol. | [gates.py](src/evals/gates.py) |
+| `onscreen_text_integrity` | `0 violations` | No on-screen text ends mid-word or with dangling stopword; bullets grounded. | [gates.py](src/evals/gates.py) |
+| `motion` | `>= 24 changes, max gap <= 5.0s` | Content region motion events sampled at 5 fps with max idle window <= 5s. | [gates.py](src/evals/gates.py) |
+| `voice_present` | `Pass` | Verified voice engine present (non-blocking unless DEVVIDEO_REQUIRE_VOICE=1). | [gates.py](src/evals/gates.py) |
 
 ---
 

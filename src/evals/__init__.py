@@ -150,6 +150,9 @@ def run_eval(
     # 12. Gate 12: Specificity (hard gate)
     report.gates.append(check_specificity_gate(script, repo_files, facts=facts))
 
+    # Gate: On-screen Text Integrity (hard gate)
+    report.gates.append(check_onscreen_text_integrity_gate(script, facts=facts))
+
     # 13. Gate 13: Motion (hard gate)
     if actual_mp4 and actual_mp4.exists():
         report.gates.append(check_motion_gate(actual_mp4))
