@@ -30,7 +30,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from .ingest import RepoContent
-from .schema import SourceSpan
+from .schema import SourceSpan, check_for_banned_phrases
+
 
 logger = logging.getLogger(__name__)
 
@@ -249,9 +250,13 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
     if not title:
         for line in raw_lines:
             s = line.strip()
-            if s and not s.startswith("<") and not s.startswith("[!["):
-                title = s.lstrip("#").strip()
-                break
+            if not s or s.startswith("<") or s.startswith("[![") or s.startswith("![") or s.startswith("```"):
+                continue
+            non_link = re.sub(r"\[([^\]]+)\]\([^)]+\)", "", s).strip()
+            if len(s) > 0 and len(non_link) / float(len(s)) < 0.60:
+                continue
+            title = s.lstrip("#").strip()
+            break
 
     # 3. Extract sections & bullet features & prose description sentences
     sections: dict[str, str] = {}
@@ -301,8 +306,9 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
                 if len(sent_clean.split()) >= 6:
                     rs = ReadmeSentence(text=sent_clean, start_line=line_idx, end_line=line_idx)
                     description_sentences.append(rs)
-                    if not tagline:
+                    if not tagline and not check_for_banned_phrases(sent_clean):
                         tagline = sent_clean
+
 
     sections[current_sec] = "\n".join(sec_lines).strip()
 

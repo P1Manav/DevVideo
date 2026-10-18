@@ -131,10 +131,18 @@ class OfflinePlanner:
         limits: dict[str, Any] | None = None,
         feedback: list[str] | None = None,
     ) -> ScriptPlan:
+        from .narrate import write_explainer_script
+        return write_explainer_script(facts)
+
+    def _unused_old_plan(
+        self,
+        facts: RepoFacts,
+    ) -> ScriptPlan:
         scenes: list[Scene] = []
         repo = facts.repo_name
         owner = facts.owner or "developer"
         top_lang = next(iter(facts.languages_by_bytes.keys()), "Python")
+
 
         readme_file = facts.readme_file or (next((f for f in facts.tree if not f.endswith("/")), "README.md"))
 

@@ -24,3 +24,4 @@ This log documents non-obvious design and engineering decisions made during the 
 - phase0_baseline: Captured baseline pytest (155 passing), ran baseline pipeline on vidsearch_py and openai/CLIP into docs/verification/baseline/, and confirmed E1-E6 reproduction.
 - phase1_schema: Added SourceSpan and sources provenance to Beat, enforced >=1 source on non-title/recap beats with legacy evidence migration, and extracted on_screen authoring to visuals.py.
 - phase2_analyze: Upgraded RepoFacts with tagline/prose picker, description sentence spans, AST function call sequences, CLI flag help text, dependency role mapping, and pipeline stage evidence tracking; added clip_like fixture.
+- phase3_narrate: Built deterministic extractive ExplainerWriter in src/narrate.py replacing lone-token templates, eliminated the banned-word replacement hack in favor of strict draft avoidance/rejection, and implemented tools/quality_check.py passing on all fixtures.
