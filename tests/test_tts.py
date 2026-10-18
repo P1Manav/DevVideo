@@ -161,3 +161,64 @@ class TestTTSChain:
         ]
         with pytest.raises(RuntimeError, match="DEVVIDEO_REQUIRE_VOICE"):
             synthesize_scenes_chain(scenes, audio_dir=tmp_path / "audio", requested_backend="silent")
+
+    def test_voice_priority_chain_order(self, tmp_path):
+        """Verify TTS candidate backends order is edge -> piper -> espeak -> pyttsx3 -> silent."""
+        probed_order = []
+        def make_mock(name):
+            m = MagicMock()
+            m.name = name
+            def probe():
+                probed_order.append(name)
+                return False
+            m.probe.side_effect = probe
+            return m
+
+        with patch("src.tts.EdgeTTS", return_value=make_mock("edge")), \
+             patch("src.tts.PiperTTS", return_value=make_mock("piper")), \
+             patch("src.tts.EspeakTTS", return_value=make_mock("espeak")), \
+             patch("src.tts.Pyttsx3TTS", return_value=make_mock("pyttsx3")), \
+             patch("src.tts.SilentTTS", return_value=make_mock("silent")):
+            synthesize_scenes_chain([], audio_dir=tmp_path / "audio", requested_backend="auto")
+
+        assert probed_order == ["edge", "piper", "espeak", "pyttsx3", "silent"]
+
+    def test_audio_audible_gate_volumedetect(self, tmp_path):
+        """Gate audio_audible measures volumedetect mean volume > -35 dB on audible audio."""
+        import math
+        import struct
+        from src.evals.gates import check_audio_audible_gate
+
+        audible_wav = tmp_path / "audible.wav"
+        sample_rate = 44100
+        n_samples = sample_rate
+        amplitude = 16000
+        frames = bytearray()
+        for i in range(n_samples):
+            val = int(amplitude * math.sin(2 * math.pi * 440 * i / sample_rate))
+            frames.extend(struct.pack("<h", val))
+
+        with wave.open(str(audible_wav), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            wf.writeframes(frames)
+
+        gate = check_audio_audible_gate(audible_wav, tts_used="edge", min_volume_db=-35.0)
+        assert gate.passed
+        assert "dB" in gate.value
+
+    def test_pipeline_require_voice_fails_with_code_1(self, tmp_path, monkeypatch):
+        """DEVVIDEO_REQUIRE_VOICE=1 causes run_pipeline to fail cleanly with exit_code 1."""
+        from src.pipeline import run_pipeline
+        monkeypatch.setenv("DEVVIDEO_REQUIRE_VOICE", "1")
+        fixture_dir = Path(__file__).parent / "fixtures" / "vidsearch_py"
+        res = run_pipeline(
+            source=str(fixture_dir),
+            output_dir=tmp_path / "out",
+            llm_backend="mock",
+            tts_backend="silent",
+        )
+        assert not res.success
+        assert res.exit_code == 1
+        assert "DEVVIDEO_REQUIRE_VOICE" in str(res.error)

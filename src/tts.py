@@ -460,6 +460,7 @@ def synthesize_scenes_chain(
 
     fallback_reasons: list[str] = []
     tts_used = "silent"
+    audio_paths: list[Path] = []
 
     for backend in candidate_backends:
         # 1. Probe backend
