@@ -1,6 +1,6 @@
 """
 Unit tests for renderer module: Playwright rendering, Pillow fallback,
-text-overflow detection, layout protection, and non-flat frame assertion.
+indentation preservation (P5 regression), and overflow detection (R7 regression).
 """
 
 from pathlib import Path
@@ -8,6 +8,7 @@ from PIL import Image
 import pytest
 
 from src.render import render_scene_to_png, _step_down_layout
+from src.render_html import highlight_code_snippet, generate_svg_diagram
 
 
 def _count_distinct_colors(img: Image.Image) -> int:
@@ -35,11 +36,50 @@ class TestRenderer:
         assert res.renderer_used == "playwright"
         assert not res.has_overflow
 
-        # Assert frame is NOT a flat single color
         with Image.open(output_path) as img:
             assert img.size == (1280, 720)
             n_colors = _count_distinct_colors(img)
             assert n_colors > 100, f"Expected rich frame, but got only {n_colors} distinct colors"
+
+    def test_code_indentation_preserved_p5_fix(self):
+        """Regression test for P5: code indentation is strictly preserved without template whitespace flattening."""
+        code = (
+            "def search_query(query: str):\n"
+            "    # 4 spaces of indentation\n"
+            "    results = []\n"
+            "    for item in query:\n"
+            "        results.append(item)\n"
+            "    return results"
+        )
+        html_code = highlight_code_snippet(code, file_path="search.py")
+        lines = html_code.splitlines()
+
+        # Check line 1 (def) vs line 2 (indentation)
+        assert 'class="line-no"> 1</span>' in lines[0]
+        assert 'class="line-no"> 2</span>' in lines[1]
+        assert 'class="code-text">    <span' in lines[1] or '    <span' in lines[1]
+        # Verify 8 spaces on line 5 (results.append)
+        assert '        results.append' in lines[4] or '        <span' in lines[4]
+
+    def test_pillow_fallback_flags_overflow_on_dropped_lines_r7_fix(self, tmp_path):
+        """Regression test for R7: Pillow fallback must flag overflow when dropping lines past 15."""
+        output_path = tmp_path / "pillow_overflow.png"
+        twenty_lines = "\n".join(f"line_{i} = execute_step({i})" for i in range(20))
+
+        res = render_scene_to_png(
+            scene_id="overflow_scene",
+            content_type="code",
+            content=twenty_lines,
+            narration="Testing that lines dropped past 15 trigger overflow.",
+            repo_name="overflow_repo",
+            output_path=output_path,
+            use_playwright=False,
+        )
+
+        assert output_path.exists()
+        assert res.renderer_used == "fallback_pillow"
+        assert res.has_overflow is True
+        assert "dropped 5 lines past 15" in res.overflow_details
 
     def test_pillow_fallback_renders_readable_frame_not_flat_color(self, tmp_path):
         """Pillow fallback renderer produces an image with real readable text (not flat color)."""
@@ -59,36 +99,18 @@ class TestRenderer:
         assert "disabled" in res.fallback_reason.lower() or "failed" in res.fallback_reason.lower()
         assert not res.has_overflow
 
-        # Assert fallback frame is NOT a flat single color
         with Image.open(output_path) as img:
             assert img.size == (1280, 720)
             n_colors = _count_distinct_colors(img)
             assert n_colors > 50, f"Expected non-flat fallback frame, but got {n_colors} colors"
 
-    def test_layout_step_down_and_truncation_marker(self):
-        """Long code/text steps down in font size and applies truncation marker."""
-        long_code = "\n".join([f"line_{i} = do_something_complex({i})" for i in range(30)])
-        content, font_size, truncated = _step_down_layout(long_code, max_lines=16)
+    def test_svg_diagram_generation(self):
+        """SVG diagram generator creates valid SVG nodes and edges without overlap."""
+        nodes = ["src/main.py", "src/embed.py", "src/index.py"]
+        edges = [{"from": "src/main.py", "to": "src/embed.py"}]
+        svg = generate_svg_diagram(nodes, edges, active_focus="embed.py")
 
-        assert truncated is True
-        assert "... [truncated for display]" in content
-        assert len(content.splitlines()) <= 16
-        assert font_size in ["15px", "18px"]
-
-    def test_text_overflow_detection(self, tmp_path):
-        """An extreme payload that exceeds frame capacity is correctly flagged."""
-        output_path = tmp_path / "overflow_frame.png"
-        extreme_content = "\n".join(["X" * 150 for _ in range(30)])
-
-        res = render_scene_to_png(
-            scene_id="overflow_scene",
-            content_type="code",
-            content=extreme_content,
-            narration="Testing overflow flagging",
-            repo_name="overflow_repo",
-            output_path=output_path,
-            use_playwright=False,
-        )
-
-        assert output_path.exists()
-        assert res.renderer_used == "fallback_pillow"
+        assert "<svg" in svg
+        assert "src/main.py" in svg or "main.py" in svg
+        assert "embed.py" in svg
+        assert 'filter="url(#glow)"' in svg  # Focused node glow

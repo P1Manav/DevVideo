@@ -12,3 +12,6 @@ This log documents non-obvious design and engineering decisions made during the 
 - reason_and_plan_loop: Built bounded verify-revise reasoning loop with multi-tier fallback (claude -> offline -> degraded 3-scene plan) to eliminate UnboundLocalError and ensure zero unhandled failures on any repo structure.
 - tts_probe_and_chain: Implemented runtime probe synthesis in priority order (edge -> espeak -> pyttsx3 -> silent); added subprocess pyttsx3 to protect Windows SAPI5 from COM deadlocks; enforced atomic chain restart on mid-scene failure to guarantee no mixed voices.
 - audio_padding_and_timing: Added ffmpeg 0.25s lead and 0.35s tail padding to 44.1kHz mono PCM WAVs; synchronized beat start/end timings to spoken duration; added WPM calibration from first synthesized sentence.
+- renderer_v2_architecture: Implemented HTML/SVG frame generator with single persistent Playwright Chromium browser (JS disabled); vendored Inter and JetBrains Mono OFL fonts; added chapter ribbon, glassmorphic caption card, and progress rail.
+- indentation_and_pygments_p5: Integrated Pygments line-by-line syntax highlighting to preserve verbatim indentation, fixing P5 template whitespace distortion.
+- pillow_overflow_detection_r7: Hardened Pillow fallback with strict text bounding metrics and explicit overflow flagging whenever lines exceed card capacity or are dropped past 15.
