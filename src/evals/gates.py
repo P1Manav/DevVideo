@@ -5,6 +5,7 @@ All gates must pass or the video is rejected and not published.
 
 from __future__ import annotations
 
+import html
 import logging
 import os
 import re
@@ -414,6 +415,121 @@ def check_code_verbatim_gate(script: ScriptPlan, repo_files: dict[str, str]) -> 
         value=f"{ratio:.0%}",
         threshold="100%",
         details=f"{valid}/{len(code_scenes)} code scenes verbatim" + (f" (Failed: {failures})" if failures else ""),
+    )
+
+
+def extract_rendered_code_from_html(frame_html: str) -> list[str]:
+    """
+    Extract visible code lines from a rendered code frame HTML.
+    Strips tags, unescapes entities, drops line numbers and wrap markers (↳),
+    and rejoins continuation rows into original lines.
+    """
+    lines: list[str] = []
+    pattern = re.compile(r'<div class="code-line([^"]*)">.*?<span class="code-text">(.*?)</span>\s*</div>', re.DOTALL)
+    for m in pattern.finditer(frame_html):
+        div_cls = m.group(1)
+        text_content = m.group(2)
+        raw = re.sub(r'<[^>]+>', '', text_content)
+        raw = html.unescape(raw)
+        is_cont = ("cont-row" in div_cls) or ("↳" in raw)
+        if is_cont:
+            cleaned = re.sub(r"^\s*↳ ?", "", raw)
+            if lines:
+                lines[-1] = lines[-1] + cleaned
+            else:
+                lines.append(cleaned)
+        else:
+            lines.append(raw)
+    return lines
+
+
+def check_rendered_code_matches_gate(
+    script: ScriptPlan,
+    frame_html_map: dict[str, str] | None = None,
+    repo_files: dict[str, str] | None = None,
+) -> EvalGate:
+    """
+    Gate: rendered_code_matches
+    Extracts visible text from frame HTML (stripping tags, unescaping, dropping line numbers & wrap markers,
+    rejoining continuation rows) and asserts it equals the cited source lines exactly (whitespace-normalized per line).
+    """
+    code_scenes = [s for s in script.scenes if s.kind == "code" or getattr(s.on_screen, "type", "") == "code"]
+    if not code_scenes:
+        return EvalGate(
+            name="rendered_code_matches",
+            passed=True,
+            value="100% (0 code scenes)",
+            threshold="100%",
+            details="No code scenes to verify",
+            blocking=True,
+        )
+
+    all_scene_titles = [s.title for s in script.scenes]
+    passed_scenes = 0
+    failures: list[str] = []
+
+    for idx, scene in enumerate(code_scenes):
+        frame_html = ""
+        if frame_html_map and scene.id in frame_html_map:
+            frame_html = frame_html_map[scene.id]
+        else:
+            from ..render_html import build_frame_html
+            meta = scene.on_screen.metadata or {}
+            content = scene.on_screen.content or ""
+            caption = scene.beats[0].caption if scene.beats else scene.narration
+            frame_html = build_frame_html(
+                repo_name=script.repo_name,
+                scene_id=scene.id,
+                scene_kind="code",
+                scene_title=scene.title,
+                content=content,
+                caption=caption,
+                all_scene_titles=all_scene_titles,
+                current_scene_idx=idx,
+                progress_pct=50.0,
+                metadata=meta,
+                active_focus=scene.beats[0].focus if scene.beats else None,
+                state_kind="default",
+                state_data={"file": meta.get("file", ""), "code": content},
+            )
+
+        extracted_lines = extract_rendered_code_from_html(frame_html)
+        expected_lines = scene.on_screen.content.strip().splitlines()[:14]
+
+        if not extracted_lines and expected_lines:
+            failures.append(f"{scene.id}: No code lines extracted from frame HTML")
+            continue
+
+        scene_matches = True
+        for line_no, (ext_l, exp_l) in enumerate(zip(extracted_lines, expected_lines), start=1):
+            norm_ext = " ".join(ext_l.split())
+            norm_exp = " ".join(exp_l.split())
+            if norm_ext != norm_exp:
+                scene_matches = False
+                failures.append(
+                    f"{scene.id} line {line_no} mismatch: extracted {norm_ext!r} != expected {norm_exp!r}"
+                )
+                break
+
+        if len(extracted_lines) < len(expected_lines):
+            scene_matches = False
+            failures.append(
+                f"{scene.id}: extracted {len(extracted_lines)} lines, expected {len(expected_lines)}"
+            )
+
+        if scene_matches:
+            passed_scenes += 1
+
+    ratio = passed_scenes / len(code_scenes)
+    passed = (ratio >= 1.0)
+    return EvalGate(
+        name="rendered_code_matches",
+        passed=passed,
+        value=f"{ratio:.0%}",
+        threshold="100%",
+        details=f"{passed_scenes}/{len(code_scenes)} code frames match source lines exactly"
+        + (f" (Mismatches: {failures})" if failures else ""),
+        blocking=True,
     )
 
 

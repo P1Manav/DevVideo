@@ -14,6 +14,7 @@ from .gates import (
     check_audio_audible_gate,
     check_av_sync_gate,
     check_code_verbatim_gate,
+    check_rendered_code_matches_gate,
     check_command_validity_gate,
     check_drift_gate,
     check_duration_gate,
@@ -48,6 +49,7 @@ __all__ = [
     "check_audio_audible_gate",
     "check_groundedness",
     "check_code_verbatim_gate",
+    "check_rendered_code_matches_gate",
     "check_command_validity_gate",
     "check_secret_leaks_gate",
     "check_secret_gate",
@@ -118,6 +120,9 @@ def run_eval(
 
     # 5. Gate 5: Code Verbatim
     report.gates.append(check_code_verbatim_gate(script, repo_files))
+
+    # Gate: Rendered Code Matches
+    report.gates.append(check_rendered_code_matches_gate(script, repo_files=repo_files))
 
     # 6. Gate 6: Command Validity
     report.gates.append(check_command_validity_gate(script, repo_files))

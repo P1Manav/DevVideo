@@ -151,31 +151,75 @@ def highlight_code_snippet(
     """
     Format source code with Pygments syntax highlighting, real token colors,
     line numbers, and focus highlighting for the active chunk.
-    Non-focused lines are dimmed.
+    Long lines are wrapped at the RAW text character level into continuation rows
+    with a hanging indent and '↳' marker, then highlighted with Pygments.
+    No HTML tags are ever sliced or left unclosed.
     """
     ext = os.path.splitext(file_path)[1].lower() if file_path else ""
     lexer = PythonLexer() if ext == ".py" else (JavascriptLexer() if ext in (".js", ".ts") else BashLexer() if ext in (".sh", ".bash") else TextLexer())
 
     formatter = HtmlFormatter(nowrap=True)
     raw_lines = code.strip().splitlines()[:14]
+    max_line_len = max((len(l) for l in raw_lines), default=0)
+    need_small_font = max_line_len > 170
+    max_cols = 100 if need_small_font else 85
 
     lines_html = []
     for idx, raw_line in enumerate(raw_lines, start=start_line):
-        hl_line = highlight(raw_line, lexer, formatter).rstrip("\n")
         is_focused = True
         if focus_range is not None and focus_range[0] <= focus_range[1]:
             is_focused = (focus_range[0] <= idx <= focus_range[1])
 
         line_cls = "code-line active" if is_focused else "code-line dimmed"
 
-        # Long line wrapping indicator
-        wrapped_line = hl_line
-        if len(raw_line) > 85:
-            wrapped_line = hl_line[:80] + '<span class="cont-marker"> ↵</span>'
+        if len(raw_line) <= max_cols:
+            hl_line = highlight(raw_line, lexer, formatter).rstrip("\n")
+            lines_html.append(
+                f'<div class="{line_cls}"><span class="line-no">{idx:2d}</span><span class="code-text">{hl_line}</span></div>'
+            )
+        else:
+            indent_len = len(raw_line) - len(raw_line.lstrip(" "))
+            base_indent = raw_line[:indent_len]
+            hanging_indent = base_indent + "    "
 
-        lines_html.append(
-            f'<div class="{line_cls}"><span class="line-no">{idx:2d}</span><span class="code-text">{wrapped_line}</span></div>'
-        )
+            # Clean split for row 0
+            split_0 = -1
+            for sep in [" ", ",", "(", "["]:
+                idx_s = raw_line.rfind(sep, max(30, max_cols - 25), max_cols)
+                if idx_s > split_0:
+                    split_0 = idx_s + 1
+            if split_0 <= 0:
+                split_0 = max_cols
+
+            chunk0 = raw_line[:split_0]
+            hl0 = highlight(chunk0, lexer, formatter).rstrip("\n")
+            lines_html.append(
+                f'<div class="{line_cls}"><span class="line-no">{idx:2d}</span><span class="code-text">{hl0}</span></div>'
+            )
+
+            # Continuation rows
+            rem = raw_line[split_0:]
+            avail = max(30, max_cols - len(hanging_indent) - 4)
+            while rem:
+                if len(rem) <= avail:
+                    hl_chunk = highlight(rem, lexer, formatter).rstrip("\n")
+                    lines_html.append(
+                        f'<div class="{line_cls} cont-row"><span class="line-no">  </span><span class="code-text">{hanging_indent}<span class="cont-marker">↳ </span>{hl_chunk}</span></div>'
+                    )
+                    break
+                split_c = -1
+                for sep in [" ", ",", "(", "["]:
+                    idx_s = rem.rfind(sep, max(15, avail - 20), avail)
+                    if idx_s > split_c:
+                        split_c = idx_s + 1
+                if split_c <= 0:
+                    split_c = avail
+                chunk = rem[:split_c]
+                rem = rem[split_c:]
+                hl_chunk = highlight(chunk, lexer, formatter).rstrip("\n")
+                lines_html.append(
+                    f'<div class="{line_cls} cont-row"><span class="line-no">  </span><span class="code-text">{hanging_indent}<span class="cont-marker">↳ </span>{hl_chunk}</span></div>'
+                )
 
     callout_html = ""
     if caption_callout:
@@ -348,7 +392,9 @@ def build_frame_html(
             "focus": "#0c1524",
         }
         c_win_bg = type_bg_map.get(c_type, code_bgs[sub_phase % len(code_bgs)])
-        code_cls = f"code-window phase-{c_type} subphase-{sub_phase}"
+        is_small = any(len(l) > 170 for l in code_body_text.strip().splitlines()[:14])
+        small_cls = " small-code" if is_small else ""
+        code_cls = f"code-window phase-{c_type} subphase-{sub_phase}{small_cls}"
         inner_content = f"""
         <div class="{code_cls}" style="background: {c_win_bg}; border: 2px solid {border_c}; box-shadow: 0 0 35px {glow_c};">
           <div class="window-titlebar">
@@ -737,15 +783,21 @@ def build_frame_html(
     padding: 16px 20px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.25;
     color: #e2e8f0;
     overflow: hidden;
   }}
-  .code-line {{ display: flex; gap: 16px; transition: opacity 0.2s; }}
-  .code-line.active {{ background: rgba(56, 189, 248, 0.32); border-left: 5px solid #38bdf8; padding-left: 4px; }}
+  .code-window.small-code .code-pre {{
+    font-size: 13px;
+    line-height: 1.2;
+  }}
+  .code-line {{ display: flex; gap: 14px; transition: opacity 0.2s; }}
+  .code-line.active {{ background: rgba(56, 189, 248, 0.14); border-radius: 4px; padding-left: 4px; }}
+  .code-line.active .line-no {{ color: #94a3b8; font-weight: 600; }}
   .code-line.dimmed {{ opacity: 0.38; }}
-  .line-no {{ color: #475569; user-select: none; width: 22px; text-align: right; }}
-  .code-text {{ white-space: pre; }}
+  .code-line.dimmed .line-no {{ color: #475569; }}
+  .line-no {{ color: #475569; user-select: none; width: 24px; text-align: right; flex-shrink: 0; }}
+  .code-text {{ white-space: pre; font-family: 'JetBrains Mono', monospace; }}
   .cont-marker {{ color: #38bdf8; font-weight: 700; }}
   .code-callout {{
     margin: 12px 20px 16px;
