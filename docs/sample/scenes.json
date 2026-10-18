@@ -1,53 +1,288 @@
 {
-  "repo_name": "fixture_repo",
+  "repo_name": "vidsearch_py",
   "scenes": [
     {
-      "id": "intro",
-      "narration": "Welcome to this walkthrough of Fixture Repo. This is a sample project for testing the developer video generator. Built for developers integrating video understanding and retrieval engines.",
+      "id": "title",
+      "kind": "title",
+      "title": "Overview",
+      "narration": "Welcome to vidsearch py. We explore vidsearch and lightweight in under one minute.",
+      "beats": [
+        {
+          "say": "Welcome to vidsearch py. We explore vidsearch and lightweight in under one minute.",
+          "caption": "vidsearch_py: vidsearch and lightweight",
+          "focus": "vidsearch_py",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
       "on_screen": {
-        "type": "text",
-        "content": "Fixture Repo\nDeveloper Walkthrough"
+        "type": "title",
+        "content": "vidsearch_py\nlocal\nMarkdown",
+        "metadata": {
+          "repo": "vidsearch_py",
+          "owner": "local",
+          "language": "Markdown"
+        }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "This is a sample project for testing the developer video generator."
-      }
+        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine. It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index, and searches video segments using natural language queries."
+      },
+      "duration_seconds": 0.0
     },
     {
-      "id": "installation",
-      "narration": "To install and configure fixture_repo, run the project installation command in your local environment.",
+      "id": "overview",
+      "kind": "overview",
+      "title": "Purpose",
+      "narration": "This project organizes install and dependencies. You can integrate these components into your developer workflows.",
+      "beats": [
+        {
+          "say": "This project organizes install and dependencies.",
+          "caption": "Focuses on install and dependencies",
+          "focus": "purpose",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "You can integrate these components into your developer workflows.",
+          "caption": "Integrates into developer workflows",
+          "focus": "integration",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "overview",
+        "content": "vidsearch_py\n\nInstall the dependencies:",
+        "metadata": {
+          "points": [
+            "Focuses on install",
+            "Structured dependencies"
+          ]
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "Install the dependencies:"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "diagram",
+      "kind": "diagram",
+      "title": "Architecture",
+      "narration": "The architecture is organized around 5 modules connecting vidsearch and cli. Execution flows from vidsearch/ main dot py into vidsearch/cli dot py.",
+      "beats": [
+        {
+          "say": "The architecture is organized around 5 modules connecting vidsearch and cli.",
+          "caption": "Core architecture: 5 modules",
+          "focus": "vidsearch/__main__.py",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "Execution flows from vidsearch/ main dot py into vidsearch/cli dot py.",
+          "caption": "Flow: vidsearch/__main__.py to vidsearch/cli.py",
+          "focus": "vidsearch/cli.py",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "diagram",
+        "content": "vidsearch/__main__.py -> vidsearch/cli.py\nvidsearch/cli.py -> vidsearch/search.py\nvidsearch/embed.py -> vidsearch/frames.py\nvidsearch/search.py -> vidsearch/embed.py",
+        "metadata": {
+          "nodes": [
+            "vidsearch/__main__.py",
+            "vidsearch/cli.py",
+            "vidsearch/embed.py",
+            "vidsearch/frames.py",
+            "vidsearch/search.py"
+          ],
+          "edges": [
+            {
+              "from": "vidsearch/__main__.py",
+              "to": "vidsearch/cli.py"
+            },
+            {
+              "from": "vidsearch/cli.py",
+              "to": "vidsearch/search.py"
+            },
+            {
+              "from": "vidsearch/embed.py",
+              "to": "vidsearch/frames.py"
+            },
+            {
+              "from": "vidsearch/search.py",
+              "to": "vidsearch/embed.py"
+            }
+          ]
+        }
+      },
+      "evidence": {
+        "file": "vidsearch/__main__.py",
+        "quote": "from vidsearch.cli import main"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "code",
+      "kind": "code",
+      "title": "Key Code",
+      "narration": "Let us look at def and parse in vidsearch/cli dot py. It provides the primary implementation logic for this module.",
+      "beats": [
+        {
+          "say": "Let us look at def and parse in vidsearch/cli dot py.",
+          "caption": "Inspecting parse_args in vidsearch/cli.py",
+          "focus": "7",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "It provides the primary implementation logic for this module.",
+          "caption": "Parse CLI flags for indexing and querying videos.",
+          "focus": "14",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
       "on_screen": {
         "type": "code",
-        "content": "pip install -r requirements.txt"
+        "content": "def parse_args():\n    \"\"\"Parse CLI flags for indexing and querying videos.\"\"\"\n    parser = argparse.ArgumentParser(description=\"VidSearch CLI query tool\")\n    parser.add_argument(\"--query\", type=str, required=True, help=\"Natural language search query\")\n    parser.add_argument(\"--index\", type=str, default=\"index.faiss\", help=\"Path to Faiss vector index\")\n    parser.add_argument(\"--fps\", type=float, default=1.0, help=\"Frames per second sampling rate\")\n    parser.add_argument(\"--top-k\", type=int, default=5, help=\"Number of top video segments to return\")\n    return parser.parse_args()",
+        "metadata": {
+          "file": "vidsearch/cli.py",
+          "symbol": "parse_args",
+          "start_line": 7,
+          "end_line": 14
+        }
+      },
+      "evidence": {
+        "file": "vidsearch/cli.py",
+        "quote": "def parse_args():"
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "terminal",
+      "kind": "terminal",
+      "title": "Terminal",
+      "narration": "To install and run, execute pip with install in your shell. Run pip install -r requirements dot txt.",
+      "beats": [
+        {
+          "say": "To install and run, execute pip with install in your shell.",
+          "caption": "Run quickstart command in shell",
+          "focus": "prompt",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "Run pip install -r requirements dot txt.",
+          "caption": "pip install -r requirements.txt",
+          "focus": "command",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "terminal",
+        "content": "$ pip install -r requirements.txt",
+        "metadata": {
+          "command": "pip install -r requirements.txt"
+        }
       },
       "evidence": {
         "file": "README.md",
         "quote": "pip install -r requirements.txt"
-      }
-    },
-    {
-      "id": "architecture",
-      "narration": "The core implementation in sample.py is modular, readable, and structured for straightforward extension.",
-      "on_screen": {
-        "type": "code",
-        "content": "# sample.py\ndef hello() -> str:"
       },
-      "evidence": {
-        "file": "sample.py",
-        "quote": "def hello() -> str:"
-      }
+      "duration_seconds": 0.0
     },
     {
-      "id": "pipeline_integration",
-      "narration": "In an AI video understanding or retrieval engine pipeline, this repository provides critical processing components for indexing, query processing, and metadata extraction.",
+      "id": "fit",
+      "kind": "fit",
+      "title": "Pipeline Fit",
+      "narration": "In video retrieval pipelines, this project utilizes vidsearch and lightweight. It powers multimodal indexing and querying pipelines.",
+      "beats": [
+        {
+          "say": "In video retrieval pipelines, this project utilizes vidsearch and lightweight.",
+          "caption": "Powers video pipelines: clips, embedding, embeddings",
+          "focus": "domain",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "It powers multimodal indexing and querying pipelines.",
+          "caption": "Delivers structured multimodal assets",
+          "focus": "artifacts",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
       "on_screen": {
-        "type": "diagram",
-        "content": "Video Understanding Pipeline\nIngest -> Neural Index -> Retrieval Engine"
+        "type": "fit",
+        "content": "Video Pipeline Fit\nRelevance Score: 1.00\nRelevant terms: clips, embedding, embeddings, faiss, ffmpeg, frame, frames, index, multimodal, retrieval, vector, vectors, video",
+        "metadata": {
+          "relevance_score": 1.0,
+          "terms": [
+            "clips",
+            "embedding",
+            "embeddings",
+            "faiss",
+            "ffmpeg",
+            "frame",
+            "frames",
+            "index",
+            "multimodal",
+            "retrieval",
+            "vector",
+            "vectors",
+            "video"
+          ]
+        }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "This is a sample project for testing the developer video generator"
-      }
+        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine. It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index, and searches video segments using natural language queries."
+      },
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "recap",
+      "kind": "recap",
+      "title": "Takeaways",
+      "narration": "To recap, vidsearch py provides structured solutions for pip and install. Next, check out README dot md to start developing.",
+      "beats": [
+        {
+          "say": "To recap, vidsearch py provides structured solutions for pip and install.",
+          "caption": "3 key takeaways for developers",
+          "focus": "takeaways",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        },
+        {
+          "say": "Next, check out README dot md to start developing.",
+          "caption": "Explore next: README.md",
+          "focus": "README.md",
+          "start_seconds": 0.0,
+          "end_seconds": 0.0
+        }
+      ],
+      "on_screen": {
+        "type": "recap",
+        "content": "1. Core focus on pip\n2. Structured install workflow\n3. Explored via README.md",
+        "metadata": {
+          "takeaways": [
+            "1. Core focus on pip",
+            "2. Structured install workflow",
+            "3. Explored via README.md"
+          ],
+          "next_file": "README.md"
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "pip install -r requirements.txt"
+      },
+      "duration_seconds": 0.0
     }
   ]
 }

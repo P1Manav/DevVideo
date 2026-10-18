@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Overview",
+    "kind": "title",
+    "start_time": 0.0,
+    "end_time": 6.54
+  },
+  {
+    "title": "Purpose",
+    "kind": "overview",
+    "start_time": 6.54,
+    "end_time": 14.98
+  },
+  {
+    "title": "Architecture",
+    "kind": "diagram",
+    "start_time": 14.98,
+    "end_time": 27.54
+  },
+  {
+    "title": "Key Code",
+    "kind": "code",
+    "start_time": 27.54,
+    "end_time": 36.89
+  },
+  {
+    "title": "Terminal",
+    "kind": "terminal",
+    "start_time": 36.89,
+    "end_time": 45.53
+  },
+  {
+    "title": "Pipeline Fit",
+    "kind": "fit",
+    "start_time": 45.53,
+    "end_time": 55.9
+  }
+]

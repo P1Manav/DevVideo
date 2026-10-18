@@ -1,0 +1,43 @@
+1
+00:00:00,250 --> 00:00:06,540
+vidsearch_py: vidsearch and lightweight
+
+2
+00:00:06,790 --> 00:00:10,120
+Focuses on install and dependencies
+
+3
+00:00:10,120 --> 00:00:14,980
+Integrates into developer workflows
+
+4
+00:00:15,230 --> 00:00:21,460
+Core architecture: 5 modules
+
+5
+00:00:21,460 --> 00:00:27,540
+Flow: vidsearch/__main__.py to vidsearch/cli.py
+
+6
+00:00:27,790 --> 00:00:31,860
+Inspecting parse_args in vidsearch/cli.py
+
+7
+00:00:31,860 --> 00:00:36,890
+Parse CLI flags for indexing and querying videos.
+
+8
+00:00:37,140 --> 00:00:41,930
+Run quickstart command in shell
+
+9
+00:00:41,930 --> 00:00:45,530
+pip install -r requirements.txt
+
+10
+00:00:45,780 --> 00:00:51,600
+Powers video pipelines: clips, embedding, embeddings
+
+11
+00:00:51,600 --> 00:00:55,900
+Delivers structured multimodal assets
