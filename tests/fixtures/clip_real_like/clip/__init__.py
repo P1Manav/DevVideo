@@ -1,4 +1,3 @@
-"""CLIP module exports."""
-from .clip import available_models, load, tokenize
+from .clip import load, available_models
 
-__all__ = ["available_models", "load", "tokenize"]
+__all__ = ['load', 'available_models']

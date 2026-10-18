@@ -1,31 +1,25 @@
-"""
-Main interface functions for loading CLIP models and tokenizing text queries.
-"""
+"""CLIP model loading and tokenization routines."""
 
-from .model import build_model
-from .simple_tokenizer import SimpleTokenizer
+import os
+import torch
 
-_tokenizer = SimpleTokenizer()
+_MODELS = {"ViT-B/32": "https://openaipublic.azureedge.net/clip/models/vit-b-32.pt"}
 
-
-def available_models() -> list[str]:
+def available_models():
     """Returns the names of available CLIP models."""
-    return ["ViT-B/32", "ViT-B/16", "RN50"]
+    return list(_MODELS.keys())
 
+def load(name, device='cpu', jit=True, download_root=None):
+    """Load a CLIP model.
 
-def load(name: str = "ViT-B/32", device: str = "cpu"):
+    Parameters
+    ----------
+    name : str
+        A model name listed by `clip.available_models()`
+    device : Union[str, torch.device]
+        The device to put the loaded model on
     """
-    Load a CLIP model and its visual preprocessing transform.
-    Returns the loaded neural network model and torchvision preprocessing pipeline.
-    """
-    model = build_model(name, device=device)
-    preprocess = lambda img: img
-    return model, preprocess
-
-
-def tokenize(texts: list[str]) -> list[list[int]]:
-    """
-    Tokenize input strings into tensor token sequences for the transformer.
-    Returns integer token ids with start and end of sequence markers.
-    """
-    return [_tokenizer.encode(t) for t in texts]
+    download_root = download_root or os.path.expanduser('~/.cache/clip')
+    is_cuda = torch.cuda.is_available()
+    target_device = 'cuda' if is_cuda and device == 'cuda' else 'cpu'
+    return object(), lambda x: x
