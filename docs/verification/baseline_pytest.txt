@@ -1,0 +1,19 @@
+======================= BASELINE PYTEST OUTPUT =======================
+Command: pytest tests/ -v
+Date: 2026-10-18
+Platform: Windows (Python 3.10.6, ffmpeg 7.1, Playwright 1.58.0)
+
+108 passed in 83.12s (0:01:23)
+
+Key findings from baseline inspection:
+- Video output was silent-only slideshow (30s)
+- TTS auto picked edge-tts or fell back without testing runtime audio
+- Drift gate compared 150wpm estimate to measured audio and failed on any real voice
+- Offline planner hardcoded domain claims and narrated raw HTML
+- Code indentation in Playwright was flattened by whitespace issues
+- URL validation accepted traversal like github.com/a/..
+- Redaction had false positives on paths and missed short secrets
+- Circular secret gate
+- Webhook had SSRF / redirect issues and only sent on success
+- Evals had vacuous passes and substring matching ("ai" in "maintain")
+- Release workflow had invalid python -m build and missing user permissions
