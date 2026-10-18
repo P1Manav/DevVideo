@@ -152,3 +152,50 @@ class TestNoReadmeRepo:
         assert facts.readme.description == ""
         assert len(facts.top_symbols) == 1
         assert facts.top_symbols[0].name == "hello"
+
+
+class TestAnalyzeClipLike:
+    def test_clip_like_prose_wins_over_link_row(self):
+        clip_dir = FIXTURES_DIR / "clip_like"
+        content = ingest_local(str(clip_dir))
+        facts = analyze_repo(content)
+
+        # 1. Prose wins over link row
+        assert "Contrastive Language-Image Pre-Training" in facts.readme.tagline
+        assert "Blog" not in facts.readme.tagline
+        assert len(facts.readme.description_sentences) >= 1
+        assert facts.readme.description_sentences[0].start_line == 3
+
+        # 2. Features extracted
+        assert len(facts.readme.features) >= 2
+        assert any("Zero-shot" in f for f in facts.readme.features)
+
+        # 3. CLI flags with help
+        flag_names = [f.flag for f in facts.cli_flag_details]
+        assert "--image" in flag_names
+        assert "--query" in flag_names
+        img_flag = next(f for f in facts.cli_flag_details if f.flag == "--image")
+        assert "input image frame" in img_flag.help
+
+        # 4. Call sequence in main function
+        main_sym = next(s for s in facts.top_symbols if s.name == "main")
+        assert "parse_args" in main_sym.calls
+        assert "load_model" in main_sym.calls
+        assert "encode_image" in main_sym.calls
+        assert "encode_text" in main_sym.calls
+
+        # 5. Dependency roles
+        assert any("torch" in d for d in facts.dependencies)
+        torch_role = next(role for dep, role in facts.dependency_roles.items() if "torch" in dep)
+        assert torch_role == "neural network"
+
+        # 6. Pipeline stages
+        assert "embed" in facts.pipeline_stages
+
+        # 7. Owner is None for local repo
+        assert facts.owner is None
+
+        # 8. Entry module and ranked top modules
+        assert "cli.py" in facts.entry_module
+        assert facts.ranked_top_modules[0] == facts.entry_module
+

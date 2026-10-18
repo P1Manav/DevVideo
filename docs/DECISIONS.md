@@ -23,3 +23,4 @@ This log documents non-obvious design and engineering decisions made during the 
 - docker_and_ci_hardening: Configured Dockerfile with non-root UID 10001 devvideo user, HOME=/home/devvideo, and playwright browser path; added must_run marker in pytest enforcing CI failure on unexpected test skips.
 - phase0_baseline: Captured baseline pytest (155 passing), ran baseline pipeline on vidsearch_py and openai/CLIP into docs/verification/baseline/, and confirmed E1-E6 reproduction.
 - phase1_schema: Added SourceSpan and sources provenance to Beat, enforced >=1 source on non-title/recap beats with legacy evidence migration, and extracted on_screen authoring to visuals.py.
+- phase2_analyze: Upgraded RepoFacts with tagline/prose picker, description sentence spans, AST function call sequences, CLI flag help text, dependency role mapping, and pipeline stage evidence tracking; added clip_like fixture.
