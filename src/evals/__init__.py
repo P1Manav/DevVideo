@@ -23,6 +23,7 @@ from .gates import (
     check_overflow_gate,
     check_secret_gate,
     check_secret_leaks_gate,
+    check_voice_present_gate,
 )
 from .metrics import (
     check_coverage,
@@ -122,6 +123,9 @@ def run_eval(
         # Default pass if frame files were not retained/provided
         report.gates.append(EvalGate(name="frames_valid", passed=True, value="untested", threshold="100%", details="No frames provided"))
 
+    # 10. Gate 10: Voice Present (non-blocking unless DEVVIDEO_REQUIRE_VOICE=1)
+    report.gates.append(check_voice_present_gate(tts_used=tts_used))
+
     # Soft Metrics
     domain_score = compute_domain_relevance(script)
     report.metrics["domain_relevance"] = domain_score
@@ -134,6 +138,6 @@ def run_eval(
     report.metrics["clarity"] = evaluate_clarity(script, llm_used=backend_used)
     report.metrics["video_duration_seconds"] = round(num_duration, 2)
 
-    # Master publication gate
-    report.all_gates_passed = all(g.passed for g in report.gates)
+    # Master publication gate: all blocking gates must pass
+    report.all_gates_passed = all(g.passed for g in report.gates if getattr(g, "blocking", True))
     return report

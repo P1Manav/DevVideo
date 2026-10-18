@@ -4,7 +4,8 @@
 setup_commands:
   - "pip install -r requirements.txt -r requirements-dev.txt"
   - "playwright install chromium --with-deps"
-  - "which espeak-ng >/dev/null 2>&1 || which ffmpeg >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq espeak-ng ffmpeg) || true"
+  - "which ffmpeg >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq ffmpeg) || true"
+  - "which espeak-ng >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq espeak-ng) || true"
 
 run_commands:
   - "python src/main.py --help"

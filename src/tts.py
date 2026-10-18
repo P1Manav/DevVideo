@@ -179,6 +179,65 @@ class EdgeTTS:
 
 
 # ---------------------------------------------------------------------------
+# Piper Neural TTS
+# ---------------------------------------------------------------------------
+
+class PiperTTS:
+    """Piper local neural TTS (fast, local ONNX runtime)."""
+    name = "piper"
+
+    def __init__(self, model_path: str | Path | None = None) -> None:
+        self.model_path = Path(model_path) if model_path else (
+            Path(os.environ.get("PIPER_MODEL", "")) if os.environ.get("PIPER_MODEL") else None
+        )
+
+    def probe(self) -> bool:
+        if not self.model_path or not self.model_path.exists():
+            default_models = list(Path("models").glob("*.onnx")) if Path("models").exists() else []
+            if default_models:
+                self.model_path = default_models[0]
+            else:
+                return False
+
+        if not shutil.which("piper"):
+            try:
+                import piper  # noqa: F401
+            except ImportError:
+                return False
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+        try:
+            self.synthesize("Hello", tmp_path)
+            return tmp_path.exists() and tmp_path.stat().st_size > 0
+        except Exception:
+            return False
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+    def synthesize(self, text: str, output_path: Path) -> dict[str, Any]:
+        if not self.model_path or not self.model_path.exists():
+            raise RuntimeError("Piper ONNX model file not found")
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            raw_wav = Path(tmp.name)
+        try:
+            if shutil.which("piper"):
+                cmd = ["piper", "--model", str(self.model_path), "--output_file", str(raw_wav)]
+                res = subprocess.run(cmd, input=text, text=True, capture_output=True, timeout=30)
+                if res.returncode != 0:
+                    raise RuntimeError(f"piper failed (exit {res.returncode}): {res.stderr[:200]}")
+            else:
+                from piper.voice import PiperVoice
+                voice = PiperVoice.load(str(self.model_path))
+                with wave.open(str(raw_wav), "wb") as wf:
+                    voice.synthesize(text, wf)
+            normalize_and_pad_audio(raw_wav, output_path)
+        finally:
+            raw_wav.unlink(missing_ok=True)
+        return {}
+
+
+# ---------------------------------------------------------------------------
 # eSpeak-ng TTS
 # ---------------------------------------------------------------------------
 
@@ -350,10 +409,12 @@ def synthesize_scenes_chain(
     audio_dir.mkdir(parents=True, exist_ok=True)
     voice_name = voice or "en-US-AriaNeural"
 
-    # Candidate backends in strict order: edge -> espeak -> pyttsx3 -> silent
+    # Candidate backends in strict order: edge -> piper -> espeak -> pyttsx3 -> silent
     candidate_backends: list[TTSBackend] = []
     if requested_backend == "edge":
-        candidate_backends = [EdgeTTS(voice=voice_name), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [EdgeTTS(voice=voice_name), PiperTTS(), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+    elif requested_backend == "piper":
+        candidate_backends = [PiperTTS(), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
     elif requested_backend == "espeak":
         candidate_backends = [EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
     elif requested_backend == "pyttsx3":
@@ -361,7 +422,7 @@ def synthesize_scenes_chain(
     elif requested_backend == "silent":
         candidate_backends = [SilentTTS()]
     else:  # "auto"
-        candidate_backends = [EdgeTTS(voice=voice_name), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
+        candidate_backends = [EdgeTTS(voice=voice_name), PiperTTS(), EspeakTTS(), Pyttsx3TTS(), SilentTTS()]
 
     fallback_reasons: list[str] = []
     tts_used = "silent"
@@ -422,6 +483,8 @@ def get_tts_backend(requested: str | None = None) -> TTSBackend:
     name = requested or os.environ.get("TTS_BACKEND", "auto")
     if name == "edge":
         return EdgeTTS()
+    if name == "piper":
+        return PiperTTS()
     if name == "espeak":
         return EspeakTTS()
     if name == "pyttsx3":

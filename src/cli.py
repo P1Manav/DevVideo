@@ -77,14 +77,26 @@ def main() -> int:
         )
 
         if result.exit_code == 0:
+            vid_dur = result.manifest.get("video_duration_seconds", 0.0)
+            voice_be = result.manifest.get("voice", result.manifest.get("tts_used", "none"))
+            gates_passed = result.manifest.get("all_gates_passed", False)
+            gates_info = "all passed"
+            if result.eval_report and result.eval_report.gates:
+                p_count = sum(1 for g in result.eval_report.gates if g.passed)
+                gates_info = f"{p_count}/{len(result.eval_report.gates)} passed"
+
             print(f"\n[OK] Video published successfully: {result.video_path}")
-            print(f"  Duration: {result.manifest.get('timings', {}).get('total', '?')}s")
-            print(f"  All gates passed: {result.manifest.get('all_gates_passed', False)}")
-        elif result.exit_code == 1:
-            print(f"\n[REJECTED] Video generated but rejected by eval gates: {result.error}")
-            print("  Check out/_rejected/ and eval_report.json for details.")
-        else:
-            print(f"\n[ERROR] Video generation pipeline failed: {result.error}")
+            print(f"  Duration: {vid_dur:.1f}s")
+            print(f"  Voice: {voice_be}")
+            print(f"  Gates: {gates_info} (all_gates_passed={gates_passed})")
+            print("  Outputs:")
+            print(f"    Video:       {result.video_path}")
+            print(f"    Transcript:  {Path(args.out) / 'transcript.vtt'}")
+            print(f"    Chapters:    {Path(args.out) / 'chapters.json'}")
+            print(f"    Index:       {Path(args.out) / 'index.jsonl'}")
+            print(f"    Thumbnail:   {Path(args.out) / 'thumbnail.png'}")
+            print(f"    Eval Report: {Path(args.out) / 'eval_report.json'}")
+            print(f"    Manifest:    {Path(args.out) / 'manifest.json'}")
 
         return result.exit_code
 

@@ -328,7 +328,20 @@ def run_pipeline(
             result.success = True
             result.exit_code = 0
             result.video_path = video_path
-            video_status = "published"
+            if tts_used == "silent":
+                video_status = "published-no-voice"
+                sys.stderr.write(
+                    "\n"
+                    "======================================================================\n"
+                    "WARNING: DevVideo generated a silent video (voice: none)!\n"
+                    "No functional text-to-speech voice engine was found or available.\n"
+                    "For full audio narration, please install espeak-ng or configure\n"
+                    "internet access for Edge Neural TTS.\n"
+                    "======================================================================\n\n"
+                )
+                logger.warning("Published video with no voice engine (silent fallback).")
+            else:
+                video_status = "published"
             video_rel_path = "video.mp4"
             video_sha = hashlib.sha256(video_path.read_bytes()).hexdigest()
             logger.info(f"All gates passed! Published {video_path} ({final_video_dur:.1f}s)")
@@ -358,6 +371,7 @@ def run_pipeline(
         # -------------------------------------------------------------------
         manifest = {
             "status": video_status,
+            "voice": "none" if tts_used == "silent" else tts_used,
             "tool_git_sha": tool_sha,
             "input_repo_commit_sha": input_sha,
             "repo_name": repo.repo_name,
@@ -393,7 +407,7 @@ def run_pipeline(
     except Exception as e:
         logger.error(f"Pipeline failed at stage [{current_stage}]: {e}", exc_info=True)
         result.success = False
-        result.exit_code = 2
+        result.exit_code = 1 if "DEVVIDEO_REQUIRE_VOICE" in str(e) else 2
         result.error = f"Stage [{current_stage}] failed: {e}"
 
         timings["total"] = round(time.time() - start_time, 2)

@@ -42,9 +42,62 @@ class TestCLI:
         manifest_file = out_dir / "manifest.json"
         assert manifest_file.exists()
         manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
-        assert manifest["status"] == "published"
+        assert manifest["status"] in ("published", "published-no-voice")
+        assert manifest["voice"] == "none"
         assert manifest["video"] == "video.mp4"
         assert manifest["all_gates_passed"] is True
+
+    def test_cli_summary_printed_duration_matches_ffprobe(self, tmp_path, monkeypatch, capsys):
+        """CLI prints video duration from ffprobe within 0.1s."""
+        import re
+        from src.tts import get_audio_duration
+        out_dir = tmp_path / "cli_summary_test"
+        args = [
+            "devvideo", "generate",
+            str(FIXTURE_REPO),
+            "--out", str(out_dir),
+            "--llm", "mock",
+            "--tts", "silent",
+            "--renderer", "pillow",
+        ]
+        monkeypatch.setattr(sys, "argv", args)
+        code = main()
+        assert code == 0
+
+        captured = capsys.readouterr()
+        m = re.search(r"Duration:\s*([\d.]+)s", captured.out)
+        assert m, f"Duration not found in stdout: {captured.out}"
+        printed_dur = float(m.group(1))
+
+        mp4_path = out_dir / "video.mp4"
+        assert mp4_path.exists()
+        ffprobe_dur = get_audio_duration(mp4_path)
+
+        assert abs(printed_dur - ffprobe_dur) <= 0.1, (
+            f"Printed duration {printed_dur}s does not match ffprobe {ffprobe_dur}s within 0.1s"
+        )
+        assert "Voice: none" in captured.out
+        assert "Gates:" in captured.out
+        assert "Outputs:" in captured.out
+
+    def test_run_yaml_independent_ffmpeg_espeak(self):
+        """Assert run.yaml handles espeak-ng and ffmpeg in independent commands to prevent short-circuiting."""
+        import yaml
+        run_yaml_path = Path(__file__).resolve().parent.parent / "run.yaml"
+        assert run_yaml_path.exists()
+        data = yaml.safe_load(run_yaml_path.read_text(encoding="utf-8"))
+        setup_cmds = data.get("setup_commands", [])
+
+        ffmpeg_cmds = [cmd for cmd in setup_cmds if "ffmpeg" in cmd]
+        espeak_cmds = [cmd for cmd in setup_cmds if "espeak-ng" in cmd]
+
+        assert len(ffmpeg_cmds) >= 1, "ffmpeg setup command missing from run.yaml"
+        assert len(espeak_cmds) >= 1, "espeak-ng setup command missing from run.yaml"
+
+        # Assert they are not bundled in a single short-circuiting chain
+        for cmd in setup_cmds:
+            if "which espeak-ng" in cmd and "which ffmpeg" in cmd:
+                assert False, f"run.yaml short-circuits espeak-ng and ffmpeg in one command: {cmd}"
 
     def test_cli_error_nonexistent_path_returns_code_2(self, tmp_path, monkeypatch):
         out_dir = tmp_path / "cli_err"

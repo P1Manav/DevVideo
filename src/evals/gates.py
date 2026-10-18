@@ -6,6 +6,7 @@ All gates must pass or the video is rejected and not published.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -438,3 +439,22 @@ def check_frames_valid_gate(frame_paths: list[Path]) -> EvalGate:
         threshold="100%",
         details="Sampled frames are visually valid" if passed else f"Flat/invalid frames: {flat_frames}",
     )
+
+
+def check_voice_present_gate(tts_used: str = "auto") -> EvalGate:
+    """
+    Gate: voice present in output.
+    Fails if tts_used == 'silent'.
+    Non-blocking by default unless DEVVIDEO_REQUIRE_VOICE=1.
+    """
+    require_voice = (os.environ.get("DEVVIDEO_REQUIRE_VOICE") == "1")
+    has_voice = (tts_used != "silent" and tts_used != "none")
+    return EvalGate(
+        name="voice_present",
+        passed=has_voice,
+        value="present" if has_voice else "none (silent)",
+        threshold="present (voice required)" if require_voice else "present (warning only if absent)",
+        details="Real speech synthesis engine produced audio" if has_voice else "Silent audio generator was used; no voice present in output.",
+        blocking=require_voice,
+    )
+

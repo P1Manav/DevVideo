@@ -21,6 +21,7 @@ class EvalGate:
     value: str
     threshold: str
     details: str = ""
+    blocking: bool = True
 
 
 @dataclass
@@ -55,7 +56,16 @@ class EvalReport:
     @classmethod
     def load(cls, path: Path) -> EvalReport:
         data = json.loads(path.read_text(encoding="utf-8"))
-        gates = [EvalGate(**g) for g in data.get("gates", [])]
+        gates = []
+        for g in data.get("gates", []):
+            gates.append(EvalGate(
+                name=g.get("name", ""),
+                passed=g.get("passed", False),
+                value=g.get("value", ""),
+                threshold=g.get("threshold", ""),
+                details=g.get("details", ""),
+                blocking=g.get("blocking", True),
+            ))
         return cls(
             gates=gates,
             metrics=data.get("metrics", {}),
