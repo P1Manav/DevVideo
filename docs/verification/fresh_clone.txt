@@ -1,0 +1,104 @@
+=== FRESH CLONE SIMULATION AUDIT ===
+Cloning from: D:\Projects\aintropy_assignment_part2_task12
+Target temp dir: C:\Users\Maxpr\AppData\Local\Temp\fresh_devvideo_p7kvwc5y
+
+$ git clone D:\Projects\aintropy_assignment_part2_task12 C:\Users\Maxpr\AppData\Local\Temp\fresh_devvideo_p7kvwc5y
+Cloning into 'C:\Users\Maxpr\AppData\Local\Temp\fresh_devvideo_p7kvwc5y'...
+done.
+
+Exit code: 0
+
+$ python src/main.py --help
+usage: devvideo [-h] [--version] {generate} ...
+
+DevVideo: Generate developer walkthrough videos from GitHub repositories
+
+positional arguments:
+  {generate}
+    generate  Generate a video from a repository
+
+options:
+  -h, --help  show this help message and exit
+  --version   show program's version number and exit
+
+Exit code: 0
+
+$ python src/main.py generate tests/fixtures/vidsearch_py --out out/
+
+[OK] Video published successfully: out\video.mp4
+  Duration: 33.7s
+  All gates passed: True
+13:48:38 INFO     src.pipeline: Stage 1 [Ingest]: from tests/fixtures/vidsearch_py
+13:48:38 INFO     src.pipeline: Ingested 10 files from vidsearch_py
+13:48:38 INFO     src.pipeline: Stage 2 [Analyze]: Computing RepoFacts
+13:48:38 INFO     src.pipeline: Stage 3 [Plan]: Planning script with LLM=auto
+13:48:38 INFO     src.pipeline: Stage 4 [Voice]: Synthesizing speech with TTS=auto
+13:48:38 INFO     src.tts: Synthesizing 7 scenes with TTS backend: pyttsx3
+13:48:50 INFO     src.tts: Synthesizing 6 scenes with TTS backend: pyttsx3
+13:49:00 INFO     src.pipeline: Stage 5 [Render]: Rendering frames with renderer=auto
+13:49:03 INFO     src.pipeline: Stage 6 [Assemble]: Concatenating audio and muxing MP4
+13:49:07 INFO     src.assemble: Assembled video 55.90s -> out\video.mp4
+13:49:07 INFO     src.pipeline: Stage 7 [Eval]: Running all 9 hard evaluation gates
+13:49:11 INFO     src.evals.report: Eval report saved to out\eval_report.json
+13:49:11 INFO     src.pipeline: All gates passed! Published out\video.mp4 (55.9s)
+
+Exit code: 0
+
+Generated video: 1220003 bytes
+Eval report: {
+  "all_gates_passed": true,
+  "gates": [
+    {
+      "name": "duration",
+      "passed": true,
+      "value": "55.9s",
+      "threshold": "<= 60.0s",
+      "details": "Final video duration 55.9s"
+    },
+    {
+      "name": "av_sync",
+      "passed": true,
+      "value": "max_scene=0.00s, stream=0....
+
+$ pytest tests/test_e2e.py -v
+============================= test session starts =============================
+platform win32 -- Python 3.10.6, pytest-8.4.2, pluggy-1.6.0 -- C:\Users\Maxpr\AppData\Local\Programs\Python\Python310\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Maxpr\AppData\Local\Temp\fresh_devvideo_p7kvwc5y
+plugins: anyio-4.11.0, langsmith-0.10.18
+collecting ... collected 6 items
+
+tests/test_e2e.py::test_e2e_vidsearch_py PASSED                          [ 16%]
+tests/test_e2e.py::test_e2e_js_tool PASSED                               [ 33%]
+tests/test_e2e.py::test_e2e_docs_only PASSED                             [ 50%]
+tests/test_e2e.py::test_e2e_html_readme_no_raw_tags PASSED               [ 66%]
+tests/test_e2e.py::test_e2e_network_blocked_fallback PASSED              [ 83%]
+tests/test_e2e.py::test_e2e_no_readme_repo_never_crashes PASSED          [100%]
+
+============================== warnings summary ===============================
+tests/test_e2e.py::test_e2e_no_readme_repo_never_crashes
+  C:\Users\Maxpr\AppData\Local\Programs\Python\Python310\lib\contextlib.py:448: RuntimeWarning: coroutine 'EdgeTTS.probe.<locals>._run_probe.<locals>._inner' was never awaited
+    def _exit_wrapper(exc_type, exc, tb):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/test_e2e.py::test_e2e_no_readme_repo_never_crashes
+  C:\Users\Maxpr\AppData\Local\Programs\Python\Python310\lib\site-packages\_pytest\unraisableexception.py:67: PytestUnraisableExceptionWarning: Exception ignored in: <function BaseEventLoop.__del__ at 0x000001F021F39AB0>
+  
+  Traceback (most recent call last):
+    File "C:\Users\Maxpr\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 687, in __del__
+      self.close()
+    File "C:\Users\Maxpr\AppData\Local\Programs\Python\Python310\lib\asyncio\proactor_events.py", line 687, in close
+      self._close_self_pipe()
+    File "C:\Users\Maxpr\AppData\Local\Programs\Python\Python310\lib\asyncio\proactor_events.py", line 755, in _close_self_pipe
+      self._ssock.close()
+  AttributeError: 'ProactorEventLoop' object has no attribute '_ssock'
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================== 6 passed, 2 warnings in 116.53s (0:01:56) ==================
+
+Exit code: 0

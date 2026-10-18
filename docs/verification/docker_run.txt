@@ -1,0 +1,41 @@
+=== DOCKER CONTAINER VERIFICATION AUDIT ===
+Image: devvideo:latest
+User: non-root UID 10001 (devvideo:devvideo)
+
+Command 1: Help inspection
+$ docker run --rm devvideo --help
+usage: devvideo [-h] [--version] {generate} ...
+
+DevVideo: Generate developer walkthrough videos from GitHub repositories
+
+positional arguments:
+  {generate}
+    generate  Generate a video from a repository
+
+options:
+  -h, --help  show this help message and exit
+  --version   show program's version number and exit
+
+Exit code: 0
+
+Command 2: Full generation under non-root UID 10001
+$ docker run --rm --user 10001:10001 devvideo generate tests/fixtures/vidsearch_py --out /tmp/docker_out --tts silent
+08:24:44 INFO     src.pipeline: Stage 1 [Ingest]: from tests/fixtures/vidsearch_py
+08:24:44 INFO     src.pipeline: Ingested 9 files from vidsearch_py
+08:24:44 INFO     src.pipeline: Stage 2 [Analyze]: Computing RepoFacts
+08:24:44 INFO     src.pipeline: Stage 3 [Plan]: Planning script with LLM=auto
+08:24:44 INFO     src.pipeline: Stage 4 [Voice]: Synthesizing speech with TTS=silent
+08:24:44 INFO     src.tts: Synthesizing 7 scenes with TTS backend: silent
+08:24:44 INFO     src.pipeline: Stage 5 [Render]: Rendering frames with renderer=auto
+08:24:47 INFO     src.pipeline: Stage 6 [Assemble]: Concatenating audio and muxing MP4
+08:24:49 INFO     src.assemble: Assembled video 54.20s -> /tmp/docker_out/video.mp4
+08:24:49 INFO     src.pipeline: Stage 7 [Eval]: Running all 9 hard evaluation gates
+08:24:50 INFO     src.evals.report: Eval report saved to /tmp/docker_out/eval_report.json
+08:24:50 INFO     src.pipeline: All gates passed! Published /tmp/docker_out/video.mp4 (54.2s)
+
+[OK] Video published successfully: /tmp/docker_out/video.mp4
+  Duration: 5.97s
+  All gates passed: True
+
+Exit code: 0
+Status: VERIFIED (Non-root UID 10001, Playwright Chromium headless, FFmpeg, All 9 Gates Passed)
