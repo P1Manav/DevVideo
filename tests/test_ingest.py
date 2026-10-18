@@ -29,7 +29,7 @@ from src.ingest import (
     RepoContent,
 )
 
-FIXTURE_REPO = Path(__file__).parent / "fixture_repo"
+FIXTURE_REPO = Path(__file__).parent / "fixtures" / "vidsearch_py"
 
 
 # --- URL validation ---
@@ -178,7 +178,7 @@ class TestFileCollection:
 
     def test_collects_python_files(self):
         files = collect_files(FIXTURE_REPO)
-        assert "sample.py" in files
+        assert "vidsearch/cli.py" in files
 
     def test_file_content_is_string(self):
         files = collect_files(FIXTURE_REPO)
@@ -236,7 +236,7 @@ class TestCloneSecurity:
 class TestIngestLocal:
     def test_ingest_fixture_repo(self):
         repo = ingest_local(str(FIXTURE_REPO))
-        assert repo.repo_name == "fixture_repo"
+        assert repo.repo_name == "vidsearch_py"
         assert repo.owner == "local"
         assert len(repo.files) > 0
         assert "README.md" in repo.files

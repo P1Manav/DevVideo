@@ -115,8 +115,8 @@ class TestOfflinePlanner:
         from src.llm import OfflinePlanner
         from src.verify import verify_script
 
-        repo1 = ingest_local("tests/fixture_repo")
-        repo2 = ingest_local("tests/fixture_repo_2")
+        repo1 = ingest_local("tests/fixtures/vidsearch_py")
+        repo2 = ingest_local("tests/fixtures/clip_real_like")
 
         planner = OfflinePlanner()
 

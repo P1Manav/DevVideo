@@ -17,7 +17,7 @@ from pathlib import Path
 
 from src.pipeline import run_pipeline
 
-FIXTURE_REPO = Path(__file__).parent / "fixture_repo"
+FIXTURE_REPO = Path(__file__).parent / "fixtures" / "vidsearch_py"
 
 
 @pytest.fixture
@@ -97,7 +97,7 @@ class TestFullPipeline:
         assert result.script is not None
         assert len(result.script.scenes) >= 2
         assert result.eval_report is not None
-        assert result.manifest["repo_name"] == "fixture_repo"
+        assert result.manifest["repo_name"] == "vidsearch_py"
 
     def test_hard_gate_failure_prevents_video_publishing(self, output_dir, monkeypatch):
         """When an eval gate fails, video is unlinked and not published."""

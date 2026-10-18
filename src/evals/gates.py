@@ -39,7 +39,7 @@ STOPWORDS = {
     "explore", "exploring", "step", "steps", "execute", "executes", "executing", "executed",
     "stage", "stages", "pipeline", "code", "file", "files", "module", "modules",
     "install", "installs", "installing", "installed", "terminal", "command", "commands",
-    "inspect", "inspecting",
+    "inspect", "inspecting", "dot", "flag", "flags",
 }
 
 CMD_PREFIXES = (

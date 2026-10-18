@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from src.cli import main
 
-FIXTURE_REPO = Path(__file__).parent / "fixture_repo"
+FIXTURE_REPO = Path(__file__).parent / "fixtures" / "vidsearch_py"
 
 
 class TestCLI:

@@ -108,6 +108,7 @@ class ReadmeSentence(BaseModel):
     text: str
     start_line: int
     end_line: int
+    raw_text: str = ""
 
 
 class CleanedReadme(BaseModel):
@@ -117,9 +118,14 @@ class CleanedReadme(BaseModel):
     description: str = ""
     description_sentences: list[ReadmeSentence] = Field(default_factory=list)
     features: list[str] = Field(default_factory=list)
+    feature_sentences: list[ReadmeSentence] = Field(default_factory=list)
     sections: dict[str, str] = Field(default_factory=dict)
     code_fences: list[str] = Field(default_factory=list)
+    install_commands: list[str] = Field(default_factory=list)
+    usage_commands: list[str] = Field(default_factory=list)
     raw_lines: list[str] = Field(default_factory=list)
+
+
 
 
 class CliFlag(BaseModel):
@@ -147,6 +153,15 @@ class ModuleDocstring(BaseModel):
     file: str
     docstring: str
     span: SourceSpan
+
+    @property
+    def start_line(self) -> int:
+        return self.span.start_line
+
+    @property
+    def end_line(self) -> int:
+        return self.span.end_line
+
 
 
 class ImportEdge(BaseModel):
@@ -263,6 +278,7 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
     current_sec = "intro"
     sec_lines: list[str] = []
     features: list[str] = []
+    feature_sentences: list[ReadmeSentence] = []
     description_sentences: list[ReadmeSentence] = []
     tagline = ""
 
@@ -293,6 +309,8 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
             item_clean = re.sub(r"[`*]", "", item_clean).strip()
             if len(item_clean.split()) >= 3 and not item_clean.startswith("http"):
                 features.append(item_clean)
+                feature_sentences.append(ReadmeSentence(text=item_clean, raw_text=line, start_line=line_idx, end_line=line_idx))
+
 
         # Check for prose line according to prose picker rules
         if is_prose_line(line):
@@ -332,16 +350,56 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
         if l.strip() and not l.strip().startswith("<") and not l.strip().startswith("[![") and not l.strip().startswith("```")
     ]
 
+    install_commands: list[str] = []
+    usage_commands: list[str] = []
+
+    for fence in fences:
+        for fline in fence.splitlines():
+            fl = fline.strip()
+            if fl.startswith("$ ") or fl.startswith("> "):
+                fl = fl[2:].strip()
+            if not fl or fl.startswith("#"):
+                continue
+            if re.search(r"\b(pip|pip3|npm|pnpm|yarn|conda|brew|cargo)\s+install\b", fl) or fl.startswith("git clone"):
+                if fl not in install_commands:
+                    install_commands.append(fl)
+            elif re.search(r"\b(python|python3|node|npx)\b", fl) or (title and title.lower() in fl.lower()):
+                if fl not in usage_commands:
+                    usage_commands.append(fl)
+
+    # Check install/usage sections if none found in fences
+    for sec_name, sec_content in sections.items():
+        sec_lower = sec_name.lower()
+        if "install" in sec_lower:
+            for sline in sec_content.splitlines():
+                sl = sline.strip()
+                if sl.startswith("$ "):
+                    sl = sl[2:].strip()
+                if re.search(r"\b(pip|npm|conda|brew)\b", sl) and sl not in install_commands:
+                    install_commands.append(sl)
+        elif "usage" in sec_lower or "quickstart" in sec_lower or "run" in sec_lower:
+            for sline in sec_content.splitlines():
+                sl = sline.strip()
+                if sl.startswith("$ "):
+                    sl = sl[2:].strip()
+                if (sl.startswith("python") or sl.startswith("./") or " --" in sl) and sl not in usage_commands:
+                    usage_commands.append(sl)
+
     return CleanedReadme(
         title=title,
         tagline=tagline,
         description=description,
         description_sentences=description_sentences,
         features=features,
+        feature_sentences=feature_sentences,
         sections=sections,
+
         code_fences=fences,
+        install_commands=install_commands,
+        usage_commands=usage_commands,
         raw_lines=valid_raw_lines,
     )
+
 
 
 # --- Relevance calculation ---
@@ -411,6 +469,17 @@ def extract_python_facts(
             docstring=first_s,
             span=SourceSpan(file=rel_path, start_line=1, end_line=min(5, len(code_lines)), text=first_s),
         )
+    else:
+        for l_idx, l_str in enumerate(code_lines, start=1):
+            s_str = l_str.strip()
+            if s_str and not s_str.startswith("#"):
+                module_doc = ModuleDocstring(
+                    file=rel_path,
+                    docstring="",
+                    span=SourceSpan(file=rel_path, start_line=l_idx, end_line=l_idx, text=s_str),
+                )
+                break
+
 
     # 1. Imports
     for node in ast.walk(tree):
@@ -569,6 +638,20 @@ def extract_js_facts(
     return edges, symbols
 
 
+def is_auxiliary_or_test_path(path: str) -> bool:
+    """R5: Exclude tests/, test_*.py, examples/, docs/, setup.py, conftest.py, benchmarks/, scripts/."""
+    p = path.lower().replace("\\", "/")
+    parts = p.split("/")
+    filename = parts[-1]
+    aux_dirs = {"tests", "test", "examples", "example", "docs", "doc", "benchmarks", "benchmark", "scripts", "script"}
+    if any(part in aux_dirs for part in parts[:-1]):
+        return True
+    if filename.startswith("test_") or filename.endswith("_test.py") or filename in ("setup.py", "conftest.py", "__init__.py", "__main__.py"):
+        return True
+    return False
+
+
+
 # --- Main analysis function ---
 
 def analyze_repo(content: RepoContent) -> RepoFacts:
@@ -585,13 +668,37 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
     # Owner is None for local paths
     owner = None if raw_owner in ("local", "None", "", None) else raw_owner
 
-    # 1. Languages by bytes
-    lang_bytes: dict[str, int] = {}
+    # 1. Languages by bytes (R10: dominant language counts only code extensions unless no code exists)
+    code_extensions = {
+        ".py": "Python", ".js": "JavaScript", ".jsx": "JavaScript",
+        ".ts": "TypeScript", ".tsx": "TypeScript", ".go": "Go",
+        ".rs": "Rust", ".java": "Java", ".c": "C", ".cpp": "C++",
+        ".h": "C/C++", ".sh": "Shell", ".bash": "Shell",
+    }
+    non_code_extensions = {
+        ".md": "Markdown", ".rst": "reStructuredText", ".txt": "Text",
+        ".json": "JSON", ".yaml": "YAML", ".yml": "YAML", ".toml": "TOML",
+        ".html": "HTML", ".css": "CSS",
+    }
+
+    code_bytes: dict[str, int] = {}
+    other_bytes: dict[str, int] = {}
     for path, text in files.items():
         ext = os.path.splitext(path)[1].lower()
-        lang = EXTENSION_LANGUAGE_MAP.get(ext, "Other")
         size = len(text.encode("utf-8", errors="replace"))
-        lang_bytes[lang] = lang_bytes.get(lang, 0) + size
+        if ext in code_extensions:
+            l_name = code_extensions[ext]
+            code_bytes[l_name] = code_bytes.get(l_name, 0) + size
+        elif ext in non_code_extensions:
+            l_name = non_code_extensions[ext]
+            other_bytes[l_name] = other_bytes.get(l_name, 0) + size
+        else:
+            other_bytes["Other"] = other_bytes.get("Other", 0) + size
+
+    if code_bytes:
+        lang_bytes = dict(sorted(code_bytes.items(), key=lambda kv: kv[1], reverse=True))
+    else:
+        lang_bytes = dict(sorted(other_bytes.items(), key=lambda kv: kv[1], reverse=True))
 
     # 2. 2-level directory tree
     tree_set: set[str] = set()
@@ -672,6 +779,19 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
         edges, symbols = extract_js_facts(js_file, files[js_file], js_files)
         all_edges.extend(edges)
         all_symbols.extend(symbols)
+        js_lines = files[js_file].splitlines()
+        for l_idx, l_str in enumerate(js_lines, start=1):
+            s_str = l_str.strip()
+            if s_str and not s_str.startswith("//") and not s_str.startswith("/*") and not s_str.startswith("#!"):
+                module_docs.append(
+                    ModuleDocstring(
+                        file=js_file,
+                        docstring="",
+                        span=SourceSpan(file=js_file, start_line=l_idx, end_line=l_idx, text=s_str),
+                    )
+                )
+                break
+
 
     # Deduplicate edges & flags
     unique_edges = []
@@ -684,27 +804,44 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
 
     unique_flags = sorted(set(all_flags))
 
-    # Graph centrality ranking for top modules
+    # Graph centrality ranking for top modules (R5: exclude tests/examples/docs unless no other code exists)
     degrees: dict[str, int] = {}
     for e in unique_edges:
         degrees[e.source] = degrees.get(e.source, 0) + 1
         degrees[e.target] = degrees.get(e.target, 0) + 1
 
     sorted_by_degree = [mod for mod, _ in sorted(degrees.items(), key=lambda kv: kv[1], reverse=True)]
+    core_by_degree = [m for m in sorted_by_degree if not is_auxiliary_or_test_path(m)]
+    candidate_modules = core_by_degree if core_by_degree else sorted_by_degree
 
-    # Make sure entry_module is first if present
     ranked_top_modules: list[str] = []
-    if entry_module:
+    if entry_module and not is_auxiliary_or_test_path(entry_module):
         ranked_top_modules.append(entry_module)
-    for m in sorted_by_degree:
+    for m in candidate_modules:
         if m not in ranked_top_modules:
             ranked_top_modules.append(m)
 
-    # If still empty, add any py_files
     if not ranked_top_modules:
-        ranked_top_modules = sorted(py_files)[:8]
+        core_py = [p for p in py_files if not is_auxiliary_or_test_path(p)]
+        ranked_top_modules = sorted(core_py)[:8] if core_py else sorted(py_files)[:8]
     else:
         ranked_top_modules = ranked_top_modules[:8]
+
+    # R4: Rank symbols by public, non-test path, README mention, centrality, docstring, good length
+    readme_text_all = f"{cleaned_readme.title} {cleaned_readme.tagline} {' '.join(cleaned_readme.sections.values())} {' '.join(cleaned_readme.code_fences)}"
+    preferred_names = {"main", "run", "load", "search", "query", "encode", "build", "generate", "transcode"}
+
+    def _sym_priority(sym: TopSymbol) -> tuple[int, int, int, int, int]:
+        is_core = 1 if not is_auxiliary_or_test_path(sym.file) else 0
+        is_pub = 1 if not sym.name.startswith("_") else 0
+        in_readme = 1 if re.search(rf"\b{re.escape(sym.name)}\b", readme_text_all) else 0
+        is_pref = 1 if sym.name.lower() in preferred_names else 0
+        has_doc = 1 if sym.docstring else 0
+        lines_cnt = sym.end_line - sym.start_line + 1
+        is_good_len = 1 if (6 <= lines_cnt <= 35) else 0
+        return (is_core, is_pub, in_readme + is_pref, has_doc, is_good_len)
+
+    all_symbols.sort(key=_sym_priority, reverse=True)
 
     # 6. Extract dependencies & mapped roles
     deps: list[str] = []
@@ -730,20 +867,48 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
         if d_clean in DEPENDENCY_ROLES:
             dependency_roles[d] = DEPENDENCY_ROLES[d_clean]
 
-    # 7. Map pipeline stages with concrete evidence lines
+    # 7. Map pipeline stages with concrete evidence lines (R8: Honesty)
     pipeline_stages: dict[str, str] = {}
-    all_searchable_lines = list(cleaned_readme.raw_lines)
-    for fpath in sorted(py_files):
-        all_searchable_lines.extend(files[fpath].splitlines()[:50])
+    literal_stage_terms = {
+        "decode": ["decode", "decoding", "decoder"],
+        "embed": ["embed", "embedding", "embeddings", "representation"],
+        "index": ["index", "indexing"],
+        "query": ["query", "search", "retrieval", "retrieve"],
+        "transcribe": ["transcribe", "transcription", "speech-to-text", "speech recognition"],
+        "serve": ["serve", "serving", "server"],
+    }
 
-    for stage, keywords in STAGE_KEYWORDS.items():
-        for line in all_searchable_lines:
-            s_line = line.strip()
-            if not s_line or s_line.startswith("#") or s_line.startswith("```"):
+    # (a) Check README prose sentences
+    for stage, terms in literal_stage_terms.items():
+        if stage in pipeline_stages:
+            continue
+        for s in cleaned_readme.description_sentences:
+            s_text = s.text.lower()
+            if any(re.search(rf"\b{re.escape(t)}\b", s_text) for t in terms):
+                pipeline_stages[stage] = s.text
+                break
+
+    # (b) Check docstrings and identifiers in own non-test source files
+    for stage, terms in literal_stage_terms.items():
+        if stage in pipeline_stages:
+            continue
+        for sym in all_symbols:
+            if is_auxiliary_or_test_path(sym.file):
                 continue
-            # Check if any keyword appears as word
-            if any(re.search(rf"\b{kw}\b", s_line, re.IGNORECASE) for kw in keywords):
-                pipeline_stages[stage] = s_line
+            sym_text = f"{sym.name} {sym.docstring}".lower()
+            if any(re.search(rf"\b{re.escape(t)}\b", sym_text) for t in terms):
+                quote = sym.docstring or sym.def_line
+                pipeline_stages[stage] = quote
+                break
+
+    # (c) Check CLI flag help text
+    for stage, terms in literal_stage_terms.items():
+        if stage in pipeline_stages:
+            continue
+        for cf in cli_flags_details:
+            cf_text = f"{cf.flag} {cf.help}".lower()
+            if any(re.search(rf"\b{re.escape(t)}\b", cf_text) for t in terms):
+                pipeline_stages[stage] = f"{cf.flag}: {cf.help}"
                 break
 
     # 8. Relevance calculation over README + docstrings + dependency names

@@ -1,0 +1,22 @@
+[title]
+ffmpeg-python: Python bindings for FFmpeg. ffmpeg wrapper like provides Python functionality.
+
+[overview]
+There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
+It provides ffmpeg-python allows you to assemble complex FFmpeg filter graphs and transcode audio or video streams using an expressive Pythonic API.
+It provides Python, bindings, and FFmpeg.
+
+[diagram]
+ffmpeg/ run dot py executes commands invoking the ffmpeg binary subprocess with configured streams.
+It connects to ffmpeg/ filters dot py, which constructs audio and video filters for assembling complex ffmpeg filtergraphs.
+
+[code]
+In ffmpeg/ run dot py, run build command-line arguments from the stream graph and execute FFmpeg.
+In run, it executes and handles stream.
+
+[terminal]
+Run pip install ffmpeg-python to install.
+
+[recap]
+In short, ffmpeg wrapper like provides open source software tools.
+To dive in, explore ffmpeg wrapper like starting with ffmpeg/ run dot py.

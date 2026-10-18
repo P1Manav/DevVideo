@@ -1,0 +1,23 @@
+[title]
+clip real like provides Python functionality.
+
+[overview]
+CLIP , Contrastive Language-Image Pre-Training, is a neural network trained on a variety of image, text pairs.
+It can be instructed in natural language to predict the most relevant text snippet, given an image.
+It provides Paper, https, and arxiv.
+
+[diagram]
+clip/clip dot py provides main interface functions for loading CLIP models and tokenizing text queries.
+It connects to clip/simple tokenizer dot py, which tokenizes text using byte-pair encoding for converting natural language queries into token IDs.
+
+[code]
+In clip/clip dot py, load load a CLIP model and its visual preprocessing transform.
+Inside load, it invokes build model.
+
+[terminal]
+Run pip install ftfy regex tqdm to install.
+Then execute import clip.
+
+[recap]
+In short, clip real like provides open source software tools.
+To dive in, explore clip real like starting with clip/clip dot py.
