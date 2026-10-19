@@ -57,17 +57,23 @@ def build_recap_scene(facts: RepoFacts, readme_file: str) -> Scene:
         s for s in facts.readme.description_sentences
         if s.text and not check_for_banned_phrases(s.text)
     ]
+    from .compress import has_verb
+    from .verbs import transform_bullet_to_sentence
     diff_sents = [s for s in desc_sents if s.text.strip().lower() != title_text]
 
     if diff_sents:
-        comp_desc = compress_sentence(diff_sents[0].text, max_words=14)
-        summary_phrase = comp_desc[0].rstrip(".") if comp_desc else diff_sents[0].text.rstrip(".")
+        raw_text = diff_sents[0].text.lstrip("-*• ")
+        comp_desc = compress_sentence(raw_text, max_words=14)
+        summary_phrase = comp_desc[0].rstrip(".") if comp_desc else raw_text.rstrip(".")
+        if not has_verb(summary_phrase):
+            transformed = transform_bullet_to_sentence(summary_phrase)
+            summary_phrase = transformed if transformed else f"{title} provides {summary_phrase}"
         say1 = f"In summary, {_lower_lead_in(summary_phrase)}."
         span1 = SourceSpan(file=readme_file, start_line=diff_sents[0].start_line, end_line=diff_sents[0].end_line, text=diff_sents[0].text)
     elif facts.readme and facts.readme.features:
         feat_clean = facts.readme.features[0].rstrip(".")
         say1 = f"In summary, {title} provides {feat_clean}."
-        summary_phrase = feat_clean
+        summary_phrase = f"{title} provides {feat_clean}"
         sp, ep = find_exact_line_range(facts.readme.raw_lines, feat_clean)
         span1 = SourceSpan(file=readme_file, start_line=sp if sp > 0 else 1, end_line=ep if ep > 0 else 1, text=feat_clean)
     elif facts.ranked_top_modules:

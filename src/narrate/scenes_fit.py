@@ -55,6 +55,11 @@ def build_fit_scene(facts: RepoFacts, readme_file: str) -> Scene:
         caption1 = f"Pipeline Stage: {st}"
 
         span: SourceSpan | None = facts.pipeline_stage_spans.get(st)
+        if span and span.file == readme_file:
+            sp_check, ep_check = find_exact_line_range(facts.readme.raw_lines, span.text)
+            if sp_check <= 0:
+                span = None
+
         if not span or span.start_line <= 0:
             quote = facts.pipeline_stages.get(st, "")
             sp, ep = find_exact_line_range(facts.readme.raw_lines, quote)

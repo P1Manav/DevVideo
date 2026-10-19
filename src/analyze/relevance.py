@@ -108,12 +108,13 @@ def extract_pipeline_stages(
             if any(re.search(rf"\b{re.escape(k)}\b", text, re.I) for k in kws):
                 if stage_name == "query" and not is_content_search_sentence(text):
                     continue
-                evidenced[stage_name] = text
+                span_text = getattr(s, "raw_text", None) or s.text
+                evidenced[stage_name] = span_text
                 evidenced_spans[stage_name] = SourceSpan(
                     file=readme_file,
                     start_line=s.start_line,
                     end_line=s.end_line,
-                    text=s.text,
+                    text=span_text,
                 )
                 found = True
                 break
