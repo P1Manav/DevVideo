@@ -1,5 +1,6 @@
 """
 Terminal scene HTML rendering with progressive typing animation and flag callouts.
+Strictly decoration-free: no fake synthesis banners or artificial progress widgets.
 """
 
 from __future__ import annotations
@@ -14,37 +15,13 @@ def render_terminal_html(
     content: str,
     state_kind: str,
 ) -> str:
-    """Render terminal window center-stage."""
+    """Render terminal window center-stage with authentic command typing."""
     cmd_typed = sdata.get("command_display") or meta.get("command") or content.lstrip("$ ")
     cursor_vis = sdata.get("cursor_visible", True)
     cursor_html = '<span class="cursor">_</span>' if cursor_vis else '<span class="cursor-hidden">&nbsp;</span>'
     is_typing = sdata.get("is_typing", False)
-    typing_pct = sdata.get("typing_pct", 0)
     typing_step = sdata.get("step", 0)
     flag_info = sdata.get("flag_callout")
-
-    typing_status_html = ""
-    if is_typing:
-        typing_bgs = [
-            "linear-gradient(135deg, rgba(14, 165, 233, 0.5) 0%, rgba(99, 102, 241, 0.5) 100%)",
-            "linear-gradient(135deg, rgba(168, 85, 247, 0.5) 0%, rgba(236, 72, 153, 0.5) 100%)",
-        ]
-        b_bg = typing_bgs[typing_step % len(typing_bgs)]
-        typing_status_html = f"""
-        <div class="terminal-status-banner typing" style="background: {b_bg};">
-          <span class="status-pulse-dot">●</span>
-          <span class="status-title">SYNTHESIZING COMMAND ({typing_pct}%)</span>
-          <div class="status-track"><div class="status-fill" style="width: {typing_pct}%;"></div></div>
-        </div>
-        """
-    elif state_kind == "terminal_cursor":
-        typing_status_html = """
-        <div class="terminal-status-banner ready">
-          <span class="status-pulse-dot static">✔</span>
-          <span class="status-title">COMMAND READY</span>
-          <div class="status-track"><div class="status-fill" style="width: 100%;"></div></div>
-        </div>
-        """
 
     flag_callout_html = ""
     if flag_info and isinstance(flag_info, dict):
@@ -90,7 +67,6 @@ def render_terminal_html(
       </div>
       <div class="terminal-body">
         <div class="prompt-line"><span class="user-prompt">dev@workspace:~$</span> <span class="term-cmd">{html.escape(cmd_typed)}</span>{cursor_html}</div>
-        {typing_status_html}
         {flag_callout_html}
       </div>
     </div>

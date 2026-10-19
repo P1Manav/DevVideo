@@ -1,0 +1,53 @@
+=== STEP: Live Narration on Real Repos ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe -c from src.ingest import ingest_github
+from src.analyze import analyze_repo
+from src.plan import OfflinePlanner
+repos = ['https://github.com/openai/CLIP', 'https://github.com/kkroening/ffmpeg-python', 'https://github.com/octocat/Hello-World']
+for url in repos:
+    print(f'=== Live Repo: {url} ===')
+    facts = analyze_repo(ingest_github(url))
+    print(f'Languages: {facts.languages_by_bytes}')
+    script = OfflinePlanner().plan(facts)
+    for s in script.scenes:
+        for b in s.beats:
+            print(f'[{s.id}] {b.say}')
+
+Exit Code: 0
+Duration: 117.39s
+Timestamp: 2026-10-19T07:19:54.385852+00:00
+
+--- STDOUT ---
+=== Live Repo: https://github.com/openai/CLIP ===
+Languages: {'Python': 34341}
+[title] CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
+[overview] It can be instructed in natural language to predict the most relevant text snippet, given an image.
+[diagram] clip/clip dot py defines tokenize.
+[diagram] It connects to clip/model dot py, which defines build model.
+[code] In clip/clip dot py, load loads a CLIP model.
+[terminal] Run pip install ftfy regex tqdm to install dependencies for CLIP.
+[fit] CLIP is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+[recap] In summary, it can be instructed in natural language to predict the most relevant text snippet.
+[recap] To dive in, open clip/clip dot py.
+=== Live Repo: https://github.com/kkroening/ffmpeg-python ===
+Languages: {'Python': 114169}
+[title] ffmpeg-python: Python bindings for FFmpeg. There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
+[overview] ffmpeg-python works well for simple as well as complex signal graphs.
+[overview] FFmpeg is extremely powerful.
+[overview] It supports the time flag and width flag command line flags.
+[diagram] ffmpeg/ utils dot py defines convert kwargs to cmd line args.
+[diagram] It connects to ffmpeg/nodes dot py, imported by examples/facetime dot py.
+[code] In ffmpeg/ run dot py, run invokes ffmpeg for the supplied node graph.
+[terminal] Run pip install ffmpeg-python to install dependencies for ffmpeg-python.
+[fit] ffmpeg-python covers one step of a video retrieval pipeline: decode.
+[recap] In summary, ffmpeg-python works well for simple as well as complex signal graphs.
+[recap] To dive in, open ffmpeg/nodes dot py.
+=== Live Repo: https://github.com/octocat/Hello-World ===
+Languages: {}
+[title] The repository contains a README and nothing else.
+[overview] The repository contains a README and nothing else.
+[fit] Hello-World is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+[recap] This concludes the overview of Hello-World.
+
+
+--- STDERR ---
+

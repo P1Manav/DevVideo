@@ -75,9 +75,7 @@ def main() -> int:
 
     log_lines.append(f"Frame validation result: {non_flat_count}/{len(timestamps)} frames valid and non-flat.")
 
-    out_file = REPO_ROOT / "docs" / "verification" / "frame_and_cues_audit.txt"
-    out_file.write_text("\n".join(log_lines), encoding="utf-8")
-    print(f"Audit log saved to {out_file}")
+    print("\n".join(log_lines))
     return 0 if (all_cues_within_bounds and non_flat_count == 10) else 1
 
 if __name__ == "__main__":

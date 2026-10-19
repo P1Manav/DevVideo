@@ -1,13 +1,13 @@
 """
-Scene 1: Title & Identity narration (T1, T2, R10).
+Scene 1: Title & Identity narration (Phase 3 & 7, T1, T2, R10).
 Dominant language comes strictly from first-party code. No language claim if no first-party code exists.
 """
 from __future__ import annotations
 
 import re
-from ..analyze import RepoFacts
+from ..analyze import RepoFacts, find_exact_line_range
 from ..schema import Beat, Scene, SourceSpan, check_for_banned_phrases
-from .compress import compress_sentence, is_dangling
+from .compress import compress_sentence, fit_clause, is_dangling
 from .speech import tts_normalize_speech
 
 
@@ -30,12 +30,15 @@ def build_title_scene(facts: RepoFacts, readme_file: str) -> Scene:
     # Truth-first: if no prose exists and no code, state facts honestly
     if not tagline or check_for_banned_phrases(tagline):
         if not has_code:
-            say_text = f"{title}. The repository contains a README with project documentation."
+            short_readme = facts.readme.description or (facts.readme.raw_lines[0].strip() if facts.readme.raw_lines else "")
+            if short_readme and len(short_readme.split()) <= 6:
+                say_text = f"This repository contains a README that says {short_readme.rstrip('.')}."
+            else:
+                say_text = f"The repository contains a README and nothing else."
         else:
             say_text = f"{title} is built with {top_lang}."
         tag_phrase = title
         quoted_text = title
-        from ..analyze import find_exact_line_range
         sp, ep = find_exact_line_range(facts.readme.raw_lines, quoted_text)
     else:
         # Compress tagline cleanly per R1
@@ -47,13 +50,18 @@ def build_title_scene(facts: RepoFacts, readme_file: str) -> Scene:
         else:
             say_text = f"{title}. {tag_phrase}"
 
-        from ..analyze import find_exact_line_range
         quoted_text = tagline
         sp, ep = find_exact_line_range(facts.readme.raw_lines, quoted_text)
 
-    from .compress import clean_caption_text
     spoken_say = tts_normalize_speech(say_text)
-    caption_text = f"{title}: {clean_caption_text(tag_phrase, 8)}"
+    caption_clause = fit_clause(tag_phrase, max_chars=60)
+    if caption_clause.lower().startswith(title.lower()):
+        caption_text = caption_clause
+    else:
+        caption_text = f"{title}: {caption_clause}"
+
+    if sp <= 0:
+        sp, ep = 1, 1
 
     source_span = SourceSpan(
         file=readme_file,

@@ -125,6 +125,41 @@ GATES_REGISTRY: list[GateDefinition] = [
         code_file="src/evals/gates.py",
         blocking=False,
     ),
+    GateDefinition(
+        name="duration_margin",
+        threshold="<= 55.0s",
+        description="Duration budget margin check (warning at > 55s, blocking at > 60s).",
+        code_file="src/evals/gates.py",
+        blocking=False,
+    ),
+    GateDefinition(
+        name="code_highlight_focus",
+        threshold="<= 60% focus ratio, >= 1 focused row",
+        description="Highlight focus is constrained to <= 60% and max 5 rows per code beat.",
+        code_file="src/evals/gates.py",
+        blocking=True,
+    ),
+    GateDefinition(
+        name="code_window_visible",
+        threshold="100%",
+        description="Header with file path is visible and rows remain inside code container.",
+        code_file="src/evals/gates.py",
+        blocking=True,
+    ),
+    GateDefinition(
+        name="decoration_free",
+        threshold="0 violations",
+        description="No fake synthesis banners, fake percentage progress bars, or decorative widgets.",
+        code_file="src/evals/gates.py",
+        blocking=True,
+    ),
+    GateDefinition(
+        name="onscreen_matches_voice",
+        threshold="100%",
+        description="Every bullet, takeaway, and caption traces to spoken beats without news items.",
+        code_file="src/evals/gates.py",
+        blocking=True,
+    ),
 ]
 
 

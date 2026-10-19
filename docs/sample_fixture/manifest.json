@@ -1,8 +1,8 @@
 {
   "status": "published",
   "voice": "edge",
-  "tool_git_sha": "36bb601adb9b17d08e3289c035c03d331f636978",
-  "input_repo_commit_sha": "36bb601adb9b17d08e3289c035c03d331f636978",
+  "tool_git_sha": "eb2908031fa6cadf6b57cfbe367a5e747206c6cb",
+  "input_repo_commit_sha": "eb2908031fa6cadf6b57cfbe367a5e747206c6cb",
   "repo_name": "vidsearch_py",
   "versions": {
     "python": "3.10.11",
@@ -10,14 +10,14 @@
     "playwright": "installed"
   },
   "timings": {
-    "ingest": 0.09,
+    "ingest": 0.08,
     "analyze": 0.01,
-    "plan": 0.04,
-    "voice": 39.12,
-    "render": 15.91,
-    "assemble": 3.7,
-    "eval": 1.93,
-    "total": 60.91
+    "plan": 0.03,
+    "voice": 32.4,
+    "render": 10.76,
+    "assemble": 2.04,
+    "eval": 1.16,
+    "total": 46.56
   },
   "backend_requested": "auto",
   "backend_used": "offline",
@@ -32,8 +32,8 @@
   "renderer_used": "playwright",
   "renderer_fallback_reason": "",
   "video": "video.mp4",
-  "video_sha256": "ea269f439914050374a0fef4a691b8d70103755ffa09808f302074223899f32a",
-  "video_duration_seconds": 58.94,
+  "video_sha256": "56b3bf802a1b8d3057d8a66bcb05f12825881a7d9f272e941ec6b099c620f79e",
+  "video_duration_seconds": 46.46,
   "eval_report": "eval_report.json",
   "all_gates_passed": true
 }

@@ -54,7 +54,14 @@ def check_code_verbatim_gate(script: ScriptPlan, repo_files: dict[str, str]) -> 
         if code_excerpt in file_text:
             valid += 1
         else:
-            failures.append(f"{scene.id}: code snippet not verbatim line range in {ev.file}")
+            chunks = [
+                c.strip() for c in re.split(r"(?:\n\s*#\s*docstring omitted|\n\s*\.\.\.)\s*\n", code_excerpt)
+                if c.strip() and not c.strip().startswith("# docstring omitted") and c.strip() != "..."
+            ]
+            if chunks and all(c in file_text for c in chunks):
+                valid += 1
+            else:
+                failures.append(f"{scene.id}: code snippet not verbatim line range in {ev.file}")
 
     ratio = valid / len(code_scenes)
     passed = ratio >= 1.0

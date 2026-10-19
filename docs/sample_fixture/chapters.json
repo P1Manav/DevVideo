@@ -3,42 +3,42 @@
     "title": "Overview",
     "kind": "title",
     "start_time": 0.0,
-    "end_time": 5.59
+    "end_time": 5.26
   },
   {
     "title": "Purpose",
     "kind": "overview",
-    "start_time": 5.59,
-    "end_time": 14.33
+    "start_time": 5.26,
+    "end_time": 13.44
   },
   {
     "title": "Architecture",
     "kind": "diagram",
-    "start_time": 14.33,
-    "end_time": 28.23
+    "start_time": 13.44,
+    "end_time": 20.02
   },
   {
     "title": "Implementation",
     "kind": "code",
-    "start_time": 28.23,
-    "end_time": 34.25
+    "start_time": 20.02,
+    "end_time": 25.68
   },
   {
     "title": "Quickstart",
     "kind": "terminal",
-    "start_time": 34.25,
-    "end_time": 44.62
+    "start_time": 25.68,
+    "end_time": 35.4
   },
   {
     "title": "Pipeline Fit",
     "kind": "fit",
-    "start_time": 44.62,
-    "end_time": 52.23
+    "start_time": 35.4,
+    "end_time": 42.1
   },
   {
     "title": "Conclusion",
     "kind": "recap",
-    "start_time": 52.23,
-    "end_time": 58.95
+    "start_time": 42.1,
+    "end_time": 46.47
   }
 ]

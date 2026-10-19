@@ -139,13 +139,34 @@ def extract_python_facts(
                 first_line_doc = doc.splitlines()[0].strip() if doc else ""
                 end_lineno = getattr(node, "end_lineno", node.lineno)
                 s_idx = max(0, node.lineno - 1)
-                e_idx = min(s_idx + 14, end_lineno)
-                excerpt = "\n".join(code_lines[s_idx:e_idx])
+                # Skip docstring in excerpt to show function body logic
+                doc_node = (
+                    node.body[0]
+                    if (node.body and isinstance(node.body[0], ast.Expr) and isinstance(getattr(node.body[0], "value", None), (ast.Constant, ast.Str)))
+                    else None
+                )
+                doc_end_line = getattr(doc_node, "end_lineno", doc_node.lineno) if doc_node else 0
+
+                if doc_node and len(node.body) > 1 and doc_end_line >= node.lineno:
+                    sig_lines = code_lines[s_idx : doc_node.lineno - 1]
+                    if len(sig_lines) > 3:
+                        sig_lines = sig_lines[:2] + ["    ..."]
+                    body_lines = code_lines[doc_end_line : min(end_lineno, doc_end_line + 11)]
+                    excerpt_lines = sig_lines + ["    # docstring omitted"] + body_lines
+                    excerpt = "\n".join(excerpt_lines[:14])
+                else:
+                    e_idx = min(s_idx + 14, end_lineno)
+                    excerpt = "\n".join(code_lines[s_idx:e_idx])
+
                 def_l = code_lines[s_idx].strip() if s_idx < len(code_lines) else ""
 
                 c_vis = FunctionCallVisitor()
                 c_vis.visit(node)
                 meaningful_calls = c_vis.calls[:10]
+
+                # Extract parameters and returns
+                params = [arg.arg for arg in node.args.args if arg.arg != "self"]
+                has_ret = any(isinstance(n, ast.Return) for n in ast.walk(node))
 
                 doc_span = None
                 if first_line_doc:
@@ -170,6 +191,8 @@ def extract_python_facts(
                     def_line=def_l,
                     code_excerpt=excerpt,
                     calls=meaningful_calls,
+                    parameters=params,
+                    has_return=has_ret,
                 )
                 if trivial:
                     symbols.append(sym)

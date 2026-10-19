@@ -65,12 +65,12 @@ DEPENDENCY_ROLES = {
 }
 
 STAGE_KEYWORDS = {
-    "decode": ["decode", "decoding", "decoder", "frame", "frames"],
-    "embed": ["embed", "embedding", "embeddings"],
-    "index": ["index", "indexing"],
-    "query": ["query", "search", "retrieval", "retrieve"],
-    "transcribe": ["transcribe", "transcription", "speech-to-text", "speech recognition"],
-    "serve": ["serve", "serving", "server"],
+    "decode": ["decode", "decoding", "decoder", "frame", "frames", "keyframe", "video decoding"],
+    "transcribe": ["transcribe", "transcription", "transcript", "speech-to-text", "asr", "whisper"],
+    "embed": ["embed", "embedding", "embeddings", "encode", "encoder", "vector", "vectors"],
+    "index": ["index", "indices", "indexing", "faiss", "vector store"],
+    "query": ["query", "queries", "search", "retrieval", "nearest neighbor", "rank", "ranking", "lookup"],
+    "serve": ["serve", "serving", "server", "endpoint", "api route"],
 }
 
 
@@ -115,6 +115,8 @@ class TopSymbol(BaseModel):
     def_line: str = ""
     code_excerpt: str = ""
     calls: list[str] = Field(default_factory=list)
+    parameters: list[str] = Field(default_factory=list)
+    has_return: bool = False
 
 
 class ModuleDocstring(BaseModel):
@@ -158,6 +160,7 @@ class RepoFacts(BaseModel):
     dependencies: list[str] = Field(default_factory=list)
     dependency_roles: dict[str, str] = Field(default_factory=dict)
     pipeline_stages: dict[str, str] = Field(default_factory=dict)
+    pipeline_stage_spans: dict[str, SourceSpan] = Field(default_factory=dict)
     readme: CleanedReadme = Field(default_factory=CleanedReadme)
     readme_file: str = ""
     relevance_score: float = 0.0

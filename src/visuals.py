@@ -18,8 +18,12 @@ DANGLING_STOPWORDS = {
 }
 
 
-def clean_takeaway_line(text: str, max_words: int = 8) -> str:
+def clean_takeaway_line(text: str, max_words: int = 14) -> str:
     """Format a takeaway line cleanly without mid-word cuts or dangling stopwords."""
+    from .narrate.compress import fit_clause
+    clause = fit_clause(text, max_chars=75)
+    if clause:
+        return clause.rstrip(".,;:!?")
     words = text.split()[:max_words]
     while words and words[-1].lower().rstrip(".,;:!?") in DANGLING_STOPWORDS:
         words.pop()
@@ -55,8 +59,11 @@ def select_primary_code_symbol(facts: Any) -> Any:
     return ranked[0]
 
 
-def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
-    """Build grounded OnScreen object for a scene based on RepoFacts."""
+def build_scene_visuals(scene_kind: str, facts: Any, scene: Scene | None = None) -> OnScreen:
+    """Build grounded OnScreen object for a scene based on RepoFacts and scene beats."""
+    from .analyze import is_auxiliary_or_test_path
+    from .narrate.compress import fit_clause
+
     # Primary language
     lang = "Python"
     if hasattr(facts, "languages_by_bytes") and facts.languages_by_bytes:
@@ -81,15 +88,22 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
         return OnScreen(type="title", content=content, metadata=metadata)
 
     elif scene_kind == "overview":
-        points = []
-        if hasattr(facts, "readme"):
-            if getattr(facts.readme, "features", None):
-                points = [f.strip() for f in facts.readme.features[:3] if f.strip()]
-            if not points and getattr(facts.readme, "description_sentences", None):
+        points: list[str] = []
+        if scene and getattr(scene, "beats", None):
+            for b in scene.beats:
+                say_text = getattr(b, "say", "")
+                if say_text:
+                    clause = fit_clause(say_text, max_chars=75)
+                    if clause and clause not in points:
+                        points.append(clause)
+        if not points and hasattr(facts, "readme"):
+            if getattr(facts.readme, "description_sentences", None):
                 for s in facts.readme.description_sentences[:3]:
                     txt = s.text if hasattr(s, "text") else str(s)
                     if txt.strip():
                         points.append(txt.strip())
+            if not points and getattr(facts.readme, "features", None):
+                points = [f.strip() for f in facts.readme.features[:3] if f.strip()]
             if not points and getattr(facts.readme, "description", None):
                 points = [facts.readme.description[:120]]
         if not points:
@@ -100,25 +114,25 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
     elif scene_kind == "diagram":
         nodes: list[str] = []
         if hasattr(facts, "ranked_top_modules") and facts.ranked_top_modules:
-            nodes = list(facts.ranked_top_modules[:8])
+            nodes = [m for m in facts.ranked_top_modules if not is_auxiliary_or_test_path(m)][:8]
         elif hasattr(facts, "import_graph") and facts.import_graph:
             seen: list[str] = []
             for e in facts.import_graph:
-                if e.source not in seen:
+                if not is_auxiliary_or_test_path(e.source) and e.source not in seen:
                     seen.append(e.source)
-                if e.target not in seen:
+                if not is_auxiliary_or_test_path(e.target) and e.target not in seen:
                     seen.append(e.target)
             nodes = seen[:8]
         if not nodes:
             entry_mod = getattr(facts, "entry_module", "")
-            if entry_mod:
+            if entry_mod and not is_auxiliary_or_test_path(entry_mod):
                 nodes = [entry_mod]
 
         edges: list[dict[str, str]] = []
         if hasattr(facts, "import_graph") and facts.import_graph:
             for e in facts.import_graph:
                 if e.source in nodes and e.target in nodes:
-                    edges.append({"from": e.source, "to": e.target})
+                    edges.append({"from": e.source, "to": e.target, "source": e.source, "target": e.target})
 
         edge_str = "\n".join(f"{e['from']} -> {e['to']}" for e in edges)
         content = edge_str if edge_str else "\n".join(nodes)
@@ -240,10 +254,10 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
 
 
 def attach_visuals_to_script(script: ScriptPlan, facts: Any) -> ScriptPlan:
-    """Populate each scene's on_screen specification strictly from RepoFacts."""
+    """Populate each scene's on_screen specification strictly from RepoFacts and scene beats."""
     from .schema import Evidence
     for scene in script.scenes:
-        scene.on_screen = build_scene_visuals(scene.kind, facts)
+        scene.on_screen = build_scene_visuals(scene.kind, facts, scene=scene)
         if scene.kind == "code" and scene.on_screen and scene.on_screen.metadata:
             target_f = scene.on_screen.metadata.get("file")
             if target_f:

@@ -1,0 +1,116 @@
+=== STEP: Multi-Fixture Generation Matrix ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe docs/verification/verify_matrix.py
+Exit Code: 0
+Duration: 213.91s
+Timestamp: 2026-10-19T07:23:28.292404+00:00
+
+--- STDOUT ---
+=== GENERATION MATRIX VERIFICATION LOG ===
+
+--- Running fixture: vidsearch_py (tests/fixtures/vidsearch_py) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published-no-voice
+FFprobe Duration: 49.80s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -91.0 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+Non-blocking Warnings: voice_present
+
+--- Running fixture: ffmpeg_wrapper_real (tests/fixtures/ffmpeg_wrapper_real) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published-no-voice
+FFprobe Duration: 55.00s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -91.0 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+Non-blocking Warnings: voice_present
+
+--- Running fixture: clip_real_like (tests/fixtures/clip_real_like) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published-no-voice
+FFprobe Duration: 53.80s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -91.0 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+Non-blocking Warnings: voice_present
+
+--- Running fixture: js_tool (tests/fixtures/js_tool) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published-no-voice
+FFprobe Duration: 41.80s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -91.0 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+Non-blocking Warnings: voice_present
+
+--- Running fixture: docs_only (tests/fixtures/docs_only) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published
+FFprobe Duration: 36.55s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -21.8 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, voice_present, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+
+--- Running fixture: html_readme (tests/fixtures/html_readme) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published
+FFprobe Duration: 49.06s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -21.8 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, voice_present, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+
+--- Running fixture: readme_only (tests/fixtures/readme_only) [LLM=auto, TTS=auto] ---
+Exit code: 0
+Status: published
+FFprobe Duration: 22.56s
+FFprobe Streams: video:h264, audio:aac
+Mean Volume: -21.9 dB
+All Gates Passed: True
+Passed Gates: duration, duration_margin, av_sync, audio_audible, groundedness, code_verbatim, rendered_code_matches, command_validity, secret_leaks, no_overflow, frames_valid, voice_present, narration_quality, specificity, onscreen_text_integrity, code_highlight_focus, code_window_visible, decoration_free, onscreen_matches_voice, motion
+
+
+
+--- STDERR ---
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+Published video with no voice engine (silent fallback).
+

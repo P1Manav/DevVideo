@@ -1,0 +1,38 @@
+=== STEP: Live End-to-End Video on openai/CLIP ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe src/main.py generate https://github.com/openai/CLIP --out docs/sample --budget-seconds 52
+Exit Code: 0
+Duration: 46.47s
+Timestamp: 2026-10-19T07:24:22.594909+00:00
+
+--- STDOUT ---
+
+[OK] Video published successfully: docs\sample\video.mp4
+  Duration: 49.6s
+  Voice: edge
+  Gates: 20/20 passed (all_gates_passed=True)
+  Outputs:
+    Video:       docs\sample\video.mp4
+    Transcript:  docs\sample\transcript.vtt
+    Chapters:    docs\sample\chapters.json
+    Index:       docs\sample\index.jsonl
+    Thumbnail:   docs\sample\thumbnail.png
+    Eval Report: docs\sample\eval_report.json
+    Manifest:    docs\sample\manifest.json
+
+
+--- STDERR ---
+12:53:36 INFO     src.pipeline.runner: Stage 1 [Ingest]: from https://github.com/openai/CLIP
+12:53:36 INFO     src.ingest.clone: Cloning https://github.com/openai/CLIP into CLIP
+12:53:39 INFO     src.pipeline.runner: Ingested 16 files from CLIP
+12:53:39 INFO     src.pipeline.runner: Stage 2 [Analyze]: Computing RepoFacts
+12:53:39 INFO     src.pipeline.runner: Stage 3 [Plan]: Planning script with LLM=auto
+12:53:39 INFO     src.pipeline.runner: Stage 4 [Voice]: Synthesizing speech with TTS=auto
+12:53:41 INFO     src.tts.chain: Synthesizing 7 scenes with TTS backend: edge
+12:53:52 INFO     src.tts.chain: Synthesizing 7 scenes with TTS backend: edge
+12:54:03 INFO     src.pipeline.runner: Stage 5 [Render]: Rendering frames with renderer=auto
+12:54:16 INFO     src.pipeline.runner: Stage 6 [Assemble]: Concatenating audio and muxing MP4
+12:54:20 INFO     src.assemble: Assembled video 49.58s -> docs\sample\video.mp4
+12:54:20 INFO     src.pipeline.runner: Stage 7 [Eval]: Running all 9 hard evaluation gates
+12:54:22 INFO     src.evals.report: Eval report saved to docs\sample\eval_report.json
+12:54:22 INFO     src.pipeline.runner: All gates passed! Published docs\sample\video.mp4 (49.6s)
+

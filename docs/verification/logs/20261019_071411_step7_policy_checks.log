@@ -1,0 +1,20 @@
+=== STEP: Voice Policy Enforcement Check ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe -c import os, subprocess, sys
+env = dict(os.environ, DEVVIDEO_REQUIRE_VOICE='1')
+cmd = [sys.executable, 'src/main.py', 'generate', 'tests/fixtures/vidsearch_py', '--tts', 'silent', '--out', 'out/_policy_test']
+res = subprocess.run(cmd, env=env, capture_output=True, text=True)
+print(f'Exit code: {res.returncode}')
+assert res.returncode == 1, 'Policy failure: silent TTS did not exit 1 under DEVVIDEO_REQUIRE_VOICE=1'
+print('Policy verified: DEVVIDEO_REQUIRE_VOICE=1 successfully aborted with code 1 on silent voice')
+
+Exit Code: 0
+Duration: 1.92s
+Timestamp: 2026-10-19T07:23:34.791047+00:00
+
+--- STDOUT ---
+Exit code: 1
+Policy verified: DEVVIDEO_REQUIRE_VOICE=1 successfully aborted with code 1 on silent voice
+
+
+--- STDERR ---
+

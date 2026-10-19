@@ -1,10 +1,10 @@
 WEBVTT
 
 00:00:00.250 --> 00:00:07.510
-CLIP: CLIP (Contrastive Language-Image Pre-Training) is a neural network
+CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs
 
 00:00:07.760 --> 00:00:13.750
-What it is: It can be instructed
+It can be instructed in natural language to predict the most relevant text snippet
 
 00:00:14.000 --> 00:00:16.760
 clip/clip.py: defines tokenize
@@ -19,10 +19,10 @@ load: loads a CLIP model
 Install: pip install ftfy regex tqdm
 
 00:00:32.480 --> 00:00:40.270
-General tool: exports transcript, chapters, and index
+Pipeline Fit: general tool
 
-00:00:40.520 --> 00:00:48.510
-Summary: CLIP (Contrastive Language-Image Pre-Training)
+00:00:40.520 --> 00:00:46.940
+It can be instructed in natural language to predict the most relevant text snippet
 
-00:00:48.510 --> 00:00:52.820
-Next Step: inspect clip/clip.py
+00:00:46.940 --> 00:00:49.580
+Next step: open clip/clip.py

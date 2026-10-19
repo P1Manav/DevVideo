@@ -4,25 +4,33 @@
     {
       "name": "duration",
       "passed": true,
-      "value": "58.9s",
+      "value": "46.5s",
       "threshold": "<= 60.0s",
-      "details": "Final video duration 58.9s",
+      "details": "Final video duration 46.5s",
       "blocking": true
+    },
+    {
+      "name": "duration_margin",
+      "passed": true,
+      "value": "46.5s",
+      "threshold": "<= 55.0s",
+      "details": "Final video duration 46.5s (budget <= 55.0s)",
+      "blocking": false
     },
     {
       "name": "av_sync",
       "passed": true,
-      "value": "max_scene=0.00s, stream=0.01s",
+      "value": "max_scene=0.00s, stream=0.03s",
       "threshold": "scene <= 0.15s, stream <= 0.3s",
-      "details": "A/V sync verified (scene drift 0.00s, stream drift 0.01s)",
+      "details": "A/V sync verified (scene drift 0.00s, stream drift 0.03s)",
       "blocking": true
     },
     {
       "name": "audio_audible",
       "passed": true,
-      "value": "-21.7 dB",
+      "value": "-21.9 dB",
       "threshold": "> -50.0 dB",
-      "details": "Measured mean volume -21.7 dB",
+      "details": "Measured mean volume -21.9 dB",
       "blocking": true
     },
     {
@@ -100,7 +108,7 @@
     {
       "name": "specificity",
       "passed": true,
-      "value": "9/9 specific",
+      "value": "8/8 specific",
       "threshold": "100%",
       "details": "All beats name >= 1 repo-specific item",
       "blocking": true
@@ -114,11 +122,43 @@
       "blocking": true
     },
     {
+      "name": "code_highlight_focus",
+      "passed": true,
+      "value": "0 violations",
+      "threshold": "<= 60% focus ratio, >= 1 focused row",
+      "details": "All code beats maintain focused highlight <= 60% of visible lines",
+      "blocking": true
+    },
+    {
+      "name": "code_window_visible",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "Code window header and rows verified inside container",
+      "blocking": true
+    },
+    {
+      "name": "decoration_free",
+      "passed": true,
+      "value": "0 violations",
+      "threshold": "0 violations",
+      "details": "No decorative progress bars or fake synthesis elements detected",
+      "blocking": true
+    },
+    {
+      "name": "onscreen_matches_voice",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "All on-screen text matches spoken beats and allowed content without news items",
+      "blocking": true
+    },
+    {
       "name": "motion",
       "passed": true,
-      "value": "38 changes, max gap 3.8s",
+      "value": "33 changes, max gap 4.2s",
       "threshold": ">= 24 changes, max gap <= 5.0s",
-      "details": "Motion verified: 38 change events, max idle window 3.8s",
+      "details": "Motion verified: 33 change events, max idle window 4.2s",
       "blocking": true
     }
   ],
@@ -137,10 +177,10 @@
       "has_recap": true
     },
     "scene_count": 7,
-    "wpm": 120.2,
-    "speech_wpm": 120.2,
+    "wpm": 128.8,
+    "speech_wpm": 128.8,
     "clarity": "skipped",
-    "video_duration_seconds": 58.94
+    "video_duration_seconds": 46.46
   },
   "backend_requested": "auto",
   "backend_used": "offline",

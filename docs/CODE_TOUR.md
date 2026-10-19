@@ -28,8 +28,8 @@ This document provides a concise 2–3 sentence interview walkthrough for each m
 ### `src/assemble.py`
 "This module handles media multiplexing and the creation of multimodal companion outputs. It generates an FFmpeg concat-demuxer script with repeated final frame padding to guarantee perfect audio-video synchronization and muxes H.264 video with AAC audio. It also emits synchronized WebVTT subtitles, SRT transcripts, chapter markers, video thumbnails, and `index.jsonl` retrieval records."
 
-### `src/evals/` (`registry.py`, `media_gates.py`, `text_gates.py`, `safety_gates.py`, `groundedness.py`, `gates.py`)
-"This package contains the hard evaluation gates that dictate whether a video is published or rejected. `media_gates.py` checks duration, AV-sync drift, audio loudness, and visual motion; `text_gates.py` and `groundedness.py` enforce verbatim quotes, onscreen text integrity, and lack of filler. `safety_gates.py` prevents secret leaks and unsafe command execution; any failure quarantines the video to `out/_rejected/` with exit code 1."
+### `src/evals/` (`registry.py`, `media_gates.py`, `text_gates.py`, `safety_gates.py`, `groundedness.py`, `visual_gates.py`, `gates.py`)
+"This package contains the 20 hard evaluation gates that dictate whether a video is published or rejected. `media_gates.py` checks duration, AV-sync drift, audio loudness, and visual motion; `text_gates.py` and `groundedness.py` enforce verbatim quotes, onscreen text integrity, and lack of filler. `visual_gates.py` verifies code window header visibility, body display (skipping docstrings), highlight ratio <= 60% with max 5 rows, and absence of fake decorative UI. Any failure quarantines the video to `out/_rejected/` with exit code 1."
 
 ### `src/pipeline/` (`models.py`, `runner.py`)
 "This package orchestrates the end-to-end video generation pipeline from repository ingestion to final artifact publishing. `runner.py` tracks granular per-stage execution timings, handles quarantined video movement on gate failures, and writes `manifest.json`. `models.py` defines structured pipeline results and configuration parameters."
@@ -39,3 +39,6 @@ This document provides a concise 2–3 sentence interview walkthrough for each m
 
 ### `tools/search_demo.py`
 "This is a standalone, pure-Python TF-IDF retrieval tool that demonstrates the multimodal search utility of our generated video outputs. It loads `index.jsonl`, computes cosine similarity between search queries and beat narration, and prints matching video timestamps. It proves that generated videos are immediately indexable and searchable by AI video understanding and retrieval engines."
+
+### `tools/visual_audit.py`
+"This tool conducts automated visual and DOM layout audits across sampled video frames at beat boundaries (+0.4s). It verifies that on-screen captions match spoken clauses, confirms code windows retain visible headers without docstring-only clipping, and generates visual contact sheets for inspection."

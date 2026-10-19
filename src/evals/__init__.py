@@ -29,6 +29,11 @@ from .gates import (
     check_specificity_gate,
     check_voice_present_gate,
     check_onscreen_text_integrity_gate,
+    check_duration_margin_gate,
+    check_code_highlight_focus_gate,
+    check_code_window_visible_gate,
+    check_decoration_free_gate,
+    check_onscreen_matches_voice_gate,
 )
 from .metrics import (
     check_coverage,
@@ -45,6 +50,7 @@ __all__ = [
     "EvalGate",
     "EvalReport",
     "check_duration_gate",
+    "check_duration_margin_gate",
     "check_av_sync_gate",
     "check_drift_gate",
     "check_audio_audible_gate",
@@ -62,6 +68,10 @@ __all__ = [
     "check_specificity_gate",
     "check_motion_gate",
     "check_onscreen_text_integrity_gate",
+    "check_code_highlight_focus_gate",
+    "check_code_window_visible_gate",
+    "check_decoration_free_gate",
+    "check_onscreen_matches_voice_gate",
     "compute_domain_relevance",
     "compute_readme_coverage",
     "compute_repo_specific_terms_count",
@@ -105,9 +115,10 @@ def run_eval(
     actual_mp4 = mp4_path if (mp4_path and mp4_path.exists()) else (video_duration if isinstance(video_duration, Path) else None)
     num_duration = float(video_duration) if isinstance(video_duration, (int, float)) else 0.0
 
-    # 1. Gate 1: Duration
+    # 1. Gate 1: Duration & Duration Margin
     dur_target = actual_mp4 or num_duration
     report.gates.append(check_duration_gate(dur_target))
+    report.gates.append(check_duration_margin_gate(dur_target))
 
     # 2. Gate 2: A/V Sync
     s_dur = scene_durations or [s.duration_seconds for s in script.scenes]
@@ -152,6 +163,18 @@ def run_eval(
 
     # Gate: On-screen Text Integrity (hard gate)
     report.gates.append(check_onscreen_text_integrity_gate(script, facts=facts, repo_files=repo_files))
+
+    # Gate: Code Highlight Focus (hard gate)
+    report.gates.append(check_code_highlight_focus_gate(script))
+
+    # Gate: Code Window Visible (hard gate)
+    report.gates.append(check_code_window_visible_gate(script))
+
+    # Gate: Decoration Free (hard gate)
+    report.gates.append(check_decoration_free_gate(script))
+
+    # Gate: On-screen Matches Voice (hard gate)
+    report.gates.append(check_onscreen_matches_voice_gate(script, facts=facts))
 
     # 13. Gate 13: Motion (hard gate)
     if actual_mp4 and actual_mp4.exists():

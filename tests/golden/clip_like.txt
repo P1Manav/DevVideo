@@ -4,6 +4,6 @@
 [code] In clip tool/cli dot py, main mains entry point orchestrating model loading and similarity comparison.
 [terminal] Run pip install -r requirements dot txt to install dependencies for clip like.
 [terminal] Next, execute the quickstart command shown on screen.
-[fit] In video retrieval workflows, clip like covers the decode, embed and query stages.
-[recap] In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
-[recap] To get started, explore clip like starting with clip tool/cli dot py.
+[fit] clip like handles the decode, embed and query steps of a video retrieval pipeline.
+[recap] In summary, it can be instructed in natural language to predict the most relevant text snippet.
+[recap] To dive in, open clip tool/cli dot py.

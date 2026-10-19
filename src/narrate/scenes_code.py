@@ -1,13 +1,14 @@
 """
-Scene 4: Key Code & Implementation narration (T4, T5, T6, R4).
-Selects non-trivial public functions, prevents duplicate verbs ('load load'), and filters stdlib predicates.
+Scene 4: Key Code & Implementation narration (Phase 4, T4, T5, T6, R4).
+Selects non-trivial public functions and generates 2-3 explanatory beats grounded in AST facts.
+Highlight focus is constrained to <= 5 lines per beat.
 """
 from __future__ import annotations
 
 import re
 from ..analyze import RepoFacts, TopSymbol, is_auxiliary_or_test_path
 from ..schema import Beat, Scene, SourceSpan
-from .compress import clean_caption_text
+from .compress import clean_caption_text, fit_clause
 from .speech import humanize_identifier, tts_normalize_speech
 from .verbs import convert_docstring_to_verb_phrase
 
@@ -31,13 +32,13 @@ def filter_meaningful_calls(calls: list[str]) -> list[str]:
         if c_clean.startswith("is_") or c_clean.startswith("has_"):
             continue
         res.append(c)
-        if len(res) >= 3:  # T5: cap at 3
+        if len(res) >= 3:
             break
     return res
 
 
 def build_code_scene(facts: RepoFacts, readme_file: str) -> Scene | None:
-    """R4, T4, T5, T6: Selects key code symbol and produces grounded narration."""
+    """R4, T4, T5, T6, Phase 4: Produces grounded 2-3 beat code narration from AST facts."""
     from ..visuals import select_primary_code_symbol
     sym = select_primary_code_symbol(facts)
     if not sym:
@@ -46,26 +47,29 @@ def build_code_scene(facts: RepoFacts, readme_file: str) -> Scene | None:
     beats: list[Beat] = []
     calls_clean = filter_meaningful_calls(sym.calls)
 
-    # Beat 1: Purpose & Declaration (T4: strip duplicate function name/verb)
+    sig_start = sym.start_line
+    sig_focus_end = min(sym.start_line + 1, sym.end_line) if (sym.end_line - sym.start_line) >= 4 else sym.start_line
+
+    # Beat 1: Purpose & Declaration (T4: verb phrase, signature focus)
     if sym.docstring:
         doc_phrase = convert_docstring_to_verb_phrase(sym.docstring, func_name=sym.name)
         say1 = f"In {sym.file}, {sym.name} {doc_phrase}."
-        caption1 = f"{sym.name}: {clean_caption_text(doc_phrase, 6)}"
+        caption1 = fit_clause(f"{sym.name}: {doc_phrase}", max_chars=55)
         span1 = sym.docstring_span or SourceSpan(
             file=sym.file,
             start_line=sym.start_line,
-            end_line=min(sym.start_line + 4, sym.end_line),
+            end_line=sym.end_line,
             text=sym.docstring,
         )
     elif calls_clean:
         humanized_calls = [humanize_identifier(c) for c in calls_clean]
         calls_str = " and ".join(humanized_calls)
         say1 = f"In {sym.file}, {sym.name} calls {calls_str}."
-        caption1 = f"{sym.name}: calls {calls_str}"
+        caption1 = fit_clause(f"{sym.name}: calls {calls_str}", max_chars=55)
         span1 = SourceSpan(
             file=sym.file,
             start_line=sym.start_line,
-            end_line=min(sym.start_line + 4, sym.end_line),
+            end_line=sym.end_line,
             text=sym.def_line or sym.name,
         )
     else:
@@ -74,45 +78,77 @@ def build_code_scene(facts: RepoFacts, readme_file: str) -> Scene | None:
         span1 = SourceSpan(
             file=sym.file,
             start_line=sym.start_line,
-            end_line=min(sym.start_line + 4, sym.end_line),
+            end_line=sym.end_line,
             text=sym.def_line or sym.name,
         )
 
     beats.append(Beat(
         say=tts_normalize_speech(say1),
         caption=caption1,
-        focus=sym.name,
+        focus=f"{sig_start}-{sig_focus_end}",
         sources=[span1],
         start_seconds=0.25,
-        end_seconds=4.8,
+        end_seconds=4.5,
     ))
 
-    # Beat 2: Execution action (T5: humanize identifiers, cap at 3, never 'invokes is available')
-    if calls_clean:
+    # Beat 2: What it takes / does (parameters and calls)
+    body_focus = min(sym.start_line + 2, sym.end_line) if sym.end_line > sym.start_line else sym.start_line
+    body_focus_end = min(body_focus + 1, sym.end_line) if (sym.end_line - sym.start_line) >= 5 else body_focus
+
+    if sym.parameters and calls_clean:
+        params_str = " and ".join(sym.parameters[:2])
+        calls_str = " and ".join([humanize_identifier(c) for c in calls_clean[:2]])
+        say2 = f"It takes {params_str} and invokes {calls_str}."
+        caption2 = f"Invokes {calls_str}"
+    elif sym.parameters:
+        params_str = " and ".join(sym.parameters[:2])
+        say2 = f"It takes {params_str} to configure execution."
+        caption2 = f"Takes {params_str}"
+    elif calls_clean:
         humanized_calls = [humanize_identifier(c) for c in calls_clean]
         calls_str = " and ".join(humanized_calls)
         say2 = f"Inside {sym.name}, it invokes {calls_str}."
-        caption2 = f"Calls: {', '.join(calls_clean)}"
-        call_line = next((l.strip() for l in sym.code_excerpt.splitlines() if any(c in l for c in calls_clean)), sym.def_line)
-        span2 = SourceSpan(
-            file=sym.file,
-            start_line=sym.start_line,
-            end_line=sym.end_line,
-            text=call_line or sym.name,
-        )
+        caption2 = f"Calls {calls_str}"
     else:
-        say2 = f"In {sym.file}, {sym.name} returns the processed result."
+        say2 = f"Inside {sym.name}, it performs the core computation."
         caption2 = f"{sym.name} execution"
-        span2 = SourceSpan(file=sym.file, start_line=sym.start_line, end_line=sym.end_line, text=sym.def_line or sym.name)
+
+    call_line = next((l.strip() for l in sym.code_excerpt.splitlines() if any(c in l for c in calls_clean)), "")
+    span2 = SourceSpan(
+        file=sym.file,
+        start_line=sym.start_line,
+        end_line=sym.end_line,
+        text=call_line or sym.def_line or sym.name,
+    )
 
     beats.append(Beat(
         say=tts_normalize_speech(say2),
-        caption=caption2,
-        focus="execution",
+        caption=fit_clause(caption2, max_chars=50),
+        focus=f"{body_focus}-{body_focus_end}",
         sources=[span2],
         start_seconds=0.25,
-        end_seconds=4.8,
+        end_seconds=4.5,
     ))
+
+    # Beat 3: What it returns (if function has return statements)
+    if sym.has_return:
+        ret_line = sym.end_line
+        say3 = f"It returns the processed output."
+        caption3 = "Returns result"
+        span3 = SourceSpan(
+            file=sym.file,
+            start_line=sym.start_line,
+            end_line=sym.end_line,
+            text=sym.def_line or sym.name,
+        )
+        beats.append(Beat(
+            say=tts_normalize_speech(say3),
+            caption=caption3,
+            focus=f"{ret_line}-{ret_line}",
+            sources=[span3],
+            start_seconds=0.25,
+            end_seconds=4.0,
+        ))
 
     narration = " ".join(b.say for b in beats)
     return Scene(
@@ -121,5 +157,5 @@ def build_code_scene(facts: RepoFacts, readme_file: str) -> Scene | None:
         title="Implementation",
         narration=narration,
         beats=beats,
-        duration_seconds=round(len(beats) * 4.8, 2),
+        duration_seconds=round(len(beats) * 4.5, 2),
     )

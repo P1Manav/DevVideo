@@ -9,7 +9,7 @@
       "beats": [
         {
           "say": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.",
-          "caption": "CLIP: CLIP (Contrastive Language-Image Pre-Training) is a neural network",
+          "caption": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs",
           "focus": "CLIP",
           "sources": [
             {
@@ -47,7 +47,7 @@
       "beats": [
         {
           "say": "It can be instructed in natural language to predict the most relevant text snippet, given an image.",
-          "caption": "What it is: It can be instructed",
+          "caption": "It can be instructed in natural language to predict the most relevant text snippet",
           "focus": "concept",
           "sources": [
             {
@@ -63,11 +63,10 @@
       ],
       "on_screen": {
         "type": "overview",
-        "content": "OpenCLIP: includes larger and independently trained CLIP models up to ViT-G/14\nHugging Face implementation of CLIP: for easier integration with the HF ecosystem",
+        "content": "It can be instructed in natural language to predict the most relevant text snippet",
         "metadata": {
           "points": [
-            "OpenCLIP: includes larger and independently trained CLIP models up to ViT-G/14",
-            "Hugging Face implementation of CLIP: for easier integration with the HF ecosystem"
+            "It can be instructed in natural language to predict the most relevant text snippet"
           ]
         }
       },
@@ -116,34 +115,25 @@
       ],
       "on_screen": {
         "type": "diagram",
-        "content": "clip/__init__.py -> clip/clip.py\nclip/__init__.py -> clip/model.py\nclip/__init__.py -> clip/simple_tokenizer.py\nclip/clip.py -> clip/model.py\nclip/clip.py -> clip/simple_tokenizer.py",
+        "content": "clip/clip.py -> clip/model.py\nclip/clip.py -> clip/simple_tokenizer.py",
         "metadata": {
           "nodes": [
             "clip/clip.py",
             "clip/model.py",
-            "clip/simple_tokenizer.py",
-            "clip/__init__.py"
+            "clip/simple_tokenizer.py"
           ],
           "edges": [
             {
-              "from": "clip/__init__.py",
-              "to": "clip/clip.py"
-            },
-            {
-              "from": "clip/__init__.py",
-              "to": "clip/model.py"
-            },
-            {
-              "from": "clip/__init__.py",
-              "to": "clip/simple_tokenizer.py"
+              "from": "clip/clip.py",
+              "to": "clip/model.py",
+              "source": "clip/clip.py",
+              "target": "clip/model.py"
             },
             {
               "from": "clip/clip.py",
-              "to": "clip/model.py"
-            },
-            {
-              "from": "clip/clip.py",
-              "to": "clip/simple_tokenizer.py"
+              "to": "clip/simple_tokenizer.py",
+              "source": "clip/clip.py",
+              "target": "clip/simple_tokenizer.py"
             }
           ]
         }
@@ -163,7 +153,7 @@
         {
           "say": "In clip/clip dot py, load loads a CLIP model.",
           "caption": "load: loads a CLIP model",
-          "focus": "load",
+          "focus": "94-95",
           "sources": [
             {
               "file": "clip/clip.py",
@@ -173,12 +163,12 @@
             }
           ],
           "start_seconds": 0.25,
-          "end_seconds": 4.8
+          "end_seconds": 4.5
         }
       ],
       "on_screen": {
         "type": "code",
-        "content": "def load(name: str, device: Union[str, torch.device] = \"cuda\" if torch.cuda.is_available() else \"cpu\", jit: bool = False, download_root: str = None):\n    \"\"\"Load a CLIP model\n\n    Parameters\n    ----------\n    name : str\n        A model name listed by `clip.available_models()`, or the path to a model checkpoint containing the state_dict\n\n    device : Union[str, torch.device]\n        The device to put the loaded model\n\n    jit : bool\n        Whether to load the optimized JIT model or more hackable non-JIT model (default).\n",
+        "content": "def load(name: str, device: Union[str, torch.device] = \"cuda\" if torch.cuda.is_available() else \"cpu\", jit: bool = False, download_root: str = None):\n    # docstring omitted\n    if name in _MODELS:\n        model_path = _download(_MODELS[name], download_root or os.path.expanduser(\"~/.cache/clip\"))\n    elif os.path.isfile(name):\n        model_path = name\n    else:\n        raise RuntimeError(f\"Model {name} not found; available models = {available_models()}\")\n\n    with open(model_path, 'rb') as opened_file:\n        try:\n            # loading JIT archive\n            model = torch.jit.load(opened_file, map_location=device if jit else \"cpu\").eval()",
         "metadata": {
           "file": "clip/clip.py",
           "symbol": "load",
@@ -190,7 +180,7 @@
         "file": "clip/clip.py",
         "quote": "def load(name: str, device: Union[str, torch.device] = \"cuda\" if torch.cuda.is_available() else \"cpu\", jit: bool = False, download_root: str = None):"
       },
-      "duration_seconds": 9.6
+      "duration_seconds": 13.5
     },
     {
       "id": "terminal",
@@ -235,7 +225,7 @@
       "beats": [
         {
           "say": "CLIP is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.",
-          "caption": "General tool: exports transcript, chapters, and index",
+          "caption": "Pipeline Fit: general tool",
           "focus": "artifacts",
           "sources": [
             {
@@ -251,12 +241,11 @@
       ],
       "on_screen": {
         "type": "fit",
-        "content": "Video Pipeline Fit\nRelevance Score: 0.20\nRelevant terms: clip, index",
+        "content": "Video Pipeline Fit\nRelevance Score: 0.10\nRelevant terms: clip",
         "metadata": {
-          "relevance_score": 0.2,
+          "relevance_score": 0.1,
           "terms": [
-            "clip",
-            "index"
+            "clip"
           ],
           "pipeline_stages": {}
         }
@@ -271,26 +260,26 @@
       "id": "recap",
       "kind": "recap",
       "title": "Conclusion",
-      "narration": "In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. To get started, explore CLIP starting with clip/clip dot py.",
+      "narration": "In summary, it can be instructed in natural language to predict the most relevant text snippet. To dive in, open clip/clip dot py.",
       "beats": [
         {
-          "say": "In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.",
-          "caption": "Summary: CLIP (Contrastive Language-Image Pre-Training)",
+          "say": "In summary, it can be instructed in natural language to predict the most relevant text snippet.",
+          "caption": "It can be instructed in natural language to predict the most relevant text snippet",
           "focus": "recap",
           "sources": [
             {
               "file": "README.md",
               "start_line": 5,
               "end_line": 5,
-              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+              "text": "It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3."
             }
           ],
           "start_seconds": 0.25,
           "end_seconds": 4.5
         },
         {
-          "say": "To get started, explore CLIP starting with clip/clip dot py.",
-          "caption": "Next Step: inspect clip/clip.py",
+          "say": "To dive in, open clip/clip dot py.",
+          "caption": "Next step: open clip/clip.py",
           "focus": "next_steps",
           "sources": [
             {
@@ -306,10 +295,10 @@
       ],
       "on_screen": {
         "type": "recap",
-        "content": "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network\n2. Entry point clip/clip.py\n3. Run pip install ftfy regex tqdm",
+        "content": "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs\n2. Entry point clip/clip.py\n3. Run pip install ftfy regex tqdm",
         "metadata": {
           "takeaways": [
-            "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network",
+            "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs",
             "2. Entry point clip/clip.py",
             "3. Run pip install ftfy regex tqdm"
           ],
@@ -318,7 +307,7 @@
       },
       "evidence": {
         "file": "README.md",
-        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
+        "quote": "It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3."
       },
       "duration_seconds": 9.0
     }

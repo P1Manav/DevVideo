@@ -1,10 +1,9 @@
 [title] VidSearch is a lightweight multimodal video understanding and retrieval engine.
 [overview] It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index.
 [diagram] vidsearch/cli dot py is the command-line interface for VidSearch video retrieval engine.
-[diagram] It connects to vidsearch/embed dot py, which computes dense multimodal embeddings for video frames and text queries.
 [code] In vidsearch/cli dot py, main runs CLI search execution.
 [terminal] Run pip install -r requirements dot txt to install dependencies for vidsearch py.
 [terminal] Next, execute the quickstart command shown on screen.
-[fit] In video retrieval workflows, vidsearch py covers the decode, embed, index and query stages.
-[recap] In short, VidSearch is a lightweight multimodal video understanding and retrieval engine.
-[recap] To get started, explore vidsearch py starting with vidsearch/cli dot py.
+[fit] vidsearch py handles the decode, embed, index and query steps of a video retrieval pipeline.
+[recap] In summary, it extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index.
+[recap] To dive in, open vidsearch/cli dot py.

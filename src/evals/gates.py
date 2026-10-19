@@ -1,6 +1,6 @@
 """
 Hard evaluation gates re-export module.
-Combines media_gates, safety_gates, groundedness, and text_gates for full backward compatibility.
+Combines media_gates, safety_gates, visual_gates, groundedness, and text_gates.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from .media_gates import (
     check_av_sync_gate,
     check_drift_gate,
     check_duration_gate,
+    check_duration_margin_gate,
     check_frames_valid_gate,
     check_motion_gate,
     check_no_overflow_gate,
@@ -38,6 +39,12 @@ from .text_gates import (
     check_onscreen_text_integrity_gate,
     check_specificity_gate,
 )
+from .visual_gates import (
+    check_code_highlight_focus_gate,
+    check_code_window_visible_gate,
+    check_decoration_free_gate,
+    check_onscreen_matches_voice_gate,
+)
 
 __all__ = [
     "STOPWORDS",
@@ -47,6 +54,7 @@ __all__ = [
     "_get_ffprobe_duration",
     "_extract_content_tokens",
     "check_duration_gate",
+    "check_duration_margin_gate",
     "check_av_sync_gate",
     "check_drift_gate",
     "check_audio_audible_gate",
@@ -66,4 +74,8 @@ __all__ = [
     "check_specificity_gate",
     "check_motion_gate",
     "check_onscreen_text_integrity_gate",
+    "check_code_highlight_focus_gate",
+    "check_code_window_visible_gate",
+    "check_decoration_free_gate",
+    "check_onscreen_matches_voice_gate",
 ]

@@ -1,0 +1,35 @@
+=================================================================
+DEVVIDEO VISUAL AUDIT HARNESS (Phase 9)
+Timestamp: 20261019_072328 UTC
+=================================================================
+
+=== VISUAL AUDIT: sample ===
+Directory: C:\Users\devpr\OneDrive\Desktop\aintropy_assignment_part2_task12\docs\sample
+Frame extracted: title[b0] @ 0.65s -> 00_00_title.png (title)
+Frame extracted: overview[b0] @ 5.15s -> 01_00_overview.png (overview)
+Frame extracted: diagram[b0] @ 14.75s -> 02_00_diagram.png (diagram)
+Frame extracted: diagram[b1] @ 14.75s -> 02_01_diagram.png (diagram)
+Frame extracted: code[b0] @ 24.35s -> 03_00_code.png (code)
+Frame extracted: terminal[b0] @ 37.85s -> 04_00_terminal.png (terminal)
+Frame extracted: fit[b0] @ 42.35s -> 05_00_fit.png (fit)
+Frame extracted: recap[b0] @ 47.35s -> 06_00_recap.png (recap)
+Frame extracted: recap[b1] @ 47.35s -> 06_01_recap.png (recap)
+Contact sheet saved to: C:\Users\devpr\OneDrive\Desktop\aintropy_assignment_part2_task12\docs\sample\contact_sheet.png
+Result: PASSED (9 frames extracted, 0 violations)
+
+Timestamped contact sheet copied to: 20261019_072328_contact_sheet_sample.png
+=== VISUAL AUDIT: sample_fixture ===
+Directory: C:\Users\devpr\OneDrive\Desktop\aintropy_assignment_part2_task12\docs\sample_fixture
+Frame extracted: title[b0] @ 0.65s -> 00_00_title.png (title)
+Frame extracted: overview[b0] @ 5.15s -> 01_00_overview.png (overview)
+Frame extracted: diagram[b0] @ 19.55s -> 02_00_diagram.png (diagram)
+Frame extracted: code[b0] @ 29.15s -> 03_00_code.png (code)
+Frame extracted: terminal[b0] @ 38.15s -> 04_00_terminal.png (terminal)
+Frame extracted: terminal[b1] @ 38.15s -> 04_01_terminal.png (terminal)
+Frame extracted: fit[b0] @ 47.15s -> 05_00_fit.png (fit)
+Frame extracted: recap[b0] @ 52.15s -> 06_00_recap.png (recap)
+Frame extracted: recap[b1] @ 52.15s -> 06_01_recap.png (recap)
+Contact sheet saved to: C:\Users\devpr\OneDrive\Desktop\aintropy_assignment_part2_task12\docs\sample_fixture\contact_sheet.png
+Result: PASSED (9 frames extracted, 0 violations)
+
+Timestamped contact sheet copied to: 20261019_072328_contact_sheet_sample_fixture.png

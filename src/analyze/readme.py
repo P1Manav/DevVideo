@@ -11,15 +11,54 @@ from .models import CleanedReadme, ReadmeSentence
 
 VALID_CMD_EXECUTABLES = (
     "python", "python3", "pip", "pip3", "npm", "npx", "yarn", "pnpm", "node",
-    "cargo", "go", "docker", "docker-compose", "make", "pytest", "uvicorn", "gunicorn"
+    "cargo", "go", "docker", "docker-compose", "make", "uvicorn", "gunicorn"
 )
+
+DEV_TEST_COMMANDS = (
+    "pytest", "tox", "make test", "npm test", "yarn test", "cargo test",
+    "go test", "ruff", "black", "mypy", "flake8", "git "
+)
+
+DISALLOWED_SECTIONS = {
+    "news", "changelog", "announcement", "announcements", "release",
+    "releases", "update", "updates", "contributing", "testing",
+    "development", "license"
+}
+
+
+def classify_section_header(header: str) -> str:
+    h = header.lower().strip()
+    if re.search(r"\b(news|changelog|announcements?|release\s*notes?|updates?|what'?s\s*new)\b", h):
+        return "news"
+    if re.search(r"\b(contributing|development|testing|tests|developing)\b", h):
+        return "contributing"
+    if re.search(r"\b(license|copyright)\b", h):
+        return "license"
+    if re.search(r"\b(install|installation|setup|getting\s*started)\b", h):
+        return "install"
+    if re.search(r"\b(usage|quickstart|examples?|how\s*to\s*use|running)\b", h):
+        return "usage"
+    if re.search(r"\b(features?|overview|highlights|capabilities|approach|about)\b", h):
+        return "features"
+    if re.search(r"\b(api|reference|documentation)\b", h):
+        return "api"
+    return "other"
+
+
+def is_news_or_date_bullet(text: str) -> bool:
+    t = text.strip()
+    if re.match(r"^\*{0,2}\[?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|\d{4})\b", t, re.I):
+        return True
+    if re.match(r"^(?:news|update|what'?s new):", t, re.I):
+        return True
+    return False
 
 
 def find_exact_line_range(raw_lines: list[str], target_text: str) -> tuple[int, int]:
-    """Find the 1-based start and end line range of target_text in raw_lines."""
+    """Find the 1-based start and end line range of target_text in raw_lines. Returns (0, 0) if missing."""
     norm_target = " ".join(target_text.split())
     if not norm_target:
-        return 1, 1
+        return 0, 0
 
     for idx, line in enumerate(raw_lines, start=1):
         norm_line = " ".join(line.split())
@@ -36,7 +75,7 @@ def find_exact_line_range(raw_lines: list[str], target_text: str) -> tuple[int, 
             if first_line in line:
                 return idx, min(len(raw_lines), idx + len(target_lines) - 1)
 
-    return 1, 1
+    return 0, 0
 
 
 def is_prose_line(line: str) -> bool:
@@ -70,7 +109,7 @@ def is_prose_line(line: str) -> bool:
 def is_valid_shell_command(cmd: str) -> bool:
     """
     Rule T7: Validate that cmd is a genuine shell invocation.
-    Rejects Python statements ('import x', 'from x import'), cd, git clone, export, prompts '>>>'.
+    Rejects Python statements ('import x', 'from x import'), cd, git clone, dev/test commands.
     """
     c = cmd.strip()
     if not c or c.startswith("#") or c.startswith(">>>") or c.startswith("..."):
@@ -85,6 +124,11 @@ def is_valid_shell_command(cmd: str) -> bool:
         return False
     if c.startswith("git clone") or c.startswith("export ") or c.startswith("source "):
         return False
+
+    # Reject dev and test commands (pytest, tox, make test, etc.)
+    for dt in DEV_TEST_COMMANDS:
+        if c == dt or c.startswith(dt + " "):
+            return False
 
     tokens = c.split()
     if not tokens:
@@ -102,17 +146,15 @@ def is_valid_shell_command(cmd: str) -> bool:
 def clean_readme(raw_text: str | None) -> CleanedReadme:
     """
     Clean raw README content by removing HTML tags, badges, images, and link syntax.
-    Extracts title, tagline, description_sentences with line spans, features, and shell commands.
+    Classifies sections into {news, install, usage, features, api, contributing, license, other}.
+    Excludes news and contributing sections from feeding features, description, or commands.
     """
     if not raw_text or not raw_text.strip():
         return CleanedReadme()
 
-    # 1. Extract code fences before stripping markup
-    fence_pattern = re.compile(r"```(?:[a-zA-Z0-9_-]*\n)?(.*?)```", re.DOTALL)
-    fences = [m.group(1).strip() for m in fence_pattern.finditer(raw_text) if m.group(1).strip()]
     raw_lines = raw_text.splitlines()
 
-    # 2. Extract title
+    # 1. Extract title
     title = ""
     h1_match = re.search(r"<h1[^>]*>(.*?)</h1>", raw_text, re.IGNORECASE | re.DOTALL)
     if h1_match:
@@ -136,23 +178,49 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
             title = s.lstrip("#").strip()
             break
 
-    # 3. Extract sections & bullet features & prose description sentences
+    # 2. Extract sections & bullet features & prose description sentences & code fences by section
     sections: dict[str, str] = {}
     current_sec = "intro"
+    current_sec_kind = "intro"
     sec_lines: list[str] = []
     features: list[str] = []
     feature_sentences: list[ReadmeSentence] = []
     description_sentences: list[ReadmeSentence] = []
     tagline = ""
 
+    all_fences: list[str] = []
+    allowed_fences: list[str] = []
+    in_fence = False
+    fence_buf: list[str] = []
+
     for line_idx, raw_line in enumerate(raw_lines, start=1):
         line = raw_line.strip()
+
+        # Track code fences line by line to keep section association
+        if line.startswith("```"):
+            if not in_fence:
+                in_fence = True
+                fence_buf = []
+            else:
+                in_fence = False
+                fence_text = "\n".join(fence_buf).strip()
+                if fence_text:
+                    all_fences.append(fence_text)
+                    if current_sec_kind not in DISALLOWED_SECTIONS:
+                        allowed_fences.append(fence_text)
+            continue
+
+        if in_fence:
+            fence_buf.append(raw_line)
+            continue
+
         if not line:
             continue
 
         if line.startswith("##"):
             sections[current_sec] = "\n".join(sec_lines).strip()
             current_sec = line.lstrip("#").strip()
+            current_sec_kind = classify_section_header(current_sec)
             sec_lines = []
             continue
 
@@ -161,9 +229,15 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
         if line_no_badges:
             sec_lines.append(line_no_badges)
 
+        # Do NOT extract features or description from news/contributing/license sections
+        if current_sec_kind in DISALLOWED_SECTIONS:
+            continue
+
         bullet_m = re.match(r"^[-*+]\s+(.*)", line) or re.match(r"^\d+\.\s+(.*)", line)
         if bullet_m:
             item = bullet_m.group(1).strip()
+            if is_news_or_date_bullet(item):
+                continue
             item_clean = re.sub(r"<[^>]+>", "", item)
             item_clean = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", item_clean)
             item_clean = re.sub(r"[`*]", "", item_clean).strip()
@@ -199,11 +273,11 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
         if intro_lines:
             description = intro_lines[0]
 
-    # 4. Extract install & usage commands (T7)
+    # 3. Extract install & usage commands (T7) from allowed sections only
     install_candidates: list[str] = []
     usage_candidates: list[str] = []
 
-    for fence in fences:
+    for fence in allowed_fences:
         for fline in fence.splitlines():
             fl = fline.strip()
             if fl.startswith("$ ") or fl.startswith("> "):
@@ -236,7 +310,7 @@ def clean_readme(raw_text: str | None) -> CleanedReadme:
         features=features,
         feature_sentences=feature_sentences,
         sections=sections,
-        code_fences=fences,
+        code_fences=all_fences,
         install_commands=ordered_installs,
         usage_commands=usage_candidates,
         raw_lines=raw_lines,

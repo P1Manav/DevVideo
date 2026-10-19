@@ -1,0 +1,101 @@
+=== STEP: Narration Truth & Golden Diffs Suite ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe -m pytest tests/test_narration_truth.py -v
+Exit Code: 0
+Duration: 4.31s
+Timestamp: 2026-10-19T07:17:56.998566+00:00
+
+--- STDOUT ---
+============================= test session starts =============================
+platform win32 -- Python 3.10.11, pytest-8.4.2, pluggy-1.7.0 -- python.exe
+cachedir: .pytest_cache
+rootdir: aintropy_assignment_part2_task12
+configfile: pytest.ini
+plugins: anyio-4.15.1, asyncio-0.26.0, cov-7.1.0
+asyncio: mode=strict, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 79 items
+
+tests/test_narration_truth.py::test_t1_no_banned_literals_in_src PASSED  [  1%]
+tests/test_narration_truth.py::test_t2_language_first_party_only PASSED  [  2%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Convert video to numpy array-It can convert video to a numpy array.] PASSED [  3%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Extract frames from video-It can extract frames from video.] PASSED [  5%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Load pretrained models-It can load pretrained models.] PASSED [  6%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Run inference on inputs-It can run inference on inputs.] PASSED [  7%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Generate video thumbnails-It can generate video thumbnails.] PASSED [  8%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Build custom filter graphs-It can build custom filter graphs.] PASSED [ 10%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Parse media containers-It can parse media containers.] PASSED [ 11%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Process audio streams-It can process audio streams.] PASSED [ 12%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Search video index-It can search video index.] PASSED [ 13%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Query multimodal embeddings-It can query multimodal embeddings.] PASSED [ 15%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Create pipeline nodes-It can create pipeline nodes.] PASSED [ 16%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Tokenize text prompts-It can tokenize text prompts.] PASSED [ 17%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Execute shell pipelines-It can execute shell pipelines.] PASSED [ 18%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Transcode media files-It can transcode media files.] PASSED [ 20%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Train neural networks-It can train neural networks.] PASSED [ 21%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Encode images into vectors-It can encode images into vectors.] PASSED [ 22%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Decode video packets-It can decode video packets.] PASSED [ 24%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Index vector features-It can index vector features.] PASSED [ 25%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Export processed segments-It can export processed segments.] PASSED [ 26%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Filter noisy audio-It can filter noisy audio.] PASSED [ 27%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Sample key frames-It can sample key frames.] PASSED [ 29%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Stream video chunks-It can stream video chunks.] PASSED [ 30%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Capture webcam streams-It can capture webcam streams.] PASSED [ 31%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Render output frames-It can render output frames.] PASSED [ 32%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Calculate similarity matrix-It can calculate similarity matrix.] PASSED [ 34%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Compute feature vectors-It can compute feature vectors.] PASSED [ 35%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Save index to disk-It can save index to disk.] PASSED [ 36%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Read video metadata-It can read video metadata.] PASSED [ 37%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[Write output container-It can write output container.] PASSED [ 39%]
+tests/test_narration_truth.py::test_t3_bullet_to_sentence_transform_table[OpenCLIP: includes larger and independently trained models-OpenCLIP includes larger and independently trained models.] PASSED [ 40%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Load a CLIP model.-load-loads a CLIP model] PASSED [ 41%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Invoke ffmpeg for the supplied node graph.-run-invokes ffmpeg for the supplied node graph] PASSED [ 43%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Normalize input text by removing extraneous whitespace.-clean_text-normalizes input text by removing extraneous whitespace] PASSED [ 44%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Apply a filter to the supplied stream.-filter-applies a filter to the supplied stream] PASSED [ 45%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Extract key video frames.-extract-extracts key video frames] PASSED [ 46%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Encode input text into a dense vector.-encode-encodes input text into a dense vector] PASSED [ 48%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Search the index for nearest neighbors.-search-searches the index for nearest neighbors] PASSED [ 49%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Query embeddings for matching scenes.-query-queries embeddings for matching scenes] PASSED [ 50%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Generate video thumbnail.-generate-generates video thumbnail] PASSED [ 51%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Build model graph.-build-builds model graph] PASSED [ 53%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Returns a list of available models.-available_models-returns a list of available models] PASSED [ 54%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Loads a pre-trained checkpoint.-load_checkpoint-loads a pre-trained checkpoint] PASSED [ 55%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Encodes image frames.-encode_frames-encodes image frames] PASSED [ 56%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Parses CLI arguments.-parse_args-parses CLI arguments] PASSED [ 58%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Processes video chunks.-process_chunks-processes video chunks] PASSED [ 59%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Transforms raw features.-transform-transforms raw features] PASSED [ 60%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Command-line interface for video retrieval.-cli-is the command-line interface for video retrieval] PASSED [ 62%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[CLI for video search.-cli-is the command-line interface for video search] PASSED [ 63%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Neural network model for multimodal representations.-model-defines the neural network model for multimodal representations] PASSED [ 64%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Top-level exports for library.-init-provides the top-level exports for library] PASSED [ 65%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Entry point for running evaluation.-main-serves as the entry point for running evaluation] PASSED [ 67%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Audio and video filter constructors for ffmpeg.-filters-constructs audio and video filters for ffmpeg] PASSED [ 68%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Execution engine invoking ffmpeg.-runner-executes commands invoking ffmpeg] PASSED [ 69%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Main interface functions for audio processing.-audio-provides main interface functions for audio processing] PASSED [ 70%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Stream representation nodes forming filter graphs.-nodes-defines stream representation nodes forming filter graphs] PASSED [ 72%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Byte-pair encoding tokenizer for vocabulary.-bpe-tokenizes text using byte-pair encoding for vocabulary] PASSED [ 73%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Utility functions for file handling.-utils-provides utility functions for file handling] PASSED [ 74%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Helper methods for tensor operations.-helpers-implements helper methods for tensor operations] PASSED [ 75%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Core implementation of vector search.-index-implements the core logic of vector search] PASSED [ 77%]
+tests/test_narration_truth.py::test_t4_docstring_transform_table[Test string escaping in shell arguments.-test_escape-tests string escaping] PASSED [ 78%]
+tests/test_narration_truth.py::test_t6_key_code_selection PASSED         [ 79%]
+tests/test_narration_truth.py::test_t7_terminal_command_selection PASSED [ 81%]
+tests/test_narration_truth.py::test_golden_narration_truth[clip_like] PASSED [ 82%]
+tests/test_narration_truth.py::test_golden_narration_truth[clip_news_readme] PASSED [ 83%]
+tests/test_narration_truth.py::test_golden_narration_truth[clip_real_like] PASSED [ 84%]
+tests/test_narration_truth.py::test_golden_narration_truth[docs_only] PASSED [ 86%]
+tests/test_narration_truth.py::test_golden_narration_truth[ffmpeg_retrieve_readme] PASSED [ 87%]
+tests/test_narration_truth.py::test_golden_narration_truth[ffmpeg_wrapper_like] PASSED [ 88%]
+tests/test_narration_truth.py::test_golden_narration_truth[ffmpeg_wrapper_real] PASSED [ 89%]
+tests/test_narration_truth.py::test_golden_narration_truth[hello_world_readme] PASSED [ 91%]
+tests/test_narration_truth.py::test_golden_narration_truth[html_readme] PASSED [ 92%]
+tests/test_narration_truth.py::test_golden_narration_truth[js_tool] PASSED [ 93%]
+tests/test_narration_truth.py::test_golden_narration_truth[no_prose_readme] PASSED [ 94%]
+tests/test_narration_truth.py::test_golden_narration_truth[readme_no_links_no_prose] PASSED [ 96%]
+tests/test_narration_truth.py::test_golden_narration_truth[readme_only] PASSED [ 97%]
+tests/test_narration_truth.py::test_golden_narration_truth[tiny_repo] PASSED [ 98%]
+tests/test_narration_truth.py::test_golden_narration_truth[vidsearch_py] PASSED [100%]
+
+============================= 79 passed in 3.01s ==============================
+
+
+--- STDERR ---
+

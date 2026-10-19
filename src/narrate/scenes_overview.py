@@ -1,13 +1,14 @@
 """
-Scene 2: Overview & Purpose narration (T1, T3, T9, R7).
+Scene 2: Overview & Purpose narration (Phase 3 & S1, T1, T3, T9, R7).
 SAY LESS, NEVER FILL. Spoken sentences strictly derived from cited source spans.
+Overview captions and on-screen points align directly with spoken clauses.
 """
 from __future__ import annotations
 
 import re
-from ..analyze import RepoFacts
+from ..analyze import RepoFacts, find_exact_line_range
 from ..schema import Beat, Scene, SourceSpan, check_for_banned_phrases
-from .compress import clean_caption_text, compress_sentence
+from .compress import compress_sentence, fit_clause
 from .speech import tts_normalize_speech
 from .verbs import transform_bullet_to_sentence
 
@@ -34,15 +35,16 @@ def build_overview_scene(facts: RepoFacts, readme_file: str) -> Scene:
         has_code = bool(facts.languages_by_bytes)
         if not has_code:
             say = f"The repository contains a README and nothing else."
-            caption = "README only repository"
+            caption = "README repository"
         else:
             top_lang = next(iter(facts.languages_by_bytes.keys()))
             say = f"{title} includes source files written in {top_lang}."
             caption = f"Source files: {top_lang}"
 
-        from ..analyze import find_exact_line_range
         txt = title
         sp, ep = find_exact_line_range(facts.readme.raw_lines, txt)
+        if sp <= 0:
+            sp, ep = 1, 1
 
         beats.append(Beat(
             say=tts_normalize_speech(say),
@@ -67,27 +69,25 @@ def build_overview_scene(facts: RepoFacts, readme_file: str) -> Scene:
         b1_sent = desc_sents[0].text
         comp_b1 = compress_sentence(b1_sent, max_words=18)
         say1 = comp_b1[0] if comp_b1 else b1_sent
-        caption1 = f"What it is: {clean_caption_text(say1, 6)}"
+        caption1 = fit_clause(say1, max_chars=60)
         sp1 = desc_sents[0].start_line
         ep1 = desc_sents[0].end_line
         quote1 = b1_sent
     elif features:
         transformed = transform_bullet_to_sentence(features[0])
         say1 = transformed if transformed else f"{facts.repo_name} provides {features[0].rstrip('.')}."
-        caption1 = clean_caption_text(features[0], 6)
+        caption1 = fit_clause(features[0], max_chars=60)
         quote1 = features[0]
-        sp1 = 1
-        ep1 = 1
-        for idx, line in enumerate(facts.readme.raw_lines, 1):
-            if quote1 in line:
-                sp1, ep1 = idx, idx
-                break
+        sp1, ep1 = find_exact_line_range(facts.readme.raw_lines, quote1)
+        if sp1 <= 0:
+            sp1, ep1 = 1, 1
     else:
         say1 = facts.readme.tagline or facts.repo_name
-        caption1 = clean_caption_text(say1, 6)
+        caption1 = fit_clause(say1, max_chars=60)
         quote1 = say1
-        from ..analyze import find_exact_line_range
         sp1, ep1 = find_exact_line_range(facts.readme.raw_lines, quote1)
+        if sp1 <= 0:
+            sp1, ep1 = 1, 1
 
     beats.append(Beat(
         say=tts_normalize_speech(say1),
@@ -103,7 +103,7 @@ def build_overview_scene(facts: RepoFacts, readme_file: str) -> Scene:
         b2_sent = desc_sents[1].text
         comp_b2 = compress_sentence(b2_sent, max_words=18)
         say2 = comp_b2[0] if comp_b2 else b2_sent
-        caption2 = f"Capabilities: {clean_caption_text(say2, 6)}"
+        caption2 = fit_clause(say2, max_chars=60)
         beats.append(Beat(
             say=tts_normalize_speech(say2),
             caption=caption2,
@@ -113,19 +113,15 @@ def build_overview_scene(facts: RepoFacts, readme_file: str) -> Scene:
             end_seconds=5.0,
         ))
     elif features:
-        # Use first or second bullet transformed
         bullet_idx = 1 if len(features) > 1 and desc_sents else 0
         feat_raw = features[bullet_idx]
         transformed = transform_bullet_to_sentence(feat_raw)
         if transformed:
             say2 = transformed
-            caption2 = f"Capabilities: {clean_caption_text(feat_raw, 6)}"
-            sp2 = 1
-            ep2 = 1
-            for idx, line in enumerate(facts.readme.raw_lines, 1):
-                if feat_raw in line:
-                    sp2, ep2 = idx, idx
-                    break
+            caption2 = fit_clause(feat_raw, max_chars=60)
+            sp2, ep2 = find_exact_line_range(facts.readme.raw_lines, feat_raw)
+            if sp2 <= 0:
+                sp2, ep2 = 1, 1
             beats.append(Beat(
                 say=tts_normalize_speech(say2),
                 caption=caption2,
@@ -139,13 +135,16 @@ def build_overview_scene(facts: RepoFacts, readme_file: str) -> Scene:
     if facts.cli_flags:
         flags_str = " and ".join(facts.cli_flags[:2])
         say3 = f"It supports the {flags_str} command line flags."
-        caption3 = f"Flags: {flags_str}"
+        caption3 = f"CLI Flags: {flags_str}"
         quote3 = facts.cli_flag_details[0].help if facts.cli_flag_details else flags_str
+        sp3, ep3 = find_exact_line_range(facts.readme.raw_lines, quote3)
+        if sp3 <= 0:
+            sp3, ep3 = (desc_sents[0].start_line if desc_sents else 1), (desc_sents[0].end_line if desc_sents else 1)
         beats.append(Beat(
             say=tts_normalize_speech(say3),
             caption=caption3,
             focus="features",
-            sources=[SourceSpan(file=readme_file, start_line=1, end_line=1, text=quote3)],
+            sources=[SourceSpan(file=readme_file, start_line=sp3, end_line=ep3, text=quote3)],
             start_seconds=0.25,
             end_seconds=4.5,
         ))

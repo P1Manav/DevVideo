@@ -4,10 +4,18 @@
     {
       "name": "duration",
       "passed": true,
-      "value": "52.8s",
+      "value": "49.6s",
       "threshold": "<= 60.0s",
-      "details": "Final video duration 52.8s",
+      "details": "Final video duration 49.6s",
       "blocking": true
+    },
+    {
+      "name": "duration_margin",
+      "passed": true,
+      "value": "49.6s",
+      "threshold": "<= 55.0s",
+      "details": "Final video duration 49.6s (budget <= 55.0s)",
+      "blocking": false
     },
     {
       "name": "av_sync",
@@ -20,9 +28,9 @@
     {
       "name": "audio_audible",
       "passed": true,
-      "value": "-21.8 dB",
+      "value": "-21.9 dB",
       "threshold": "> -50.0 dB",
-      "details": "Measured mean volume -21.8 dB",
+      "details": "Measured mean volume -21.9 dB",
       "blocking": true
     },
     {
@@ -114,17 +122,49 @@
       "blocking": true
     },
     {
+      "name": "code_highlight_focus",
+      "passed": true,
+      "value": "0 violations",
+      "threshold": "<= 60% focus ratio, >= 1 focused row",
+      "details": "All code beats maintain focused highlight <= 60% of visible lines",
+      "blocking": true
+    },
+    {
+      "name": "code_window_visible",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "Code window header and rows verified inside container",
+      "blocking": true
+    },
+    {
+      "name": "decoration_free",
+      "passed": true,
+      "value": "0 violations",
+      "threshold": "0 violations",
+      "details": "No decorative progress bars or fake synthesis elements detected",
+      "blocking": true
+    },
+    {
+      "name": "onscreen_matches_voice",
+      "passed": true,
+      "value": "100%",
+      "threshold": "100%",
+      "details": "All on-screen text matches spoken beats and allowed content without news items",
+      "blocking": true
+    },
+    {
       "name": "motion",
       "passed": true,
-      "value": "37 changes, max gap 4.2s",
+      "value": "34 changes, max gap 4.2s",
       "threshold": ">= 24 changes, max gap <= 5.0s",
-      "details": "Motion verified: 37 change events, max idle window 4.2s",
+      "details": "Motion verified: 34 change events, max idle window 4.2s",
       "blocking": true
     }
   ],
   "metrics": {
-    "relevance": 0.2,
-    "domain_relevance": 0.2,
+    "relevance": 0.1,
+    "domain_relevance": 0.1,
     "domain_relevance_warning": "low_relevance (< 0.35)",
     "readme_coverage": 1.0,
     "repo_specific_terms": 5,
@@ -141,7 +181,7 @@
     "wpm": 138.9,
     "speech_wpm": 138.9,
     "clarity": "skipped",
-    "video_duration_seconds": 52.82
+    "video_duration_seconds": 49.58
   },
   "backend_requested": "auto",
   "backend_used": "offline",

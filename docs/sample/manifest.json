@@ -1,7 +1,7 @@
 {
   "status": "published",
   "voice": "edge",
-  "tool_git_sha": "36bb601adb9b17d08e3289c035c03d331f636978",
+  "tool_git_sha": "eb2908031fa6cadf6b57cfbe367a5e747206c6cb",
   "input_repo_commit_sha": "d05afc436d78f1c48dc0dbf8e5980a9d471f35f6",
   "repo_name": "CLIP",
   "versions": {
@@ -10,14 +10,14 @@
     "playwright": "installed"
   },
   "timings": {
-    "ingest": 5.35,
-    "analyze": 0.04,
-    "plan": 0.07,
-    "voice": 24.78,
-    "render": 10.23,
-    "assemble": 1.93,
-    "eval": 1.5,
-    "total": 44.01
+    "ingest": 2.78,
+    "analyze": 0.05,
+    "plan": 0.05,
+    "voice": 23.42,
+    "render": 13.43,
+    "assemble": 3.48,
+    "eval": 2.17,
+    "total": 45.49
   },
   "backend_requested": "auto",
   "backend_used": "offline",
@@ -32,8 +32,8 @@
   "renderer_used": "playwright",
   "renderer_fallback_reason": "",
   "video": "video.mp4",
-  "video_sha256": "61e28849aecfe95e29d9397ee797b182e16e89bcfcc2b1fe81bec6c991abd483",
-  "video_duration_seconds": 52.82,
+  "video_sha256": "8486036cb958d2bb711b6f90685b6f2c82a6f3c383f833817f7c958c79234750",
+  "video_duration_seconds": 49.58,
   "eval_report": "eval_report.json",
   "all_gates_passed": true
 }

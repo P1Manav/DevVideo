@@ -37,9 +37,13 @@ jobs:
         run: playwright install chromium --with-deps
 
       - name: Run pytest test suite (full verification with must_run gates)
+        env:
+          DEVVIDEO_REQUIRE_VOICE: "0"
         run: pytest tests/ -v
 
       - name: Run video generator on vidsearch_py (default backends)
+        env:
+          DEVVIDEO_REQUIRE_VOICE: "1"
         run: |
           python -m src.cli generate tests/fixtures/vidsearch_py --out out/
 

@@ -19,6 +19,7 @@ REQUIRED_FILES = [
     "eval_report.json",
     "manifest.json",
     "narration.txt",
+    "contact_sheet.png",
     "README.md",
 ]
 
@@ -42,3 +43,15 @@ def test_sample_manifests_not_mock_or_silent():
         narration_path = sdir / "narration.txt"
         lines = [l.strip() for l in narration_path.read_text(encoding="utf-8").splitlines() if l.strip()]
         assert len(lines) >= 5, f"narration.txt in {sdir} has fewer than 5 beats ({len(lines)})"
+
+def test_sample_video_duration_and_size():
+    for sdir in SAMPLE_DIRS:
+        mp4_path = sdir / "video.mp4"
+        assert mp4_path.exists()
+        size_mb = mp4_path.stat().st_size / (1024 * 1024)
+        assert size_mb < 10.0, f"Sample video in {sdir} is {size_mb:.2f} MB, exceeding 10 MB"
+        manifest_path = sdir / "manifest.json"
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        dur = data.get("video_duration_seconds", 0.0)
+        assert dur <= 56.0, f"Sample in {sdir} duration is {dur:.2f}s, exceeding 56s"
+

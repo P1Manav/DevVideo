@@ -22,6 +22,7 @@ DANGLING_STOPWORDS = {
     "and", "or", "but", "that", "which", "is", "are", "was", "be", "as",
     "at", "than", "then", "if", "most", "more", "e.g.", "i.e.", "etc", "etc.",
     "its", "into", "their", "our", "your", "natural", "matching", "multimodal",
+    "understanding", "instructed",
 }
 
 JUNK_TOKENS = {
@@ -89,25 +90,13 @@ def check_narration_quality_gate(
                 if f"start with {non_code}" in r_lower:
                     issues.append(f"Recap suggests non-code file '{non_code}' when code exists")
             code_files = [f for f in repo_files if any(f.endswith(ext) for ext in code_exts)]
-            code_names = [Path(f).name.lower() for f in code_files] + [f.lower() for f in code_files]
-            has_mention = False
-            for cn in code_names:
-                cn_stem = Path(cn).stem
-                cn_dot = cn.replace(".", " dot ")
-                cn_clean = cn.replace("_", "")
-                cn_clean_dot = cn_clean.replace(".", " dot ")
-                stem_clean = cn_stem.replace("_", "")
-                if (
-                    cn in r_lower
-                    or cn_dot in r_lower
-                    or cn_clean in r_lower
-                    or cn_clean_dot in r_lower
-                    or f"start with {cn_stem}" in r_lower
-                    or f"start with {stem_clean}" in r_lower
-                    or (stem_clean and stem_clean in r_lower and len(stem_clean) >= 3)
-                ):
-                    has_mention = True
-                    break
+            code_names = {Path(f).name.lower() for f in code_files} | {Path(f).stem.lower() for f in code_files} | {f.lower() for f in code_files}
+            code_names |= {cn.lstrip("_") for cn in list(code_names)}
+            code_names |= {cn.replace("_", " ") for cn in list(code_names)}
+            has_mention = any(
+                cn in r_lower or cn.replace(".", " dot ") in r_lower or f"open {cn}" in r_lower or f"start with {cn}" in r_lower
+                for cn in code_names
+            )
             if not has_mention:
                 issues.append("Recap does not mention a code/entry file to start with")
 
@@ -345,6 +334,11 @@ def check_onscreen_text_integrity_gate(
 
             if cap.endswith("...") or cap.endswith("…"):
                 violations.append(f"{scene.id}[b{b_idx}]: caption ends with truncation ellipsis")
+
+            # Phase 3: Check duplicate repo name
+            repo_name = getattr(facts, "repo_name", "") or script.repo_name
+            if repo_name and re.search(rf"\b{re.escape(repo_name)}:\s*{re.escape(repo_name)}\b", cap, re.I):
+                violations.append(f"{scene.id}[b{b_idx}]: caption duplicates repo name '{repo_name}' twice in a row")
 
             # Phase 3: Partial clause check (no verb in string > 3 words unless command/label)
             core_cap = re.sub(r"^[^:]+:\s*", "", cap).strip()

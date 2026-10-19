@@ -23,6 +23,7 @@ _assemble_tmp/
 !docs/sample/eval_report.json
 !docs/sample/manifest.json
 !docs/sample/scenes.json
+!docs/sample/contact_sheet.png
 
 !docs/sample_fixture/video.mp4
 !docs/sample_fixture/thumbnail.png
@@ -33,4 +34,5 @@ _assemble_tmp/
 !docs/sample_fixture/eval_report.json
 !docs/sample_fixture/manifest.json
 !docs/sample_fixture/scenes.json
+!docs/sample_fixture/contact_sheet.png
 

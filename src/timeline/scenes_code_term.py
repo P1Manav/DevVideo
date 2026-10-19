@@ -39,10 +39,20 @@ def expand_code(
             except Exception:
                 focus_range = None
 
+        if focus_range:
+            # Phase 4: Cap highlighted lines to at most 5 rows per beat
+            l_start, l_end = focus_range
+            if l_end - l_start + 1 > 5:
+                l_end = l_start + 4
+            focus_range = (l_start, l_end)
+        else:
+            total_code_l = len(code_text.splitlines()) if code_text else 1
+            focus_range = (code_start_line, min(code_start_line + 2, code_start_line + total_code_l - 1))
+
         if focus_range and (focus_range[1] - focus_range[0] >= 2) and b_dur > 2.8:
             l_start, l_end = focus_range
-            step1_end = l_start + 1
-            step2_end = l_start + max(2, (l_end - l_start) * 2 // 3)
+            step1_end = min(l_start + 1, l_end)
+            step2_end = l_start + max(1, (l_end - l_start) * 2 // 3)
             d1 = round(b_dur * 0.32, 2)
             d2 = round(b_dur * 0.32, 2)
             d3 = round(b_dur - d1 - d2, 2)
@@ -231,7 +241,6 @@ def expand_terminal(
     states: list[FrameState] = []
     for s_idx, slen in enumerate(slice_lens):
         partial = cmd[:slen]
-        pct = int(fractions[s_idx] * 100)
         states.append(
             FrameState(
                 scene_id=scene.id,
@@ -248,7 +257,6 @@ def expand_terminal(
                     "command_display": partial,
                     "cursor_visible": True,
                     "is_typing": True,
-                    "typing_pct": pct,
                     "step": s_idx + 1,
                     "total_steps": len(slice_lens),
                 },

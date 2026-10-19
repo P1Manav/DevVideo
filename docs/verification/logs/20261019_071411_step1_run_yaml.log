@@ -1,0 +1,45 @@
+=== STEP: run.yaml Command Execution ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe src/main.py generate tests/fixtures/vidsearch_py --out out/_verify_vidsearch
+Exit Code: 0
+Duration: 37.78s
+Timestamp: 2026-10-19T07:14:48.801699+00:00
+
+--- STDOUT ---
+
+[OK] Video published successfully: out\_verify_vidsearch\video.mp4
+  Duration: 49.8s
+  Voice: none
+  Gates: 19/20 passed (all_gates_passed=True)
+  Outputs:
+    Video:       out\_verify_vidsearch\video.mp4
+    Transcript:  out\_verify_vidsearch\transcript.vtt
+    Chapters:    out\_verify_vidsearch\chapters.json
+    Index:       out\_verify_vidsearch\index.jsonl
+    Thumbnail:   out\_verify_vidsearch\thumbnail.png
+    Eval Report: out\_verify_vidsearch\eval_report.json
+    Manifest:    out\_verify_vidsearch\manifest.json
+
+
+--- STDERR ---
+12:44:12 INFO     src.pipeline.runner: Stage 1 [Ingest]: from tests/fixtures/vidsearch_py
+12:44:12 INFO     src.pipeline.runner: Ingested 11 files from vidsearch_py
+12:44:12 INFO     src.pipeline.runner: Stage 2 [Analyze]: Computing RepoFacts
+12:44:12 INFO     src.pipeline.runner: Stage 3 [Plan]: Planning script with LLM=auto
+12:44:12 INFO     src.pipeline.runner: Stage 4 [Voice]: Synthesizing speech with TTS=auto
+12:44:24 INFO     src.tts.chain: Synthesizing 7 scenes with TTS backend: silent
+12:44:26 INFO     src.pipeline.runner: Stage 5 [Render]: Rendering frames with renderer=auto
+12:44:44 INFO     src.pipeline.runner: Stage 6 [Assemble]: Concatenating audio and muxing MP4
+12:44:47 INFO     src.assemble: Assembled video 49.80s -> out\_verify_vidsearch\video.mp4
+12:44:47 INFO     src.pipeline.runner: Stage 7 [Eval]: Running all 9 hard evaluation gates
+12:44:48 INFO     src.evals.report: Eval report saved to out\_verify_vidsearch\eval_report.json
+
+======================================================================
+WARNING: DevVideo generated a silent video (voice: none)!
+No functional text-to-speech voice engine was found or available.
+For full audio narration, please install espeak-ng or configure
+internet access for Edge Neural TTS.
+======================================================================
+
+12:44:48 WARNING  src.pipeline.runner: Published video with no voice engine (silent fallback).
+12:44:48 INFO     src.pipeline.runner: All gates passed! Published out\_verify_vidsearch\video.mp4 (49.8s)
+

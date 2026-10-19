@@ -21,6 +21,7 @@ VERB_TOKENS = {
     "provides", "provide", "providing", "provided",
     "extracts", "extract", "extracting", "extracted",
     "runs", "run", "running", "ran",
+    "open", "opens", "opening", "dive", "dives", "diving",
     "builds", "build", "building", "built",
     "trains", "train", "training", "trained",
     "loads", "load", "loading", "loaded",
@@ -103,10 +104,11 @@ def are_quotes_and_brackets_balanced(text: str) -> bool:
     return True
 
 
-def clean_caption_text(text: str, max_words: int = 8) -> str:
+def fit_clause(text: str, max_chars: int = 70) -> str:
     """
-    Format caption text cleanly from a complete clause without dangling stops or unbalanced quotes.
-    Never slices mid-clause if it would break grammar.
+    Phase 3: Picks a complete grammatical clause (split at commas, 'and', 'but', semicolons, dashes)
+    or the whole sentence. NEVER cuts words mid-word, and NEVER cuts before a dependent tail
+    ('understanding' without 'and retrieval engine' is wrong).
     """
     if not text:
         return ""
@@ -116,31 +118,66 @@ def clean_caption_text(text: str, max_words: int = 8) -> str:
     s = re.sub(r"[`*]", "", s)
     s = " ".join(s.split()).strip()
 
-    words = s.split()
-    if len(words) <= max_words and not is_dangling(s):
-        res = s.rstrip(".,;:!?")
-        return res if are_quotes_and_brackets_balanced(res) else s
+    # If already fits within max_chars without dangling ending
+    if len(s) <= max_chars and not is_dangling(s):
+        s_clean = s.rstrip(".,;:!?")
+        if are_quotes_and_brackets_balanced(s_clean):
+            return s_clean
 
-    # Clause boundary split
-    for sep in [": ", " - ", " -- ", "; ", ", ", " and "]:
-        if sep in s:
-            first_clause = s.split(sep)[0].strip()
-            if 2 <= len(first_clause.split()) <= max_words and not is_dangling(first_clause):
-                res = first_clause.rstrip(".,;:!?")
-                if are_quotes_and_brackets_balanced(res):
-                    return res
+    # Try clause boundary splits in order of semantic separation
+    delimiters = [
+        r";\s*",
+        r"\s*--\s*",
+        r"\s*—\s*",
+        r":\s+",
+        r",\s+and\s+",
+        r",\s+but\s+",
+        r",\s+while\s+",
+        r",\s+where\s+",
+        r",\s+",
+    ]
+    candidates: list[str] = []
+    for delim in delimiters:
+        parts = re.split(delim, s)
+        if len(parts) > 1:
+            candidate = parts[0].strip().rstrip(".,;:!?")
+            if (
+                len(candidate) <= max_chars
+                and len(candidate.split()) >= 3
+                and not is_dangling(candidate)
+                and are_quotes_and_brackets_balanced(candidate)
+            ):
+                candidates.append(candidate)
 
-    if len(words) <= 10 and not is_dangling(s):
-        res = s.rstrip(".,;:!?")
-        if are_quotes_and_brackets_balanced(res):
-            return res
+    if candidates:
+        # Pick the longest complete clause that fits
+        candidates.sort(key=lambda c: len(c), reverse=True)
+        return candidates[0]
 
-    truncated = words[:max_words]
-    while truncated and (truncated[-1].lower().rstrip(".,;:!?") in DANGLING_STOPWORDS or is_dangling(" ".join(truncated))):
-        truncated.pop()
-    res = " ".join(truncated).rstrip(".,;:!?")
+    # If whole sentence is not too long (<= max_chars + 15), keep the complete sentence
+    if len(s) <= max_chars + 15 and not is_dangling(s):
+        return s.rstrip(".,;:!?")
+
+    # If no clause fits, do not cut mid-word; drop trailing phrases at commas
+    if "," in s:
+        comma_prefix = s.split(",")[0].strip().rstrip(".,;:!?")
+        if not is_dangling(comma_prefix) and are_quotes_and_brackets_balanced(comma_prefix):
+            return comma_prefix
+
+    return s.rstrip(".,;:!?")
+
+
+def clean_caption_text(text: str, max_words: int = 8) -> str:
+    """
+    Format caption text cleanly from a complete clause without dangling stops or unbalanced quotes.
+    Never slices mid-clause if it would break grammar. Uses fit_clause.
+    """
+    if not text:
+        return ""
+    # Map max_words to approximate max_chars (approx 7 chars per word)
+    max_c = max_words * 8
+    res = fit_clause(text, max_chars=max_c)
     if not are_quotes_and_brackets_balanced(res):
-        # balance double quote if single open
         if res.count('"') % 2 == 1:
             res += '"'
     return res

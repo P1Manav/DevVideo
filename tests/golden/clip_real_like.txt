@@ -1,8 +1,9 @@
 [title] CLIP: Contrastive Language-Image Pre-Training. CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
 [overview] It can be instructed in natural language to predict the most relevant text snippet, given an image.
 [diagram] clip/clip dot py provides cLIP model loading and tokenization routines.
+[diagram] It connects to clip/model dot py, which provides neural network model architecture defining the image and text encoders.
 [code] In clip/clip dot py, load loads a CLIP model.
 [terminal] Run pip install ftfy regex tqdm to install dependencies for clip real like.
-[fit] clip real like is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
-[recap] In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
-[recap] To get started, explore clip real like starting with clip/clip dot py.
+[fit] clip real like handles the embed and query steps of a video retrieval pipeline.
+[recap] In summary, it can be instructed in natural language to predict the most relevant text snippet.
+[recap] To dive in, open clip/clip dot py.

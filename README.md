@@ -10,22 +10,26 @@ DevVideo autonomously generates 50–58 second, 720p 30fps narrated developer ex
 
 *Sample explainer generated autonomously from the [openai/CLIP](https://github.com/openai/CLIP) repository.*
 
-- **Video**: [docs/sample/video.mp4](docs/sample/video.mp4) (52.8s, H.264/AAC, 1.21 MB)
+<!-- BEGIN:GENERATED:sample_stats -->
+- **Video**: [docs/sample/video.mp4](docs/sample/video.mp4) (49.6s, H.264/AAC, 1.14 MB)
 - **Subtitles**: [docs/sample/transcript.vtt](docs/sample/transcript.vtt) & [docs/sample/transcript.srt](docs/sample/transcript.srt)
 - **Chapters**: [docs/sample/chapters.json](docs/sample/chapters.json)
 - **Retrieval Index**: [docs/sample/index.jsonl](docs/sample/index.jsonl)
-- **Eval Report**: [docs/sample/eval_report.json](docs/sample/eval_report.json) (All 15 evaluation gates passed)
+- **Eval Report**: [docs/sample/eval_report.json](docs/sample/eval_report.json) (All 20 evaluation gates passed)
 - **Manifest**: [docs/sample/manifest.json](docs/sample/manifest.json)
+<!-- END:GENERATED:sample_stats -->
 
 Try querying the generated sample video with the pure-Python TF-IDF retrieval tool:
+<!-- BEGIN:GENERATED:search_demo -->
 ```bash
 python tools/search_demo.py docs/sample "where is the CLI explained"
 # Output:
 # Top video timestamps for 'where is the CLI explained':
-#   [0.105] 007.8s - 013.8s | OVERVIEW   | It can be instructed in natural language to predict the most relevant text snippet, given an image.
-#   [0.063] 000.2s - 007.5s | TITLE      | CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
-#   [0.034] 040.5s - 048.5s | RECAP      | In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
+#   [0.094] 007.8s - 013.8s | OVERVIEW   | It can be instructed in natural language to predict the most relevant text snippet, given an image.
+#   [0.093] 040.5s - 046.9s | RECAP      | In summary, it can be instructed in natural language to predict the most relevant text snippet.
+#   [0.074] 000.2s - 007.5s | TITLE      | CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
 ```
+<!-- END:GENERATED:search_demo -->
 
 ---
 
@@ -40,7 +44,7 @@ cd aintropy_assignment_part2_task12
 pip install -r requirements.txt -r requirements-dev.txt
 playwright install chromium
 
-# 2. Run the test suite (318 tests passing)
+# 2. Run the test suite <!-- BEGIN:GENERATED:test_count -->(332 passed, 1 skipped)<!-- END:GENERATED:test_count -->
 pytest tests/ -v
 
 # 3. Generate an explainer video
@@ -73,7 +77,7 @@ flowchart TD
     E -- Verified Plan --> F[5. Voice Chain & Calibration]
     F -- Synthesized Audio --> G[6. Precision Frame Rendering]
     G --> H[7. FFmpeg Concat-Demuxer Assembly]
-    H --> I{8. 15 Evaluation Gates}
+    H --> I{8. <!-- BEGIN:GENERATED:gate_count -->20<!-- END:GENERATED:gate_count --> Evaluation Gates}
     I -- All Pass --> J[Publish: out/video.mp4 + Manifest]
     I -- Any Fail --> K[Quarantine: out/_rejected/ + Manifest]
 ```
@@ -85,7 +89,7 @@ flowchart TD
 5. **Adaptive Voice**: Runtime probe chain (`edge` -> `espeak-ng` -> `pyttsx3` -> `silent`) with atomic restart on error (zero mixed voices).
 6. **Precision Rendering**: Headless Playwright Chromium (JS disabled) with Pygments syntax highlighting, SVG graph, and Pillow fallback.
 7. **Assembly & Muxing**: FFmpeg concat-demuxer with repeated final entries to eliminate A/V drift.
-8. **Evaluation Gates**: 15 evaluation gates evaluate the final MP4. Videos failing any gate are quarantined to `out/_rejected/`.
+8. **Evaluation Gates**: <!-- BEGIN:GENERATED:gate_count -->20<!-- END:GENERATED:gate_count --> evaluation gates evaluate the final MP4. Videos failing any gate are quarantined to `out/_rejected/`.
 
 ---
 
@@ -100,15 +104,16 @@ flowchart TD
 | `chapters.json` | JSON | Timed chapter markers matching scene boundaries. |
 | `index.jsonl` | JSON Lines | Search-ready records with timestamp ranges, evidence files, and text. |
 | `scenes.json` | JSON | Full structured script plan, beats, visual focus, and quotes. |
-| `eval_report.json` | JSON | Results of all 9 hard gates and soft metrics. |
+| `eval_report.json` | JSON | Results of all evaluation gates and soft metrics. |
 | `manifest.json` | JSON | Audit trail with relative POSIX paths, git SHAs, timings, and SHA-256 media hash. |
 
 ---
 
 ## Hard Evaluation Gates
 
-Videos are only published if all 15 evaluation gates pass:
+Videos are only published if all <!-- BEGIN:GENERATED:gate_count -->20<!-- END:GENERATED:gate_count --> evaluation gates pass:
 
+<!-- BEGIN:GENERATED:gates_table -->
 | Gate | Target / Threshold | Description | Code Location |
 |------|-------------------|-------------|---------------|
 | `duration` | `<= 60.0s` | Container duration measured via ffprobe on final MP4. | [gates.py](src/evals/gates.py) |
@@ -126,6 +131,12 @@ Videos are only published if all 15 evaluation gates pass:
 | `onscreen_text_integrity` | `0 violations` | No on-screen text ends mid-word or with dangling stopword; bullets grounded. | [gates.py](src/evals/gates.py) |
 | `motion` | `>= 24 changes, max gap <= 5.0s` | Content region motion events sampled at 5 fps with max idle window <= 5s. | [gates.py](src/evals/gates.py) |
 | `voice_present` | `Pass` | Verified voice engine present (non-blocking unless DEVVIDEO_REQUIRE_VOICE=1). | [gates.py](src/evals/gates.py) |
+| `duration_margin` | `<= 55.0s` | Duration budget margin check (warning at > 55s, blocking at > 60s). | [gates.py](src/evals/gates.py) |
+| `code_highlight_focus` | `<= 60% focus ratio, >= 1 focused row` | Highlight focus is constrained to <= 60% and max 5 rows per code beat. | [gates.py](src/evals/gates.py) |
+| `code_window_visible` | `100%` | Header with file path is visible and rows remain inside code container. | [gates.py](src/evals/gates.py) |
+| `decoration_free` | `0 violations` | No fake synthesis banners, fake percentage progress bars, or decorative widgets. | [gates.py](src/evals/gates.py) |
+| `onscreen_matches_voice` | `100%` | Every bullet, takeaway, and caption traces to spoken beats without news items. | [gates.py](src/evals/gates.py) |
+<!-- END:GENERATED:gates_table -->
 
 ---
 
@@ -146,7 +157,7 @@ Options:
 ```
 
 ### Exit Codes
-- `0`: Video published successfully and passed all 9 hard evaluation gates.
+- `0`: Video published successfully and passed all evaluation gates.
 - `1`: Gate failure; video was rejected and quarantined to `out/_rejected/`.
 - `2`: Fatal pipeline error or unrecoverable exception.
 

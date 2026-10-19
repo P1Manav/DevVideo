@@ -193,8 +193,10 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
         if d in DEPENDENCY_ROLES:
             dep_roles[d] = DEPENDENCY_ROLES[d]
 
-    # 7. Pipeline stages (Phase 4)
-    pipeline_stages = extract_pipeline_stages(cleaned_readme, top_symbols, module_docstrings)
+    # 7. Pipeline stages (Phase 2 & 6)
+    pipeline_stages, pipeline_stage_spans = extract_pipeline_stages(
+        cleaned_readme, top_symbols, module_docstrings, readme_file
+    )
 
     # 8. Domain relevance score
     corpus_parts = [
@@ -227,6 +229,7 @@ def analyze_repo(content: RepoContent) -> RepoFacts:
         dependencies=deps,
         dependency_roles=dep_roles,
         pipeline_stages=pipeline_stages,
+        pipeline_stage_spans=pipeline_stage_spans,
         readme=cleaned_readme,
         readme_file=readme_file,
         relevance_score=rel_score,

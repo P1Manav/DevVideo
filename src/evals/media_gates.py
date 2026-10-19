@@ -54,6 +54,32 @@ def check_duration_gate(target: Path | float, max_seconds: float = 60.0) -> Eval
     )
 
 
+def check_duration_margin_gate(target: Path | float, target_margin: float = 55.0, hard_limit: float = 60.0) -> EvalGate:
+    """Gate: duration_margin (non-blocking warning at > 55s, blocking at > 60s)."""
+    if isinstance(target, Path):
+        dur = _get_ffprobe_duration(target)
+    else:
+        dur = float(target)
+
+    blocking_failed = dur > hard_limit
+    has_warning = dur > target_margin
+    passed = not blocking_failed
+    details = f"Final video duration {dur:.1f}s (budget <= {target_margin}s)"
+    if has_warning and not blocking_failed:
+        details += f" [WARNING: duration {dur:.1f}s exceeds target budget {target_margin}s]"
+    elif blocking_failed:
+        details += f" [FAILED: duration {dur:.1f}s exceeds hard limit {hard_limit}s]"
+
+    return EvalGate(
+        name="duration_margin",
+        passed=passed,
+        value=f"{dur:.1f}s",
+        threshold=f"<= {target_margin}s",
+        details=details,
+        blocking=False,
+    )
+
+
 def check_av_sync_gate(
     scene_video_durations: list[float],
     scene_audio_durations: list[float],

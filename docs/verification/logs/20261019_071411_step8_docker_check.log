@@ -1,0 +1,19 @@
+=== STEP: Docker Container Non-Root Check ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe -c import subprocess, sys
+res = subprocess.run(['docker', 'info'], capture_output=True, text=True)
+if res.returncode != 0:
+    print('UNVERIFIED: Docker daemon not running on host.')
+    sys.exit(0)
+else:
+    print('Docker running.')
+
+Exit Code: 0
+Duration: 1.33s
+Timestamp: 2026-10-19T07:23:36.116957+00:00
+
+--- STDOUT ---
+UNVERIFIED: Docker daemon not running on host.
+
+
+--- STDERR ---
+

@@ -95,7 +95,8 @@ def check_groundedness(
         "inspect", "returns", "implements", "module", "code", "file", "function", "class", "workflow",
         "pipeline", "stage", "stages", "supported", "operation", "operations", "multimedia", "processing",
         "deliverables", "coordinates", "execution", "package", "contains", "definitions", "logic", "core",
-        "source", "written", "built", "result", "processed", "results",
+        "source", "written", "built", "result", "processed", "results", "covers", "step", "steps", "one",
+        "video", "retrieval", "domain", "workflows",
     }
     lang_tokens = set()
     if facts:

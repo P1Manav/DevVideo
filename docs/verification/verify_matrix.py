@@ -80,20 +80,21 @@ def main() -> int:
         if eval_f.exists():
             rep = json.loads(eval_f.read_text(encoding="utf-8"))
             passed_gates = [g["name"] for g in rep.get("gates", []) if g["passed"]]
-            failed_gates = [g["name"] for g in rep.get("gates", []) if not g["passed"]]
+            failed_blocking = [g["name"] for g in rep.get("gates", []) if not g["passed"] and g.get("blocking", True)]
+            non_blocking_failed = [g["name"] for g in rep.get("gates", []) if not g["passed"] and not g.get("blocking", True)]
             log_lines.append(f"All Gates Passed: {rep.get('all_gates_passed')}")
             log_lines.append(f"Passed Gates: {', '.join(passed_gates)}")
-            if failed_gates:
-                log_lines.append(f"Failed Gates: {', '.join(failed_gates)}")
+            if non_blocking_failed:
+                log_lines.append(f"Non-blocking Warnings: {', '.join(non_blocking_failed)}")
+            if failed_blocking or not rep.get("all_gates_passed", False):
+                log_lines.append(f"Failed Gates: {', '.join(failed_blocking)}")
                 all_passed = False
         else:
             all_passed = False
         
         log_lines.append("")
 
-    output_file = REPO_ROOT / "docs" / "verification" / "generation_matrix.txt"
-    output_file.write_text("\n".join(log_lines), encoding="utf-8")
-    print(f"Matrix verification saved to {output_file}")
+    print("\n".join(log_lines))
     return 0 if all_passed else 1
 
 if __name__ == "__main__":

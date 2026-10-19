@@ -67,6 +67,26 @@ class TestDurationGate:
         assert "60.1s" in gate.value
 
 
+class TestDurationMarginGate:
+    def test_under_55s_passes_without_warning(self):
+        from src.evals.media_gates import check_duration_margin_gate
+        gate = check_duration_margin_gate(52.0, target_margin=55.0, hard_limit=60.0)
+        assert gate.passed
+        assert "WARNING" not in gate.details
+
+    def test_between_55s_and_60s_warns_non_blocking(self):
+        from src.evals.media_gates import check_duration_margin_gate
+        gate = check_duration_margin_gate(56.5, target_margin=55.0, hard_limit=60.0)
+        assert gate.passed  # non-blocking
+        assert "WARNING" in gate.details
+
+    def test_over_60s_fails_duration_margin(self):
+        from src.evals.media_gates import check_duration_margin_gate
+        gate = check_duration_margin_gate(61.2, target_margin=55.0, hard_limit=60.0)
+        assert not gate.passed
+        assert "FAILED" in gate.details
+
+
 class TestSecretGate:
     def test_no_secrets(self):
         script = ScriptPlan(
