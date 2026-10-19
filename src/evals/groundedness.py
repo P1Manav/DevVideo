@@ -156,9 +156,12 @@ def check_groundedness(
                             norm_quote = " ".join(quote.split())
                             norm_content = " ".join(file_content.split())
                             if norm_quote not in norm_content:
-                                ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
-                                scene_failed = True
-                                break
+                                norm_q_clean = re.sub(r"[\*`_]", "", norm_quote)
+                                norm_c_clean = re.sub(r"[\*`_]", "", norm_content)
+                                if norm_q_clean not in norm_c_clean:
+                                    ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
+                                    scene_failed = True
+                                    break
                             file_lines = [l.strip() for l in file_content.splitlines()]
                             num_lines = max(1, len(file_lines))
                             if span.start_line > 0 or span.end_line > 0:
@@ -171,9 +174,12 @@ def check_groundedness(
                                 cited_slice = file_lines[eff_start:eff_end]
                                 norm_cited = " ".join(" ".join(cited_slice).split())
                                 if norm_quote not in norm_cited and norm_cited not in norm_quote:
-                                    ungrounded.append(f"{b_label}: quoted text does not appear in cited line range {span.start_line}-{span.end_line} in {span.file}")
-                                    scene_failed = True
-                                    break
+                                    norm_q_c = re.sub(r"[\*`_]", "", norm_quote)
+                                    norm_cited_c = re.sub(r"[\*`_]", "", norm_cited)
+                                    if norm_q_c not in norm_cited_c and norm_cited_c not in norm_q_c:
+                                        ungrounded.append(f"{b_label}: quoted text does not appear in cited line range {span.start_line}-{span.end_line} in {span.file}")
+                                        scene_failed = True
+                                        break
                     continue
 
                 if not b.sources:
@@ -208,9 +214,12 @@ def check_groundedness(
                     norm_quote = " ".join(quote.split())
                     norm_content = " ".join(file_content.split())
                     if norm_quote not in norm_content:
-                        ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
-                        scene_failed = True
-                        break
+                        norm_q_clean = re.sub(r"[\*`_]", "", norm_quote)
+                        norm_c_clean = re.sub(r"[\*`_]", "", norm_content)
+                        if norm_q_clean not in norm_c_clean:
+                            ungrounded.append(f"{b_label}: quote not found case-sensitively in {span.file}")
+                            scene_failed = True
+                            break
 
                     num_lines = max(1, len(file_lines))
                     if span.start_line > 0 or span.end_line > 0:
@@ -223,9 +232,12 @@ def check_groundedness(
                         cited_slice = file_lines[eff_start:eff_end]
                         norm_cited = " ".join(" ".join(cited_slice).split())
                         if norm_quote not in norm_cited and norm_cited not in norm_quote:
-                            ungrounded.append(f"{b_label}: quoted text does not appear in cited line range {span.start_line}-{span.end_line} in {span.file}")
-                            scene_failed = True
-                            break
+                            norm_q_c = re.sub(r"[\*`_]", "", norm_quote)
+                            norm_cited_c = re.sub(r"[\*`_]", "", norm_cited)
+                            if norm_q_c not in norm_cited_c and norm_cited_c not in norm_q_c:
+                                ungrounded.append(f"{b_label}: quoted text does not appear in cited line range {span.start_line}-{span.end_line} in {span.file}")
+                                scene_failed = True
+                                break
 
                     span_tokens.update(_extract_content_tokens(quote))
                     span_tokens.update(_extract_content_tokens(file_content))

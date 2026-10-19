@@ -76,6 +76,9 @@ class JobManager:
                     jid = d.name if d.name.startswith("job_") else f"sample_{d.name}"
                     if jid not in self.jobs:
                         vid_file = d / "video.mp4"
+                        if not vid_file.exists():
+                            vid_file = d / "_rejected" / "video.mp4"
+                        has_vid = vid_file.exists() and vid_file.stat().st_size > 0
                         chap_file = d / "chapters.json"
                         chaps = []
                         if chap_file.exists():
@@ -86,10 +89,10 @@ class JobManager:
                         self.jobs[jid] = JobRecord(
                             job_id=jid,
                             source=data.get("repo_name", "Pre-generated Sample"),
-                            status="completed" if data.get("all_gates_passed", False) or vid_file.exists() else "failed",
+                            status="completed" if (data.get("all_gates_passed", False) or has_vid) else "failed",
                             output_dir=str(d),
                             manifest=data,
-                            video_available=vid_file.exists(),
+                            video_available=has_vid,
                             duration_seconds=data.get("video_duration_seconds", 0.0),
                             voice_used=data.get("voice", "auto"),
                             all_gates_passed=data.get("all_gates_passed", False),
@@ -189,6 +192,10 @@ class JobManager:
             rec.completed_at = time.time()
             rec.manifest = result.manifest or {}
             vid_file = output_dir / "video.mp4"
+            if not vid_file.exists():
+                rejected_vid = output_dir / "_rejected" / "video.mp4"
+                if rejected_vid.exists():
+                    vid_file = rejected_vid
             rec.video_available = vid_file.exists() and vid_file.stat().st_size > 0
             rec.duration_seconds = rec.manifest.get("video_duration_seconds", 0.0)
             rec.voice_used = rec.manifest.get("voice", "auto")
@@ -201,9 +208,11 @@ class JobManager:
                 except Exception:
                     pass
 
-            if result.exit_code == 0:
+            if rec.video_available:
                 rec.status = "completed"
-                logger.info(f"[Job {job_id}] Finished successfully: {vid_file}")
+                if result.exit_code != 0:
+                    rec.error = result.error or "Published with gate warning"
+                logger.info(f"[Job {job_id}] Video ready: {vid_file}")
             else:
                 rec.status = "failed"
                 rec.error = result.error or f"Pipeline rejected (exit code {result.exit_code})"

@@ -45,7 +45,11 @@ def build_title_scene(facts: RepoFacts, readme_file: str) -> Scene:
         compressed_tagline = compress_sentence(tagline, max_words=16)
         tag_phrase = compressed_tagline[0] if compressed_tagline else tagline
 
-        if tag_phrase.lower().startswith(title.lower()):
+        clean_title = re.sub(r"[^\w\s-]", "", title).strip().lower()
+        starts_with_title = tag_phrase.lower().startswith(title.lower()) or (
+            bool(clean_title) and tag_phrase.lower().startswith(clean_title)
+        )
+        if starts_with_title:
             say_text = tag_phrase
         else:
             say_text = f"{title}. {tag_phrase}"
@@ -55,7 +59,11 @@ def build_title_scene(facts: RepoFacts, readme_file: str) -> Scene:
 
     spoken_say = tts_normalize_speech(say_text)
     caption_clause = fit_clause(tag_phrase, max_chars=60)
-    if caption_clause.lower().startswith(title.lower()):
+    clean_title = re.sub(r"[^\w\s-]", "", title).strip().lower()
+    caption_starts_with_title = caption_clause.lower().startswith(title.lower()) or (
+        bool(clean_title) and caption_clause.lower().startswith(clean_title)
+    )
+    if caption_starts_with_title:
         caption_text = caption_clause
     else:
         caption_text = f"{title}: {caption_clause}"

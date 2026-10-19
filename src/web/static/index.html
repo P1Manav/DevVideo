@@ -250,7 +250,7 @@ function pollJobStatus() {
       const job = await res.json();
       if (job.status === 'running') {
         document.getElementById('progressStep').textContent = 'Analyzing and rendering video (' + elapsed + 's)...';
-      } else if (job.status === 'completed') {
+      } else if (job.status === 'completed' || job.video_available) {
         clearInterval(pollTimer);
         document.getElementById('progressBox').style.display = 'none';
         document.getElementById('genBtn').disabled = false;
@@ -283,11 +283,15 @@ function loadVideoPlayer(job) {
   const track = document.getElementById('vttTrack');
   track.src = trackUrl;
 
+  const gateBadge = job.all_gates_passed
+    ? '<span class="meta-tag" style="color:var(--success);border-color:rgba(46,160,67,0.4);">✅ All Gates Passed</span>'
+    : '<span class="meta-tag" style="color:var(--warning);border-color:rgba(210,153,34,0.4);" title="' + (job.error || 'Gate notice') + '">⚠️ Quality Notice</span>';
+
   const meta = document.getElementById('videoMeta');
   meta.innerHTML = `
-    <span class="meta-tag">⏱️ ${job.duration_seconds.toFixed(1)}s</span>
-    <span class="meta-tag">🎙️ Voice: ${job.voice_used}</span>
-    <span class="meta-tag">${job.all_gates_passed ? '✅ All Gates Passed' : '⚠️ Quality Notice'}</span>
+    <span class="meta-tag">⏱️ ${(job.duration_seconds || 0).toFixed(1)}s</span>
+    <span class="meta-tag">🎙️ Voice: ${job.voice_used || 'auto'}</span>
+    ${gateBadge}
     <span class="meta-tag">ID: ${job.job_id}</span>
   `;
 
@@ -330,7 +334,7 @@ async function loadRecentJobs() {
       <div class="history-card" onclick="fetchJob('${j.job_id}')">
         <div class="history-title">${j.source}</div>
         <div class="history-sub">
-          <span>${j.status === 'completed' ? '✅ Ready' : j.status} &bull; ${j.duration_seconds.toFixed(1)}s</span>
+          <span>${j.status === 'completed' ? '✅ Ready' : j.status} &bull; ${(j.duration_seconds || 0).toFixed(1)}s</span>
           <span>${j.job_id.slice(0,14)}</span>
         </div>
       </div>

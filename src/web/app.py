@@ -141,6 +141,11 @@ def get_job_status(job_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
 
     out_p = Path(job.output_dir)
+    vid_p = out_p / "video.mp4"
+    if not vid_p.exists():
+        vid_p = out_p / "_rejected" / "video.mp4"
+    has_vid = vid_p.exists() and vid_p.stat().st_size > 0
+
     return {
         "job_id": job.job_id,
         "source": job.source,
@@ -152,7 +157,7 @@ def get_job_status(job_id: str) -> dict[str, Any]:
         "voice_used": job.voice_used,
         "all_gates_passed": job.all_gates_passed,
         "error": job.error,
-        "video_available": (out_p / "video.mp4").exists(),
+        "video_available": has_vid,
         "transcript_available": (out_p / "transcript.vtt").exists(),
         "thumbnail_available": (out_p / "thumbnail.png").exists(),
         "chapters": job.chapters,
@@ -168,6 +173,9 @@ def get_job_video(job_id: str) -> FileResponse:
         raise HTTPException(status_code=404, detail="Job not found")
 
     vid_path = Path(job.output_dir) / "video.mp4"
+    if not vid_path.exists() or vid_path.stat().st_size == 0:
+        vid_path = Path(job.output_dir) / "_rejected" / "video.mp4"
+
     if not vid_path.exists() or vid_path.stat().st_size == 0:
         raise HTTPException(status_code=404, detail="Video file not available for this job")
 

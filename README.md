@@ -44,7 +44,7 @@ cd aintropy_assignment_part2_task12
 pip install -r requirements.txt -r requirements-dev.txt
 playwright install chromium
 
-# 2. Run the test suite <!-- BEGIN:GENERATED:test_count -->(332 passed, 1 skipped)<!-- END:GENERATED:test_count -->
+# 2. Run the test suite <!-- BEGIN:GENERATED:test_count -->(339 passed, 1 skipped)<!-- END:GENERATED:test_count -->
 pytest tests/ -v
 
 # 3. Generate an explainer video

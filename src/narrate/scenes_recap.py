@@ -62,18 +62,19 @@ def build_recap_scene(facts: RepoFacts, readme_file: str) -> Scene:
     diff_sents = [s for s in desc_sents if s.text.strip().lower() != title_text]
 
     if diff_sents:
-        raw_text = diff_sents[0].text.lstrip("-*• ")
-        comp_desc = compress_sentence(raw_text, max_words=14)
-        summary_phrase = comp_desc[0].rstrip(".") if comp_desc else raw_text.rstrip(".")
-        if not has_verb(summary_phrase):
-            transformed = transform_bullet_to_sentence(summary_phrase)
-            summary_phrase = transformed if transformed else f"{title} provides {summary_phrase}"
+        comp_desc = compress_sentence(diff_sents[0].text, max_words=14)
+        summary_phrase = comp_desc[0].rstrip(".") if comp_desc else diff_sents[0].text.rstrip(".")
         say1 = f"In summary, {_lower_lead_in(summary_phrase)}."
         span1 = SourceSpan(file=readme_file, start_line=diff_sents[0].start_line, end_line=diff_sents[0].end_line, text=diff_sents[0].text)
+        cap_phrase = summary_phrase
+        if not has_verb(cap_phrase):
+            transformed = transform_bullet_to_sentence(summary_phrase.lstrip("-*• "))
+            cap_phrase = transformed if transformed else f"{title} provides {summary_phrase.lstrip('-*• ')}"
     elif facts.readme and facts.readme.features:
         feat_clean = facts.readme.features[0].rstrip(".")
         say1 = f"In summary, {title} provides {feat_clean}."
-        summary_phrase = f"{title} provides {feat_clean}"
+        summary_phrase = feat_clean
+        cap_phrase = f"{title} provides {feat_clean}"
         sp, ep = find_exact_line_range(facts.readme.raw_lines, feat_clean)
         span1 = SourceSpan(file=readme_file, start_line=sp if sp > 0 else 1, end_line=ep if ep > 0 else 1, text=feat_clean)
     elif facts.ranked_top_modules:
@@ -81,6 +82,7 @@ def build_recap_scene(facts: RepoFacts, readme_file: str) -> Scene:
         mods_str = ", ".join(facts.ranked_top_modules[:3])
         say1 = f"In summary, {title} organizes logic across {mods_str}."
         summary_phrase = f"Modules: {mods_str}"
+        cap_phrase = summary_phrase
         m_doc = next((m for m in facts.module_docstrings if m.file == top_mod), None)
         sym = next((s for s in facts.top_symbols if s.file == top_mod), None)
         edge = next((e for e in facts.import_graph if e.source == top_mod and e.raw_line), None)
@@ -96,12 +98,13 @@ def build_recap_scene(facts: RepoFacts, readme_file: str) -> Scene:
     else:
         say1 = f"This concludes the overview of {title}."
         summary_phrase = title
+        cap_phrase = summary_phrase
         sp1, ep1 = find_exact_line_range(facts.readme.raw_lines, title)
         span1 = SourceSpan(file=readme_file, start_line=sp1 if sp1 > 0 else 1, end_line=ep1 if ep1 > 0 else 1, text=title)
 
     beats.append(Beat(
         say=tts_normalize_speech(say1),
-        caption=fit_clause(summary_phrase, max_chars=60),
+        caption=fit_clause(cap_phrase, max_chars=60),
         focus="recap",
         sources=[span1],
         start_seconds=0.25,
