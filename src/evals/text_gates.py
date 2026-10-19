@@ -350,9 +350,10 @@ def check_onscreen_text_integrity_gate(
             core_cap = re.sub(r"^[^:]+:\s*", "", cap).strip()
             norm_core = " ".join(core_cap.split()).lower()
 
-            if scene.kind != "title":
+            if scene.kind not in ("title", "terminal"):
                 core_words = core_cap.split()
-                if len(core_words) > 3 and not any(core_words[0].lower().startswith(p) for p in ("pip", "python", "npm", "cargo", "docker")):
+                cmd_prefixes = ("pip", "python", "npm", "npx", "yarn", "pnpm", "cargo", "docker", "make", "go", "node", "pytest")
+                if len(core_words) > 3 and not any(core_words[0].lower().startswith(p) for p in cmd_prefixes):
                     from ..narrate.compress import has_verb
                     if not has_verb(core_cap):
                         violations.append(f"{scene.id}[b{b_idx}]: caption is partial clause without verb '{core_cap}'")
