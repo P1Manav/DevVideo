@@ -1,22 +1,22 @@
 {
-  "repo_name": "vidsearch_py",
+  "repo_name": "CLIP",
   "scenes": [
     {
       "id": "title",
       "kind": "title",
       "title": "Overview",
-      "narration": "VidSearch is a lightweight multimodal video understanding and retrieval engine.",
+      "narration": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.",
       "beats": [
         {
-          "say": "VidSearch is a lightweight multimodal video understanding and retrieval engine.",
-          "caption": "VidSearch: VidSearch is a lightweight multimodal video understanding and retrieval",
-          "focus": "vidsearch_py",
+          "say": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.",
+          "caption": "CLIP: CLIP (Contrastive Language-Image Pre-Training) is a neural network",
+          "focus": "CLIP",
           "sources": [
             {
               "file": "README.md",
-              "start_line": 9,
-              "end_line": 9,
-              "text": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
             }
           ],
           "start_seconds": 0.25,
@@ -25,17 +25,17 @@
       ],
       "on_screen": {
         "type": "title",
-        "content": "vidsearch_py\n\nPython",
+        "content": "CLIP\nopenai\nPython",
         "metadata": {
-          "repo": "vidsearch_py",
-          "owner": null,
+          "repo": "CLIP",
+          "owner": "openai",
           "language": "Python",
-          "tagline": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+          "tagline": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
       },
       "duration_seconds": 4.5
     },
@@ -43,48 +43,18 @@
       "id": "overview",
       "kind": "overview",
       "title": "Purpose",
-      "narration": "VidSearch is a lightweight multimodal video understanding and retrieval engine. It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index. It provides Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.",
+      "narration": "It can be instructed in natural language to predict the most relevant text snippet, given an image.",
       "beats": [
         {
-          "say": "VidSearch is a lightweight multimodal video understanding and retrieval engine.",
-          "caption": "What it is: VidSearch is a lightweight multimodal video",
+          "say": "It can be instructed in natural language to predict the most relevant text snippet, given an image.",
+          "caption": "What it is: It can be instructed",
           "focus": "concept",
           "sources": [
             {
               "file": "README.md",
-              "start_line": 9,
-              "end_line": 9,
-              "text": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
-            }
-          ],
-          "start_seconds": 0.25,
-          "end_seconds": 5.0
-        },
-        {
-          "say": "It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index.",
-          "caption": "Capabilities: It extracts key frames from video",
-          "focus": "operation",
-          "sources": [
-            {
-              "file": "README.md",
-              "start_line": 9,
-              "end_line": 9,
-              "text": "It extracts key frames from video clips using ffmpeg, computes dense vector embeddings, builds a fast Faiss vector index, and searches video segments using natural language queries."
-            }
-          ],
-          "start_seconds": 0.25,
-          "end_seconds": 5.0
-        },
-        {
-          "say": "It provides Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.",
-          "caption": "Features: Frame Extraction: vidsearch.frames samples video keyframes",
-          "focus": "features",
-          "sources": [
-            {
-              "file": "README.md",
-              "start_line": 27,
-              "end_line": 27,
-              "text": "1. **Frame Extraction**: `vidsearch.frames` samples video keyframes with ffmpeg."
+              "start_line": 5,
+              "end_line": 5,
+              "text": "It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3."
             }
           ],
           "start_seconds": 0.25,
@@ -93,174 +63,151 @@
       ],
       "on_screen": {
         "type": "overview",
-        "content": "Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.\nEmbedding: vidsearch.embed generates normalized vector embeddings.\nIndexing: vidsearch.index writes vectors into a Faiss cosine index.",
+        "content": "OpenCLIP: includes larger and independently trained CLIP models up to ViT-G/14\nHugging Face implementation of CLIP: for easier integration with the HF ecosystem",
         "metadata": {
           "points": [
-            "Frame Extraction: vidsearch.frames samples video keyframes with ffmpeg.",
-            "Embedding: vidsearch.embed generates normalized vector embeddings.",
-            "Indexing: vidsearch.index writes vectors into a Faiss cosine index."
+            "OpenCLIP: includes larger and independently trained CLIP models up to ViT-G/14",
+            "Hugging Face implementation of CLIP: for easier integration with the HF ecosystem"
           ]
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+        "quote": "It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3."
       },
-      "duration_seconds": 15.0
+      "duration_seconds": 9.6
     },
     {
       "id": "diagram",
       "kind": "diagram",
       "title": "Architecture",
-      "narration": "vidsearch/cli dot py is the command-line interface for VidSearch video retrieval engine. It connects to vidsearch/search dot py, which query vector index and rank matching video segments.",
+      "narration": "clip/clip dot py defines tokenize. It connects to clip/model dot py, which defines build model.",
       "beats": [
         {
-          "say": "vidsearch/cli dot py is the command-line interface for VidSearch video retrieval engine.",
-          "caption": "vidsearch/cli.py: is the command-line interface for VidSearch",
-          "focus": "vidsearch/cli.py",
+          "say": "clip/clip dot py defines tokenize.",
+          "caption": "clip/clip.py: defines tokenize",
+          "focus": "clip/clip.py",
           "sources": [
             {
-              "file": "vidsearch/cli.py",
-              "start_line": 1,
-              "end_line": 5,
-              "text": "Command-line interface for VidSearch video retrieval engine."
+              "file": "clip/clip.py",
+              "start_line": 205,
+              "end_line": 245,
+              "text": "def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate: bool = False) -> Union[torch.IntTensor, torch.LongTensor]:"
             }
           ],
           "start_seconds": 0.25,
-          "end_seconds": 5.0
+          "end_seconds": 4.8
         },
         {
-          "say": "It connects to vidsearch/search dot py, which query vector index and rank matching video segments.",
-          "caption": "vidsearch/search.py: query vector index and rank matching",
-          "focus": "vidsearch/search.py",
+          "say": "It connects to clip/model dot py, which defines build model.",
+          "caption": "clip/model.py: defines build_model",
+          "focus": "clip/model.py",
           "sources": [
             {
-              "file": "vidsearch/search.py",
-              "start_line": 1,
-              "end_line": 5,
-              "text": "Query vector index and rank matching video segments."
+              "file": "clip/model.py",
+              "start_line": 399,
+              "end_line": 436,
+              "text": "def build_model(state_dict: dict):"
             }
           ],
           "start_seconds": 0.25,
-          "end_seconds": 5.0
+          "end_seconds": 4.8
         }
       ],
       "on_screen": {
         "type": "diagram",
-        "content": "vidsearch/cli.py -> vidsearch/search.py\nvidsearch/embed.py -> vidsearch/frames.py\nvidsearch/search.py -> vidsearch/embed.py",
+        "content": "clip/__init__.py -> clip/clip.py\nclip/__init__.py -> clip/model.py\nclip/__init__.py -> clip/simple_tokenizer.py\nclip/clip.py -> clip/model.py\nclip/clip.py -> clip/simple_tokenizer.py",
         "metadata": {
           "nodes": [
-            "vidsearch/cli.py",
-            "vidsearch/search.py",
-            "vidsearch/embed.py",
-            "vidsearch/frames.py"
+            "clip/clip.py",
+            "clip/model.py",
+            "clip/simple_tokenizer.py",
+            "clip/__init__.py"
           ],
           "edges": [
             {
-              "from": "vidsearch/cli.py",
-              "to": "vidsearch/search.py"
+              "from": "clip/__init__.py",
+              "to": "clip/clip.py"
             },
             {
-              "from": "vidsearch/embed.py",
-              "to": "vidsearch/frames.py"
+              "from": "clip/__init__.py",
+              "to": "clip/model.py"
             },
             {
-              "from": "vidsearch/search.py",
-              "to": "vidsearch/embed.py"
+              "from": "clip/__init__.py",
+              "to": "clip/simple_tokenizer.py"
+            },
+            {
+              "from": "clip/clip.py",
+              "to": "clip/model.py"
+            },
+            {
+              "from": "clip/clip.py",
+              "to": "clip/simple_tokenizer.py"
             }
           ]
         }
       },
       "evidence": {
-        "file": "vidsearch/cli.py",
-        "quote": "Command-line interface for VidSearch video retrieval engine."
+        "file": "clip/clip.py",
+        "quote": "def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate: bool = False) -> Union[torch.IntTensor, torch.LongTensor]:"
       },
-      "duration_seconds": 10.0
+      "duration_seconds": 9.6
     },
     {
       "id": "code",
       "kind": "code",
       "title": "Implementation",
-      "narration": "In vidsearch/cli dot py, main run CLI search execution. Inside main, it invokes parse args and search video index.",
+      "narration": "In clip/clip dot py, load loads a CLIP model.",
       "beats": [
         {
-          "say": "In vidsearch/cli dot py, main run CLI search execution.",
-          "caption": "main: run CLI search execution",
-          "focus": "main",
+          "say": "In clip/clip dot py, load loads a CLIP model.",
+          "caption": "load: loads a CLIP model",
+          "focus": "load",
           "sources": [
             {
-              "file": "vidsearch/cli.py",
-              "start_line": 17,
-              "end_line": 21,
-              "text": "Run CLI search execution."
+              "file": "clip/clip.py",
+              "start_line": 94,
+              "end_line": 98,
+              "text": "Load a CLIP model"
             }
           ],
           "start_seconds": 0.25,
-          "end_seconds": 5.0
-        },
-        {
-          "say": "Inside main, it invokes parse args and search video index.",
-          "caption": "Calls: parse_args and search_video_index",
-          "focus": "execution",
-          "sources": [
-            {
-              "file": "vidsearch/cli.py",
-              "start_line": 17,
-              "end_line": 22,
-              "text": "args = parse_args()"
-            }
-          ],
-          "start_seconds": 0.25,
-          "end_seconds": 5.0
+          "end_seconds": 4.8
         }
       ],
       "on_screen": {
         "type": "code",
-        "content": "def main():\n    \"\"\"Run CLI search execution.\"\"\"\n    args = parse_args()\n    results = search_video_index(args.query, index_path=args.index, top_k=args.top_k)\n    for rank, (timestamp, score) in enumerate(results, start=1):\n        print(f\"[{rank}] Match at {timestamp:.2f}s (score: {score:.3f})\")",
+        "content": "def load(name: str, device: Union[str, torch.device] = \"cuda\" if torch.cuda.is_available() else \"cpu\", jit: bool = False, download_root: str = None):\n    \"\"\"Load a CLIP model\n\n    Parameters\n    ----------\n    name : str\n        A model name listed by `clip.available_models()`, or the path to a model checkpoint containing the state_dict\n\n    device : Union[str, torch.device]\n        The device to put the loaded model\n\n    jit : bool\n        Whether to load the optimized JIT model or more hackable non-JIT model (default).\n",
         "metadata": {
-          "file": "vidsearch/cli.py",
-          "symbol": "main",
-          "start_line": 17,
-          "end_line": 22
+          "file": "clip/clip.py",
+          "symbol": "load",
+          "start_line": 94,
+          "end_line": 202
         }
       },
       "evidence": {
-        "file": "vidsearch/cli.py",
-        "quote": "Run CLI search execution."
+        "file": "clip/clip.py",
+        "quote": "def load(name: str, device: Union[str, torch.device] = \"cuda\" if torch.cuda.is_available() else \"cpu\", jit: bool = False, download_root: str = None):"
       },
-      "duration_seconds": 10.0
+      "duration_seconds": 9.6
     },
     {
       "id": "terminal",
       "kind": "terminal",
       "title": "Quickstart",
-      "narration": "Run pip install -r requirements dot txt to install. Next, execute the quickstart command to run the tool.",
+      "narration": "Run pip install ftfy regex tqdm to install dependencies for CLIP.",
       "beats": [
         {
-          "say": "Run pip install -r requirements dot txt to install.",
-          "caption": "Install: pip install -r requirements.txt",
+          "say": "Run pip install ftfy regex tqdm to install dependencies for CLIP.",
+          "caption": "Install: pip install ftfy regex tqdm",
           "focus": "install",
           "sources": [
             {
               "file": "README.md",
-              "start_line": 16,
-              "end_line": 16,
-              "text": "pip install -r requirements.txt"
-            }
-          ],
-          "start_seconds": 0.25,
-          "end_seconds": 4.5
-        },
-        {
-          "say": "Next, execute the quickstart command to run the tool.",
-          "caption": "Run: python -m vidsearch.cli --query \"sunset",
-          "focus": "run",
-          "sources": [
-            {
-              "file": "README.md",
-              "start_line": 22,
-              "end_line": 22,
-              "text": "python -m vidsearch.cli --query \"sunset over ocean\" --index index.faiss --fps 1.0"
+              "start_line": 21,
+              "end_line": 21,
+              "text": "pip install ftfy regex tqdm"
             }
           ],
           "start_seconds": 0.25,
@@ -269,48 +216,88 @@
       ],
       "on_screen": {
         "type": "terminal",
-        "content": "$ pip install -r requirements.txt",
+        "content": "$ pip install ftfy regex tqdm",
         "metadata": {
-          "command": "pip install -r requirements.txt"
+          "command": "pip install ftfy regex tqdm"
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "pip install -r requirements.txt"
+        "quote": "pip install ftfy regex tqdm"
       },
-      "duration_seconds": 9.0
+      "duration_seconds": 4.5
+    },
+    {
+      "id": "fit",
+      "kind": "fit",
+      "title": "Pipeline Fit",
+      "narration": "CLIP is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.",
+      "beats": [
+        {
+          "say": "CLIP is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.",
+          "caption": "General tool: exports transcript, chapters, and index",
+          "focus": "artifacts",
+          "sources": [
+            {
+              "file": "README.md",
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3. We found CLIP matches the performance of the original ResNet50 on ImageNet “zero-shot” without using any of the original 1.28M labeled examples, overcoming several major challenges in computer vision."
+            }
+          ],
+          "start_seconds": 0.25,
+          "end_seconds": 5.5
+        }
+      ],
+      "on_screen": {
+        "type": "fit",
+        "content": "Video Pipeline Fit\nRelevance Score: 0.20\nRelevant terms: clip, index",
+        "metadata": {
+          "relevance_score": 0.2,
+          "terms": [
+            "clip",
+            "index"
+          ],
+          "pipeline_stages": {}
+        }
+      },
+      "evidence": {
+        "file": "README.md",
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3. We found CLIP matches the performance of the original ResNet50 on ImageNet “zero-shot” without using any of the original 1.28M labeled examples, overcoming several major challenges in computer vision."
+      },
+      "duration_seconds": 5.0
     },
     {
       "id": "recap",
       "kind": "recap",
       "title": "Conclusion",
-      "narration": "In short, VidSearch is a lightweight multimodal video understanding and retrieval engine. To dive in, explore vidsearch py starting with vidsearch/ main dot py.",
+      "narration": "In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. To get started, explore CLIP starting with clip/clip dot py.",
       "beats": [
         {
-          "say": "In short, VidSearch is a lightweight multimodal video understanding and retrieval engine.",
-          "caption": "Summary: VidSearch is a lightweight multimodal video",
+          "say": "In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.",
+          "caption": "Summary: CLIP (Contrastive Language-Image Pre-Training)",
           "focus": "recap",
           "sources": [
             {
               "file": "README.md",
-              "start_line": 9,
-              "end_line": 9,
-              "text": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+              "start_line": 5,
+              "end_line": 5,
+              "text": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
             }
           ],
           "start_seconds": 0.25,
           "end_seconds": 4.5
         },
         {
-          "say": "To dive in, explore vidsearch py starting with vidsearch/ main dot py.",
-          "caption": "Next Step: inspect vidsearch/__main__.py",
+          "say": "To get started, explore CLIP starting with clip/clip dot py.",
+          "caption": "Next Step: inspect clip/clip.py",
           "focus": "next_steps",
           "sources": [
             {
-              "file": "vidsearch/__main__.py",
+              "file": "clip/clip.py",
               "start_line": 1,
               "end_line": 1,
-              "text": "from vidsearch.cli import main"
+              "text": "import hashlib"
             }
           ],
           "start_seconds": 0.25,
@@ -319,19 +306,19 @@
       ],
       "on_screen": {
         "type": "recap",
-        "content": "1. VidSearch is a lightweight multimodal video understanding\n2. Entry point vidsearch/__main__.py\n3. Run pip install -r requirements.txt",
+        "content": "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network\n2. Entry point clip/clip.py\n3. Run pip install ftfy regex tqdm",
         "metadata": {
           "takeaways": [
-            "1. VidSearch is a lightweight multimodal video understanding",
-            "2. Entry point vidsearch/__main__.py",
-            "3. Run pip install -r requirements.txt"
+            "1. CLIP (Contrastive Language-Image Pre-Training) is a neural network",
+            "2. Entry point clip/clip.py",
+            "3. Run pip install ftfy regex tqdm"
           ],
-          "next_file": "vidsearch/__main__.py"
+          "next_file": "clip/clip.py"
         }
       },
       "evidence": {
         "file": "README.md",
-        "quote": "VidSearch is a lightweight multimodal video understanding and retrieval engine."
+        "quote": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs."
       },
       "duration_seconds": 9.0
     }

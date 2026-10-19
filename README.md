@@ -1,6 +1,6 @@
 # DevVideo: Grounded Developer Explainer Video Generator
 
-DevVideo autonomously generates 50–58 second, 720p 30fps narrated developer explainer videos from any GitHub repository or local codebase. Built for AI video understanding and retrieval pipelines, every frame is constructed from real AST facts, verbatim syntax-highlighted code, and verified shell commands with audible voice narration. Alongside the video, DevVideo generates synchronized WebVTT/SRT transcripts, chapter markers, and search-ready index records.
+DevVideo autonomously generates 50–58 second, 720p 30fps narrated developer explainer videos from any GitHub repository or local codebase. Built for AI video understanding and retrieval pipelines, diagram, code and terminal frames are built from parsed repo data; narration is extractive from README/docstrings, verbatim syntax-highlighted code, and verified shell commands with audible voice narration. Alongside the video, DevVideo generates synchronized WebVTT/SRT transcripts, chapter markers, and search-ready index records.
 
 ---
 
@@ -8,13 +8,13 @@ DevVideo autonomously generates 50–58 second, 720p 30fps narrated developer ex
 
 [![Sample Explainer Thumbnail](docs/sample/thumbnail.png)](docs/sample/video.mp4)
 
-*Sample explainer generated autonomously from the domain-relevant [vidsearch_py](tests/fixtures/vidsearch_py) repository.*
+*Sample explainer generated autonomously from the [openai/CLIP](https://github.com/openai/CLIP) repository.*
 
-- **Video**: [docs/sample/video.mp4](docs/sample/video.mp4) (55.9s, H.264/AAC, 1.2 MB)
+- **Video**: [docs/sample/video.mp4](docs/sample/video.mp4) (52.8s, H.264/AAC, 1.21 MB)
 - **Subtitles**: [docs/sample/transcript.vtt](docs/sample/transcript.vtt) & [docs/sample/transcript.srt](docs/sample/transcript.srt)
 - **Chapters**: [docs/sample/chapters.json](docs/sample/chapters.json)
 - **Retrieval Index**: [docs/sample/index.jsonl](docs/sample/index.jsonl)
-- **Eval Report**: [docs/sample/eval_report.json](docs/sample/eval_report.json) (All 9 hard gates passed)
+- **Eval Report**: [docs/sample/eval_report.json](docs/sample/eval_report.json) (All 15 evaluation gates passed)
 - **Manifest**: [docs/sample/manifest.json](docs/sample/manifest.json)
 
 Try querying the generated sample video with the pure-Python TF-IDF retrieval tool:
@@ -22,8 +22,9 @@ Try querying the generated sample video with the pure-Python TF-IDF retrieval to
 python tools/search_demo.py docs/sample "where is the CLI explained"
 # Output:
 # Top video timestamps for 'where is the CLI explained':
-#   [0.247] 015.2s - 021.5s | DIAGRAM | The architecture is organized around 5 modules connecting vidsearch and cli.
-#   [0.129] 031.9s - 036.9s | CODE    | It provides the primary implementation logic for this module.
+#   [0.105] 007.8s - 013.8s | OVERVIEW   | It can be instructed in natural language to predict the most relevant text snippet, given an image.
+#   [0.063] 000.2s - 007.5s | TITLE      | CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
+#   [0.034] 040.5s - 048.5s | RECAP      | In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
 ```
 
 ---
@@ -39,7 +40,7 @@ cd aintropy_assignment_part2_task12
 pip install -r requirements.txt -r requirements-dev.txt
 playwright install chromium
 
-# 2. Run the test suite (155 tests passing)
+# 2. Run the test suite (318 tests passing)
 pytest tests/ -v
 
 # 3. Generate an explainer video
@@ -72,7 +73,7 @@ flowchart TD
     E -- Verified Plan --> F[5. Voice Chain & Calibration]
     F -- Synthesized Audio --> G[6. Precision Frame Rendering]
     G --> H[7. FFmpeg Concat-Demuxer Assembly]
-    H --> I{8. 9 Hard Eval Gates}
+    H --> I{8. 15 Evaluation Gates}
     I -- All Pass --> J[Publish: out/video.mp4 + Manifest]
     I -- Any Fail --> K[Quarantine: out/_rejected/ + Manifest]
 ```
@@ -84,7 +85,7 @@ flowchart TD
 5. **Adaptive Voice**: Runtime probe chain (`edge` -> `espeak-ng` -> `pyttsx3` -> `silent`) with atomic restart on error (zero mixed voices).
 6. **Precision Rendering**: Headless Playwright Chromium (JS disabled) with Pygments syntax highlighting, SVG graph, and Pillow fallback.
 7. **Assembly & Muxing**: FFmpeg concat-demuxer with repeated final entries to eliminate A/V drift.
-8. **Evaluation Gates**: 9 hard gates evaluate the final MP4. Videos failing any gate are quarantined to `out/_rejected/`.
+8. **Evaluation Gates**: 15 evaluation gates evaluate the final MP4. Videos failing any gate are quarantined to `out/_rejected/`.
 
 ---
 
@@ -106,7 +107,7 @@ flowchart TD
 
 ## Hard Evaluation Gates
 
-Videos are only published if all 13 hard evaluation gates pass:
+Videos are only published if all 15 evaluation gates pass:
 
 | Gate | Target / Threshold | Description | Code Location |
 |------|-------------------|-------------|---------------|

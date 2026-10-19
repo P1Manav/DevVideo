@@ -1,22 +1,9 @@
-[title]
-ffmpeg-python: Python bindings for FFmpeg. ffmpeg wrapper like provides Python functionality.
-
-[overview]
-There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
-It provides ffmpeg-python allows you to assemble complex FFmpeg filter graphs and transcode audio or video streams using an expressive Pythonic API.
-It provides Python, bindings, and FFmpeg.
-
-[diagram]
-ffmpeg/ run dot py executes commands invoking the ffmpeg binary subprocess with configured streams.
-It connects to ffmpeg/ filters dot py, which constructs audio and video filters for assembling complex ffmpeg filtergraphs.
-
-[code]
-In ffmpeg/ run dot py, run build command-line arguments from the stream graph and execute FFmpeg.
-In run, it executes and handles stream.
-
-[terminal]
-Run pip install ffmpeg-python to install.
-
-[recap]
-In short, ffmpeg wrapper like provides open source software tools.
-To dive in, explore ffmpeg wrapper like starting with ffmpeg/ run dot py.
+[title] ffmpeg-python: Python bindings for FFmpeg. There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
+[overview] ffmpeg-python allows you to assemble complex FFmpeg filter graphs and transcode audio or video streams using an expressive Pythonic API.
+[diagram] ffmpeg/nodes dot py defines stream representation nodes forming directed acyclic graphs for FFmpeg commands.
+[code] In ffmpeg/ run dot py, run builds command-line arguments from the stream graph and execute FFmpeg.
+[terminal] Run pip install ffmpeg-python to install dependencies for ffmpeg wrapper like.
+[fit] ffmpeg wrapper like is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+[fit] It does handle decode operations within multimedia processing.
+[recap] In short, There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
+[recap] To get started, explore ffmpeg wrapper like starting with ffmpeg/nodes dot py.

@@ -46,9 +46,11 @@ def _parse_requirements(req_path: Path) -> set[str]:
 
 
 def _collect_top_level_imports(directory: Path) -> set[str]:
-    """Parse all .py files in directory and collect top-level import names."""
+    """Parse all .py files in directory and collect top-level import names (excluding test fixtures)."""
     imports = set()
     for root, _, files in os.walk(directory):
+        if "fixtures" in Path(root).parts:
+            continue
         for f in files:
             if f.endswith(".py"):
                 file_path = Path(root) / f

@@ -1,0 +1,11 @@
+[title] js-video-tagger. Fast CLI utility to tag and catalog video frame assets.
+[overview] js-video-tagger includes source files written in JavaScript.
+[diagram] bin/main dot js imports from src/index dot js.
+[diagram] It connects to src/index dot js, which defines runTagger.
+[code] In src/index dot js, runTagger coordinates module execution.
+[code] In src/index dot js, runTagger returns the processed result.
+[terminal] Run npm install -g js-video-tagger to install dependencies for js tool.
+[fit] js tool is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+[fit] It does handle decode operations within multimedia processing.
+[recap] In short, Fast CLI utility to tag and catalog video frame assets.
+[recap] To get started, explore js tool starting with bin/main dot js.

@@ -37,7 +37,7 @@ def test_fixture_narration_quality(fixture_name):
     script = write_explainer_script(facts)
 
     assert len(script.scenes) >= 3, f"Too few scenes for {fixture_name}"
-    assert len(script.scenes) <= 6, f"Too many scenes for {fixture_name}"
+    assert len(script.scenes) <= 7, f"Too many scenes for {fixture_name}"
 
     for scene in script.scenes:
         assert scene.beats, f"Scene {scene.id} in {fixture_name} has no beats"

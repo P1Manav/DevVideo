@@ -117,12 +117,20 @@ class TestRenderer:
 
     def test_no_placeholder_strings_in_render_code(self):
         """Acceptance test A7: No placeholder strings anywhere in render code."""
-        render_files = [
+        render_paths = [
             Path("src/render.py"),
             Path("src/render_html.py"),
+            Path("src/render_html"),
             Path("src/visuals.py"),
             Path("src/timeline.py"),
+            Path("src/timeline"),
         ]
+        render_files = []
+        for rp in render_paths:
+            if rp.is_file():
+                render_files.append(rp)
+            elif rp.is_dir():
+                render_files.extend(rp.glob("*.py"))
         forbidden = ["src/main.py", "core.py", "developer"]
         for rf in render_files:
             text = rf.read_text(encoding="utf-8")

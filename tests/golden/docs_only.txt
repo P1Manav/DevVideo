@@ -1,0 +1,5 @@
+[title] Video Retrieval Guide. A conceptual guide and documentation book explaining vector retrieval principles for computer vision researchers.
+[overview] This repository contains specifications, architecture notes, and algorithmic guidelines.
+[overview] It provides comprehensive architectural diagrams and mathematical formulations for cross-modal indexing.
+[fit] In video retrieval workflows, docs only covers the index and query stages.
+[recap] In short, A conceptual guide and documentation book explaining vector retrieval principles for computer vision researchers.

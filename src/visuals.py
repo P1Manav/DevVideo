@@ -27,28 +27,32 @@ def clean_takeaway_line(text: str, max_words: int = 8) -> str:
 
 
 def select_primary_code_symbol(facts: Any) -> Any:
-    """Select the primary symbol for the code scene deterministically."""
+    """T6: Select key code symbol: public function, non-trivial, referenced in README usage/CLI, 6-25 lines."""
+    from .analyze import is_auxiliary_or_test_path
+    import re
+
     if not hasattr(facts, "top_symbols") or not facts.top_symbols:
         return None
-    entry_mod = getattr(facts, "entry_module", "")
-    if entry_mod:
-        for s in facts.top_symbols:
-            if s.file == entry_mod and getattr(s, "kind", "") in ("function", "class") and not s.name.startswith("_"):
-                return s
-        for s in facts.top_symbols:
-            if s.file == entry_mod and not s.name.startswith("_"):
-                return s
 
-    core_symbols = [
-        s for s in facts.top_symbols
-        if not s.name.startswith("_") and "test" not in s.file.lower()
-    ]
-    if core_symbols:
-        for s in core_symbols:
-            if getattr(s, "kind", "") in ("function", "class"):
-                return s
-        return core_symbols[0]
-    return facts.top_symbols[0]
+    readme_usage = ""
+    if hasattr(facts, "readme"):
+        readme_usage = " ".join(getattr(facts.readme, "usage_commands", [])) + " " + " ".join(getattr(facts.readme, "code_fences", []))
+
+    preferred_names = {"main", "run", "load", "search", "query", "encode", "transcode", "process"}
+
+    def _sym_score(s: Any) -> tuple[int, int, int, int, int]:
+        is_core_path = 1 if not is_auxiliary_or_test_path(s.file) else 0
+        is_pub = 1 if not s.name.startswith("_") else 0
+        is_func = 2 if getattr(s, "kind", "") == "function" else 1
+        is_pref = 2 if s.name.lower() in preferred_names else 0
+        non_trivial = 0 if getattr(s, "is_trivial", False) else 1
+        in_usage = 2 if (s.name and re.search(rf"\b{re.escape(s.name)}\b", readme_usage)) else 0
+        lines_cnt = s.end_line - s.start_line + 1
+        good_len = 1 if 5 <= lines_cnt <= 30 else 0
+        return (is_core_path, is_pub, non_trivial, is_func + is_pref + in_usage, good_len)
+
+    ranked = sorted(facts.top_symbols, key=_sym_score, reverse=True)
+    return ranked[0]
 
 
 def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
@@ -191,7 +195,7 @@ def build_scene_visuals(scene_kind: str, facts: Any) -> OnScreen:
             cleaned = clean_takeaway_line(facts.readme.tagline, max_words=8)
             takeaways.append(f"1. {cleaned}")
         else:
-            takeaways.append(f"1. {facts.repo_name} core capabilities")
+            takeaways.append(f"1. {facts.repo_name} project overview")
 
         entry_mod = getattr(facts, "entry_module", "")
         if entry_mod:

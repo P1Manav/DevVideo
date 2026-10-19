@@ -1,0 +1,9 @@
+[title] ffmpeg-python: Python bindings for FFmpeg. There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
+[overview] ffmpeg-python works well for simple as well as complex signal graphs.
+[diagram] ffmpeg/ filters dot py filters nodes and operations for ffmpeg-python.
+[code] In ffmpeg/ run dot py, run invokes ffmpeg for the supplied node graph.
+[terminal] Run pip install ffmpeg-python to install dependencies for ffmpeg wrapper real.
+[fit] ffmpeg wrapper real is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+[fit] It does handle decode operations within multimedia processing.
+[recap] In short, There are tons of Python FFmpeg wrappers out there but they seem to lack complex filter support.
+[recap] To get started, explore ffmpeg wrapper real starting with ffmpeg/ filters dot py.

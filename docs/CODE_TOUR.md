@@ -1,62 +1,41 @@
 # DevVideo Code Tour (5-Minute Technical Interview Guide)
 
-This document provides a concise 2–3 sentence interview walkthrough for each source file in the repository.
+This document provides a concise 2–3 sentence interview walkthrough for each modular package and key source file in the repository. Every module is strictly under 400 lines of code.
 
 ---
 
-### `src/ingest.py`
-"This file forms our first security perimeter by sanitizing input repository URLs and isolating untrusted git operations. It runs shallow clones with disabled symlinks and hooks, caps repository scan sizes, and redacts sensitive credentials while hashing them for downstream verification. We designed it to ensure untrusted repositories can never escape into host filesystems or inject malicious commands."
+### `src/ingest/` (`security.py`, `collector.py`, `clone.py`)
+"This package forms our first security perimeter by sanitizing input repository URLs and isolating untrusted git operations. `security.py` enforces shallow clones with symlinks disabled, blocks path traversal and private network targets, and redacts sensitive credentials. `collector.py` enforces size caps and harvests untrusted files safely, while `clone.py` orchestrates safe disk staging."
 
-### `src/analyze.py`
-"This module parses codebases into a structured semantic `RepoFacts` object without ever executing repository code. It uses Python AST parsing and JavaScript regex extraction to build internal module import graphs, extract verbatim line ranges for top symbols, and parse CLI flags. We built it to give planners real, grounded structural data instead of relying on vague LLM summaries."
+### `src/analyze/` (`readme.py`, `python_ast.py`, `js_graph.py`, `languages.py`, `relevance.py`)
+"This package parses codebases into a structured semantic `RepoFacts` object without ever executing repository code. `readme.py` extracts genuine prose, title taglines, and bullet points without vendor noise; `python_ast.py` and `js_graph.py` parse AST trees to identify public symbols, call graphs, and entry points. `languages.py` filters vendored assets to report true first-party languages, and `relevance.py` calculates objective domain alignment."
 
 ### `src/schema.py`
-"This file defines our Pydantic data contracts for scenes, beats, on-screen visual assets, source spans, and timing models. It separates what is spoken from what is displayed on-screen, includes a phonetic speech normalizer for speech synthesis, and enforces strict provenance rules (max 3 source spans per beat, rejection of disallowed span formats). We created it to ensure every single scene has explicit visual focus, timing boundaries, and verifiable evidence."
+"This module defines our Pydantic data contracts for scenes, beats, on-screen visual assets, source spans, and timing models. It separates what is spoken from what is displayed on-screen, includes phonetic speech normalizers, and enforces strict provenance rules (rejection of disallowed span formats). It guarantees that every single scene has explicit visual focus, timing boundaries, and verifiable evidence."
 
-### `src/narrate.py`
-"This module implements the Explainer Writer that drafts deterministic, extractive narration strictly obeying quality rules R1 through R12. It compresses sentences at natural clause boundaries rather than truncation, eliminates dangling stopwords, requires verb tokens, and selects key public functions and internal architecture flows. We built it to guarantee natural, grammatical, and fully evidenced developer narration across any repository structure."
+### `src/narrate/` (`compress.py`, `verbs.py`, `speech.py`, `scenes_*.py`)
+"This package implements the Explainer Writer that drafts deterministic, extractive narration strictly obeying truth-first rules without filler. `compress.py` compresses sentences at natural clause boundaries rather than arbitrary truncation, while `verbs.py` handles deterministic bullet-to-sentence transformations. Each scene generator (`scenes_title.py`, `scenes_overview.py`, `scenes_diagram.py`, `scenes_code.py`, `scenes_terminal.py`, `scenes_fit.py`, `scenes_recap.py`) ensures spoken facts are fully grounded in cited spans."
 
-### `src/visuals.py`
-"This file constructs grounded OnScreen specifications directly from `RepoFacts` so that visual contents cannot be authored or hallucinated by LLMs. It generates language chips, module graph diagrams, Pygments-highlighted code blocks, and structured takeaways with clean word-boundary truncation. We designed it to ensure visual cards strictly reflect repository facts without layout overflow."
+### `src/timeline/` (`layout.py`, `animation.py`, `compiler.py`, `scenes_*.py`)
+"This package compiles script scenes into visual layout models with precise per-beat timestamps and animation curves. `layout.py` and the scene layout helpers calculate exact spatial coordinates for chips, syntax-highlighted code windows, and terminal prompts. `animation.py` creates smooth ease-in transitions, and `compiler.py` verifies frame geometry across scenes."
 
-### `src/plan.py`
-"This module contains our planning protocol and implementations: the deterministic `OfflinePlanner` and the prompt-based `ClaudePlanner`. The offline planner generates a fact-conditional 7-scene explainer directly from AST facts, while the Claude planner communicates safely via standard input inside a nonce-delimited data block. We separated planning from rendering so that LLMs only determine narrative structure while tools supply verified code and diagrams."
+### `src/render_html/` (`base.py`, `title.py`, `overview.py`, `diagram.py`, `code.py`, `terminal.py`, `fit.py`, `recap.py`)
+"This package renders visual cards into self-contained HTML/CSS and drives Playwright Chromium to capture 1280x720 frames. `base.py` injects responsive CSS design tokens and Google Font typography without external CDN dependencies. Specialized modules generate DOM elements for architecture diagrams, Pygments-highlighted code, terminal sessions, and domain fit stage indicators."
 
-### `src/reason.py`
-"This file implements our verify-revise reasoning loop that inspects planned scripts before speech synthesis or frame rendering. It enforces lexical overlap between narration and cited quotes, checks command validity, and estimates duration against calibrated speech rates. We added this pre-synthesis verification loop so the system can automatically correct errors or gracefully degrade to a minimal 3-scene plan without crashing."
-
-### `src/claude.py`
-"This is our lightweight subprocess adapter for the Claude CLI tool that passes prompts strictly via standard input. It prevents command-line argument length overflows on Windows and catches timeouts, missing binaries, and non-zero exit codes into typed exceptions. We wrote it to keep LLM integration completely optional, dependency-free, and subprocess-isolated."
-
-### `src/tts.py`
-"This module orchestrates our speech synthesis chain by probing available backends at runtime in priority order (`edge` -> `piper` -> `espeak` -> `pyttsx3` -> `silent`). It runs Windows pyttsx3 in an isolated subprocess to protect against COM thread deadlocks, normalizes all audio to 44.1 kHz PCM WAVs, and adds lead/tail acoustic pads. We enforced an atomic restart rule so that if any scene fails mid-run, the entire script restarts on the next backend to prevent mixed voices."
-
-### `src/render.py`
-"This is our precision frame renderer that generates 1280x720 visual cards using a single persistent Playwright Chromium browser with JavaScript disabled. It draws SVG dependency graphs, highlights verbatim code lines with Pygments to preserve exact whitespace indentation, and animates terminal commands. It also includes an independent Pillow fallback engine that measures font bounding boxes and explicitly flags dropped or overflowing lines."
+### `src/tts/` (`engines.py`, `chain.py`)
+"This package orchestrates speech synthesis across available engines (`edge` -> `piper` -> `espeak` -> `pyttsx3` -> `silent`). `engines.py` isolates engine-specific invocation and subprocessing to prevent COM thread deadlocks on Windows and normalizes audio to 44.1 kHz PCM WAV. `chain.py` enforces an atomic restart rule so that if any scene fails mid-run, the entire script restarts on the next engine to avoid mixed voices."
 
 ### `src/assemble.py`
-"This module handles media multiplexing and the creation of all multimodal companion outputs. It generates an FFmpeg concat-demuxer script with repeated final frame entries to guarantee perfect audio-video synchronization and muxes H.264 video with AAC audio. It also emits synchronized WebVTT subtitles, SRT transcripts, chapter markers, video thumbnails, and `index.jsonl` retrieval records with complete provenance fields."
+"This module handles media multiplexing and the creation of multimodal companion outputs. It generates an FFmpeg concat-demuxer script with repeated final frame padding to guarantee perfect audio-video synchronization and muxes H.264 video with AAC audio. It also emits synchronized WebVTT subtitles, SRT transcripts, chapter markers, video thumbnails, and `index.jsonl` retrieval records."
 
-### `src/repair.py`
-"This file implements a bounded automated repair manager that makes up to two attempts to fix minor defects before triggering gate rejections. It can step down text lines to resolve visual overflow, accelerate speech rates or drop low-priority recap scenes to respect duration budgets, and replace invalid commands with verified ones from the repository. We designed it to maximize pipeline completion rates while strictly respecting hard gate thresholds."
+### `src/evals/` (`registry.py`, `media_gates.py`, `text_gates.py`, `safety_gates.py`, `groundedness.py`, `gates.py`)
+"This package contains the hard evaluation gates that dictate whether a video is published or rejected. `media_gates.py` checks duration, AV-sync drift, audio loudness, and visual motion; `text_gates.py` and `groundedness.py` enforce verbatim quotes, onscreen text integrity, and lack of filler. `safety_gates.py` prevents secret leaks and unsafe command execution; any failure quarantines the video to `out/_rejected/` with exit code 1."
 
-### `src/evals/registry.py`
-"This module acts as the single source of truth for all 13 hard evaluation gates, defining their criteria, thresholds, and module locations. It provides a programmatic generator for the canonical markdown gates table in README.md, validated by regression tests. We centralized the registry so that evaluation logic and documentation never drift."
-
-### `src/evals/gates.py`
-"This package implements the 13 runnable hard evaluation gates that dictate whether a video is published or rejected. It validates final duration (45-60s), container stream drift (<=0.3s), audio loudness (`volumedetect` > -50 dB), quote groundedness with exact line ranges, verbatim code slices, command validity, secret non-leakage, title language chips, 3-beat overview structures, internal module diagrams, honest fit scoring, fact-derived takeaways, and on-screen text integrity. If any gate fails, the video is quarantined with exit code 1."
-
-### `src/evals/metrics.py`
-"This module computes soft informational metrics such as domain relevance, visual scene coverage, words-per-minute speech rates, and clarity scores. Domain relevance is calculated using strict word-boundary token matching to eliminate false positives on common words. We separated soft metrics from hard gates so that informational metrics never block video publication."
-
-### `src/evals/report.py`
-"This module defines the typed `EvalGate` and `EvalReport` models and handles serialization to `eval_report.json`. It provides convenience properties such as `all_gates_passed` and formatted terminal summaries. We created it to ensure every execution leaves an unambiguous, auditable quality record."
-
-### `src/pipeline.py`
-"This is our top-level orchestrator that connects all seven stages into a unified linear pipeline. It tracks granular per-stage execution timings, handles quarantined video movement to `out/_rejected/` on gate failures, writes `manifest.json` on all outcomes, and triggers outbound webhooks. We structured it to guarantee that every run produces a complete audit trail regardless of whether it succeeded, was rejected, or crashed."
+### `src/pipeline/` (`models.py`, `runner.py`)
+"This package orchestrates the end-to-end video generation pipeline from repository ingestion to final artifact publishing. `runner.py` tracks granular per-stage execution timings, handles quarantined video movement on gate failures, and writes `manifest.json`. `models.py` defines structured pipeline results and configuration parameters."
 
 ### `src/cli.py`
-"This file provides the production command-line interface with standardized flags for backend selection, voice overrides, rendering engines, and webhook URLs. It returns standardized exit codes—0 for published, 1 for rejected gates, and 2 for errors—and ensures local directory inputs exist. We designed it to be directly scriptable in CI/CD workflows and automated containers."
+"This module provides the production command-line interface with standardized flags for backend selection, voice overrides, rendering engines, and webhook URLs. It returns standardized exit codes—0 for published, 1 for rejected gates, and 2 for errors—and validates inputs cleanly. It is designed for seamless integration into CI/CD workflows and automated containers."
 
 ### `tools/search_demo.py`
-"This is a standalone, 58-line pure-Python TF-IDF retrieval tool that demonstrates the multimodal search utility of our generated video outputs. It loads `index.jsonl`, computes cosine similarity between search queries and beat narration, and prints the exact matching video timestamps. We built it to prove that our video explainers are directly usable by AI video retrieval and understanding engines."
+"This is a standalone, pure-Python TF-IDF retrieval tool that demonstrates the multimodal search utility of our generated video outputs. It loads `index.jsonl`, computes cosine similarity between search queries and beat narration, and prints matching video timestamps. It proves that generated videos are immediately indexable and searchable by AI video understanding and retrieval engines."

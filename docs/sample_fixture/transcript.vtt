@@ -1,37 +1,28 @@
 WEBVTT
 
-00:00:00.250 --> 00:00:03.280
-CLIP: clip_real_like provides Python functionality
+00:00:00.250 --> 00:00:05.590
+VidSearch: VidSearch is a lightweight multimodal video understanding and retrieval
 
-00:00:03.530 --> 00:00:09.790
-What it is: CLIP , Contrastive Language-Image Pre-Training
+00:00:05.840 --> 00:00:14.330
+What it is: It extracts key frames from video
 
-00:00:09.790 --> 00:00:15.430
-Capabilities: It can be instructed in natural
+00:00:14.580 --> 00:00:20.800
+vidsearch/cli.py: is the command-line interface for VidSearch video retrieval engine
 
-00:00:15.430 --> 00:00:17.770
-Capabilities: image text pairs
+00:00:20.800 --> 00:00:28.230
+vidsearch/search.py: queries vector index
 
-00:00:18.020 --> 00:00:23.460
-clip/clip.py: provides main interface functions for loading
+00:00:28.480 --> 00:00:34.250
+main: runs CLI search execution
 
-00:00:23.460 --> 00:00:30.140
-clip/model.py: provides neural network model architecture defining
+00:00:34.500 --> 00:00:40.400
+Install: pip install -r requirements.txt
 
-00:00:30.390 --> 00:00:35.710
-load: load a CLIP model
+00:00:40.400 --> 00:00:44.620
+Run: python -m vidsearch.cli --query "sunset over ocean" --index index.faiss --fps 1.0
 
-00:00:35.710 --> 00:00:38.370
-Calls: build_model
+00:00:44.870 --> 00:00:52.230
+Pipeline Stages: decode, embed, index and query
 
-00:00:38.620 --> 00:00:42.090
-Install: pip install ftfy regex tqdm
-
-00:00:42.090 --> 00:00:44.460
-Run: import clip
-
-00:00:44.710 --> 00:00:48.510
-Summary: clip_real_like provides open source software tools
-
-00:00:48.510 --> 00:00:52.970
-Next Step: inspect clip/clip.py
+00:00:52.480 --> 00:00:58.950
+Next Step: inspect vidsearch/cli.py

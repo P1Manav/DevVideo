@@ -1,0 +1,12 @@
+=== STEP: Frame & Subtitle Cue 10-Point Audit ===
+Command: C:\Users\devpr\AppData\Local\Programs\Python\Python310\python.exe docs/verification/verify_frames_and_cues.py
+Exit Code: 0
+Duration: 1.75s
+Timestamp: 2026-10-19T04:55:56.099285+00:00
+
+--- STDOUT ---
+Audit log saved to frame_and_cues_audit.txt
+
+
+--- STDERR ---
+

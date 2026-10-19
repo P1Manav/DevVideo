@@ -15,12 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      CI: "true"
+      DEVVIDEO_REQUIRE_VOICE: "1"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: "3.11"
           cache: "pip"
@@ -44,6 +47,22 @@ jobs:
           python -m src.cli generate "$TARGET" --out out/
           test -s out/video.mp4 || { echo "Video generation failed"; exit 1; }
 
+      - name: Verify outputs (audible voice, companion assets, eval gates passed)
+        run: |
+          python - << 'EOF'
+          import json, subprocess, sys
+          from pathlib import Path
+
+          out = Path("out")
+          assert (out / "video.mp4").stat().st_size > 0
+          assert (out / "narration.txt").stat().st_size > 0
+          m = json.loads((out / "manifest.json").read_text())
+          assert m.get("status") == "published"
+          assert m.get("tts_used") != "silent"
+          r = json.loads((out / "eval_report.json").read_text())
+          assert r.get("all_gates_passed") is True
+          EOF
+
       - name: Build Docker image
         run: |
           docker build -t devvideo:${{ github.ref_name || 'latest' }} .
@@ -53,19 +72,21 @@ jobs:
           mkdir -p docker_out docker_tmp
           chmod 777 docker_out docker_tmp
           docker run --rm \
-            --user "$(id -u):$(id -g)" \
+            --user 10001:10001 \
             -e TMPDIR=/tmp \
+            -e DEVVIDEO_REQUIRE_VOICE=1 \
             -v $(pwd)/docker_tmp:/tmp \
             -v $(pwd)/docker_out:/app/out \
             devvideo:${{ github.ref_name || 'latest' }} generate tests/fixtures/vidsearch_py --out out/
           test -s docker_out/video.mp4 || { echo "Docker container failed to generate video"; exit 1; }
 
       - name: Upload Workflow Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.1
         with:
           name: devvideo-release-bundle
           path: |
             out/video.mp4
+            out/narration.txt
             out/transcript.vtt
             out/chapters.json
             out/index.jsonl
@@ -79,6 +100,7 @@ jobs:
         with:
           files: |
             out/video.mp4
+            out/narration.txt
             out/transcript.vtt
             out/chapters.json
             out/index.jsonl

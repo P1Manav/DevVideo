@@ -1,0 +1,8 @@
+[title] Tiny Repo provides a lightweight utility for text normalization.
+[overview] It exposes a single helper function for processing strings in Python pipelines.
+[code] In tiny dot py, clean text normalizes input text by removing extraneous whitespace.
+[code] In tiny dot py, clean text returns the processed result.
+[terminal] Run pip install tiny-repo to install dependencies for tiny repo.
+[fit] tiny repo is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+[recap] In short, Tiny Repo provides a lightweight utility for text normalization.
+[recap] To get started, explore tiny repo starting with tiny dot py.

@@ -1,43 +1,35 @@
 1
-00:00:00,250 --> 00:00:04,740
-VidSearch: VidSearch is a lightweight multimodal video understanding and retrieval
+00:00:00,250 --> 00:00:07,510
+CLIP: CLIP (Contrastive Language-Image Pre-Training) is a neural network
 
 2
-00:00:04,990 --> 00:00:09,450
-What it is: VidSearch is a lightweight multimodal video
+00:00:07,760 --> 00:00:13,750
+What it is: It can be instructed
 
 3
-00:00:09,450 --> 00:00:16,280
-Capabilities: It extracts key frames from video
+00:00:14,000 --> 00:00:16,760
+clip/clip.py: defines tokenize
 
 4
-00:00:16,280 --> 00:00:21,320
-Features: Frame Extraction: vidsearch.frames samples video keyframes
+00:00:16,760 --> 00:00:21,980
+clip/model.py: defines build_model
 
 5
-00:00:21,570 --> 00:00:26,620
-vidsearch/cli.py: is the command-line interface for VidSearch
+00:00:22,230 --> 00:00:26,400
+load: loads a CLIP model
 
 6
-00:00:26,620 --> 00:00:32,590
-vidsearch/search.py: query vector index and rank matching
+00:00:26,650 --> 00:00:32,230
+Install: pip install ftfy regex tqdm
 
 7
-00:00:32,840 --> 00:00:36,830
-main: run CLI search execution
+00:00:32,480 --> 00:00:40,270
+General tool: exports transcript, chapters, and index
 
 8
-00:00:36,830 --> 00:00:41,380
-Calls: parse_args and search_video_index
+00:00:40,520 --> 00:00:48,510
+Summary: CLIP (Contrastive Language-Image Pre-Training)
 
 9
-00:00:41,630 --> 00:00:44,780
-Install: pip install -r requirements.txt
-
-10
-00:00:44,780 --> 00:00:48,400
-Run: python -m vidsearch.cli --query "sunset
-
-11
-00:00:48,650 --> 00:00:53,830
-Summary: VidSearch is a lightweight multimodal video
+00:00:48,510 --> 00:00:52,820
+Next Step: inspect clip/clip.py

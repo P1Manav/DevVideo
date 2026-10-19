@@ -1,0 +1,9 @@
+CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
+It can be instructed in natural language to predict the most relevant text snippet, given an image.
+clip/clip dot py defines tokenize.
+It connects to clip/model dot py, which defines build model.
+In clip/clip dot py, load loads a CLIP model.
+Run pip install ftfy regex tqdm to install dependencies for CLIP.
+CLIP is not built for video retrieval, but you can feed this video's transcript, chapters and search index into a retrieval pipeline.
+In short, CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs.
+To get started, explore CLIP starting with clip/clip dot py.

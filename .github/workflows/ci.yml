@@ -12,12 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: "true"
+      DEVVIDEO_REQUIRE_VOICE: "1"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: "3.11"
           cache: "pip"
@@ -42,22 +43,64 @@ jobs:
         run: |
           python -m src.cli generate tests/fixtures/vidsearch_py --out out/
 
-      - name: Verify outputs (MP4 with audible voice, companion assets, eval gates passed)
+      - name: Verify outputs (audible voice, companion assets, eval gates passed)
         run: |
-          test -s out/video.mp4 || { echo "ERROR: out/video.mp4 is missing or empty"; exit 1; }
-          test -s out/transcript.vtt || { echo "ERROR: out/transcript.vtt missing"; exit 1; }
-          test -s out/chapters.json || { echo "ERROR: out/chapters.json missing"; exit 1; }
-          test -s out/index.jsonl || { echo "ERROR: out/index.jsonl missing"; exit 1; }
-          python -c "import json; r = json.load(open('out/eval_report.json')); assert r['all_gates_passed'] is True, f'Gates failed: {r}'"
-          echo "[OK] out/video.mp4 and all companion outputs verified successfully"
+          python - << 'EOF'
+          import json, os, subprocess, sys
+          from pathlib import Path
+
+          out = Path("out")
+          assert (out / "video.mp4").stat().st_size > 0, "video.mp4 is missing or empty"
+          assert (out / "transcript.vtt").stat().st_size > 0, "transcript.vtt missing or empty"
+          assert (out / "narration.txt").stat().st_size > 0, "narration.txt missing or empty"
+
+          # 1. Manifest assertions
+          m = json.loads((out / "manifest.json").read_text())
+          assert m.get("status") == "published", f"Status is not published: {m.get('status')}"
+          assert m.get("tts_used") != "silent", f"Voice was silent: {m.get('tts_used')}"
+
+          # 2. Eval report assertions
+          r = json.loads((out / "eval_report.json").read_text())
+          assert r.get("all_gates_passed") is True, f"Gates failed: {r}"
+          for gate in r.get("gates", []):
+              if gate.get("blocking", True):
+                  assert gate.get("passed") is True, f"Blocking gate {gate.get('name')} failed"
+
+          # 3. Audio stream & volume detection via ffmpeg
+          probe = subprocess.run(
+              ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "default=noprint_wrappers=1:nokey=1", "out/video.mp4"],
+              capture_output=True, text=True, check=True
+          )
+          assert probe.stdout.strip() == "audio", f"No audio stream in video: {probe.stdout}"
+
+          dur_p = subprocess.run(
+              ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", "out/video.mp4"],
+              capture_output=True, text=True, check=True
+          )
+          dur = float(dur_p.stdout.strip())
+          assert dur <= 60.0, f"Video duration exceeds 60s: {dur}"
+
+          vol_p = subprocess.run(
+              ["ffmpeg", "-i", "out/video.mp4", "-af", "volumedetect", "-f", "null", "-"],
+              capture_output=True, text=True
+          )
+          import re
+          vol_m = re.search(r"mean_volume:\s*(-?[\d\.]+)\s*dB", vol_p.stderr)
+          assert vol_m, "Could not detect mean_volume"
+          vol = float(vol_m.group(1))
+          assert vol > -35.0, f"Audio volume too quiet: {vol} dB (threshold: -35.0 dB)"
+
+          print(f"[OK] Video verified: duration={dur:.1f}s, voice={m.get('tts_used')}, mean_volume={vol} dB, all gates passed")
+          EOF
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.1
         if: always()
         with:
           name: devvideo-ci-artifacts
           path: |
             out/video.mp4
+            out/narration.txt
             out/transcript.vtt
             out/chapters.json
             out/index.jsonl
