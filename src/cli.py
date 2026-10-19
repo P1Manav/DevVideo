@@ -49,6 +49,19 @@ def main() -> int:
     gen.add_argument("--webhook", default=None, help="Webhook URL to POST manifest upon completion")
     gen.add_argument("--keep-frames", action="store_true", help="Preserve rendered PNG frames in output directory")
 
+    srv = sub.add_parser("serve", help="Start the DevVideo web frontend and server")
+    srv.add_argument(
+        "--host",
+        default=os.environ.get("HOST", "0.0.0.0"),
+        help="Host to bind (default: 0.0.0.0)",
+    )
+    srv.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("PORT", "10000")),
+        help="Port to bind (default: 10000)",
+    )
+
     parser.add_argument("--version", action="version", version="devvideo 0.2.0")
 
     args = parser.parse_args()
@@ -99,6 +112,14 @@ def main() -> int:
             print(f"    Manifest:    {Path(args.out) / 'manifest.json'}")
 
         return result.exit_code
+
+    if args.command == "serve":
+        import uvicorn
+        from .web.app import app
+
+        print(f"Starting DevVideo web service on {args.host}:{args.port}")
+        uvicorn.run(app, host=args.host, port=args.port)
+        return 0
 
     return 0
 

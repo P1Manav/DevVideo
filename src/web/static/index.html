@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevVideo - GitHub to Explainer Video</title>
+  <style>
+    :root {
+      --bg: #0d1117; --card-bg: #161b22; --border: #30363d;
+      --text: #c9d1d9; --text-muted: #8b949e; --accent: #58a6ff;
+      --accent-hover: #1f6feb; --success: #238636; --success-glow: #3fb950;
+      --warning: #d29922; --danger: #f85149;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.5; padding: 20px;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .brand svg { fill: var(--accent); }
+    .badge {
+      font-size: 0.75rem; padding: 4px 10px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+      background: #21262d; border: 1px solid var(--border);
+    }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success-glow); box-shadow: 0 0 8px var(--success-glow); }
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px; margin-bottom: 24px;
+    }
+    .card-title { font-size: 1.1rem; color: #fff; margin-bottom: 14px; font-weight: 600; }
+    .input-group { display: flex; gap: 10px; margin-bottom: 12px; }
+    input[type="text"] {
+      flex: 1; padding: 12px 16px; background: #0d1117; border: 1px solid var(--border);
+      border-radius: 6px; color: #fff; font-size: 0.95rem; outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,0.2); }
+    button.btn-primary {
+      padding: 12px 24px; background: var(--accent-hover); color: #fff; border: none;
+      border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; transition: background 0.2s;
+    }
+    button.btn-primary:hover { background: #388bfd; }
+    button.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .samples { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .sample-btn {
+      background: #21262d; border: 1px solid var(--border); color: var(--accent);
+      padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;
+    }
+    .options-toggle {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: 0.85rem; margin-top: 10px; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .options-panel {
+      margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;
+    }
+    .option-item label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+    .option-item select, .option-item input {
+      width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border);
+      border-radius: 4px; color: #fff; font-size: 0.85rem;
+    }
+    .progress-box { display: none; margin-top: 16px; padding: 16px; background: #0d1117; border-radius: 6px; border: 1px solid var(--border); }
+    .progress-bar-bg { width: 100%; height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+    .progress-bar-fill { width: 30%; height: 100%; background: var(--accent); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    .video-container { margin-top: 20px; }
+    video { width: 100%; border-radius: 6px; background: #000; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .video-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .meta-tag { background: #21262d; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--border); }
+    .chapters-list { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .chapter-pill {
+      background: #21262d; border: 1px solid var(--border); color: var(--text);
+      padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+    }
+    .chapter-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .actions-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .btn-secondary {
+      background: #21262d; border: 1px solid var(--border); color: #fff;
+      padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-secondary:hover { background: #30363d; }
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .history-card {
+      background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+      padding: 12px; cursor: pointer; transition: border-color 0.2s;
+    }
+    .history-card:hover { border-color: var(--accent); }
+    .history-title { font-weight: 600; font-size: 0.9rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between; }
+    .keepalive-footer {
+      font-size: 0.75rem; color: var(--text-muted); text-align: center;
+      margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      DevVideo
+    </div>
+    <div id="healthBadge" class="badge" title="Render Keep-Alive Monitor">
+      <span class="pulse-dot"></span>
+      <span id="healthStatus">Keep-Alive Active (~60s)</span>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Turn any GitHub repository into an explainer video</div>
+    <div class="input-group">
+      <input type="text" id="repoUrl" placeholder="https://github.com/owner/repository" value="">
+      <button id="genBtn" class="btn-primary" onclick="generateVideo()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Generate Video
+      </button>
+    </div>
+    <div class="samples">
+      <span>Quick try:</span>
+      <button class="sample-btn" onclick="setSample('tests/fixtures/vidsearch_py')">Local Fixture (Fast)</button>
+      <button class="sample-btn" onclick="setSample('https://github.com/psf/requests')">psf/requests</button>
+      <button class="sample-btn" onclick="setSample('https://github.com/pallets/flask')">pallets/flask</button>
+    </div>
+
+    <button class="options-toggle" onclick="toggleOptions()">⚙️ Settings <span id="optArrow">▼</span></button>
+    <div id="optionsPanel" class="options-panel" style="display: none;">
+      <div class="option-item">
+        <label for="ttsSelect">Voice (TTS)</label>
+        <select id="ttsSelect">
+          <option value="auto">Auto (Edge / Espeak / Pyttsx3)</option>
+          <option value="edge">Edge Neural (Cloud)</option>
+          <option value="espeak">Espeak-NG (Local)</option>
+          <option value="pyttsx3">Pyttsx3 (Local)</option>
+          <option value="silent">Silent (Captions Only)</option>
+        </select>
+      </div>
+      <div class="option-item">
+        <label for="budgetInput">Duration Budget (Seconds)</label>
+        <input type="number" id="budgetInput" value="55" min="20" max="90">
+      </div>
+      <div class="option-item">
+        <label for="rendererSelect">Renderer</label>
+        <select id="rendererSelect">
+          <option value="auto">Auto (Playwright Chromium)</option>
+          <option value="pillow">Pillow Fallback</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="progressBox" class="progress-box">
+      <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+        <span id="progressStep">Starting generation pipeline...</span>
+        <span id="elapsedTimer">0s</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="videoCard" class="card" style="display: none;">
+    <div class="card-title" id="videoTitle">Generated Walkthrough Video</div>
+    <div class="video-container">
+      <video id="player" controls playsinline>
+        <track id="vttTrack" kind="subtitles" srclang="en" label="English" default>
+        Your browser does not support HTML5 video.
+      </video>
+    </div>
+    <div class="video-meta" id="videoMeta"></div>
+    <div id="chaptersContainer" style="display:none; margin-top:14px;">
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Chapters:</div>
+      <div class="chapters-list" id="chaptersList"></div>
+    </div>
+    <div class="actions-row" id="actionsRow"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent & Sample Videos</div>
+    <div class="history-grid" id="historyGrid">Loading past runs...</div>
+  </div>
+
+  <div class="keepalive-footer">
+    Render Keep-Alive Service &bull; Self-pings <code>/healthz</code> every ~60s &bull; Uptime: <span id="uptimeText">--</span>
+    &bull; <button onclick="triggerPing()" style="background:none;border:none;color:var(--accent);cursor:pointer;text-decoration:underline;">Ping Now</button>
+  </div>
+</div>
+
+<script>
+let currentJobId = null;
+let pollTimer = null;
+let startTime = null;
+
+function toggleOptions() {
+  const p = document.getElementById('optionsPanel');
+  const a = document.getElementById('optArrow');
+  const isOpen = p.style.display !== 'none';
+  p.style.display = isOpen ? 'none' : 'grid';
+  a.textContent = isOpen ? '▼' : '▲';
+}
+
+function setSample(url) {
+  document.getElementById('repoUrl').value = url;
+}
+
+async function generateVideo() {
+  const url = document.getElementById('repoUrl').value.trim();
+  if (!url) { alert('Please enter a GitHub repository URL'); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  document.getElementById('progressBox').style.display = 'block';
+  document.getElementById('progressStep').textContent = 'Submitting repository...';
+  startTime = Date.now();
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: url,
+        tts: document.getElementById('ttsSelect').value,
+        budget_seconds: parseFloat(document.getElementById('budgetInput').value) || 55.0,
+        renderer: document.getElementById('rendererSelect').value,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to start generation');
+    currentJobId = data.job_id;
+    pollJobStatus();
+  } catch (err) {
+    alert('Error: ' + err.message);
+    btn.disabled = false;
+    document.getElementById('progressBox').style.display = 'none';
+  }
+}
+
+function pollJobStatus() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    document.getElementById('elapsedTimer').textContent = elapsed + 's';
+
+    try {
+      const res = await fetch('/api/jobs/' + currentJobId);
+      const job = await res.json();
+      if (job.status === 'running') {
+        document.getElementById('progressStep').textContent = 'Analyzing and rendering video (' + elapsed + 's)...';
+      } else if (job.status === 'completed') {
+        clearInterval(pollTimer);
+        document.getElementById('progressBox').style.display = 'none';
+        document.getElementById('genBtn').disabled = false;
+        loadVideoPlayer(job);
+        loadRecentJobs();
+      } else if (job.status === 'failed') {
+        clearInterval(pollTimer);
+        document.getElementById('progressBox').style.display = 'none';
+        document.getElementById('genBtn').disabled = false;
+        alert('Generation failed: ' + (job.error || 'Unknown error'));
+        loadRecentJobs();
+      }
+    } catch (e) { console.error('Poll error', e); }
+  }, 2000);
+}
+
+function loadVideoPlayer(job) {
+  const card = document.getElementById('videoCard');
+  card.style.display = 'block';
+  document.getElementById('videoTitle').textContent = 'Walkthrough: ' + job.source;
+
+  const player = document.getElementById('player');
+  const videoUrl = '/api/jobs/' + job.job_id + '/video';
+  const trackUrl = '/api/jobs/' + job.job_id + '/artifact/transcript.vtt';
+  const thumbUrl = '/api/jobs/' + job.job_id + '/artifact/thumbnail.png';
+
+  player.src = videoUrl;
+  player.poster = thumbUrl;
+
+  const track = document.getElementById('vttTrack');
+  track.src = trackUrl;
+
+  const meta = document.getElementById('videoMeta');
+  meta.innerHTML = `
+    <span class="meta-tag">⏱️ ${job.duration_seconds.toFixed(1)}s</span>
+    <span class="meta-tag">🎙️ Voice: ${job.voice_used}</span>
+    <span class="meta-tag">${job.all_gates_passed ? '✅ All Gates Passed' : '⚠️ Quality Notice'}</span>
+    <span class="meta-tag">ID: ${job.job_id}</span>
+  `;
+
+  const chapList = document.getElementById('chaptersList');
+  const chapBox = document.getElementById('chaptersContainer');
+  if (job.chapters && job.chapters.length > 0) {
+    chapBox.style.display = 'block';
+    chapList.innerHTML = job.chapters.map(c =>
+      `<button class="chapter-pill" onclick="seekTo(${c.start_time})">${c.title || 'Scene'} (${Math.round(c.start_time)}s)</button>`
+    ).join('');
+  } else { chapBox.style.display = 'none'; }
+
+  const actions = document.getElementById('actionsRow');
+  actions.innerHTML = `
+    <a class="btn-secondary" href="${videoUrl}" download="walkthrough.mp4">📥 Download MP4</a>
+    <a class="btn-secondary" href="${trackUrl}" download="transcript.vtt">💬 Subtitles (.vtt)</a>
+    <a class="btn-secondary" href="/api/jobs/${job.job_id}/artifact/manifest.json" target="_blank">📋 Manifest</a>
+    <a class="btn-secondary" href="/api/jobs/${job.job_id}/artifact/eval_report.json" target="_blank">📊 Eval Report</a>
+  `;
+
+  card.scrollIntoView({ behavior: 'smooth' });
+}
+
+function seekTo(sec) {
+  const p = document.getElementById('player');
+  p.currentTime = sec;
+  p.play();
+}
+
+async function loadRecentJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    const jobs = await res.json();
+    const grid = document.getElementById('historyGrid');
+    if (!jobs || jobs.length === 0) {
+      grid.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">No videos generated yet. Enter a GitHub URL above!</div>';
+      return;
+    }
+    grid.innerHTML = jobs.map(j => `
+      <div class="history-card" onclick="fetchJob('${j.job_id}')">
+        <div class="history-title">${j.source}</div>
+        <div class="history-sub">
+          <span>${j.status === 'completed' ? '✅ Ready' : j.status} &bull; ${j.duration_seconds.toFixed(1)}s</span>
+          <span>${j.job_id.slice(0,14)}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) { console.error('Failed to load recent jobs', e); }
+}
+
+async function fetchJob(jid) {
+  try {
+    const res = await fetch('/api/jobs/' + jid);
+    const job = await res.json();
+    loadVideoPlayer(job);
+  } catch (e) { alert('Failed to load job details'); }
+}
+
+async function updateHealth() {
+  try {
+    const res = await fetch('/healthz');
+    const data = await res.json();
+    document.getElementById('healthStatus').textContent = `Keep-Alive Active (~60s) • Pings: ${data.total_pings || 0}`;
+    document.getElementById('uptimeText').textContent = `${Math.round(data.uptime_seconds || 0)}s`;
+  } catch (e) {}
+}
+
+async function triggerPing() {
+  try {
+    const res = await fetch('/api/keepalive/ping', { method: 'POST' });
+    const d = await res.json();
+    alert('Ping Result: ' + JSON.stringify(d, null, 2));
+    updateHealth();
+  } catch (e) { alert('Ping failed: ' + e); }
+}
+
+loadRecentJobs();
+updateHealth();
+setInterval(updateHealth, 15000);
+</script>
+</body>
+</html>

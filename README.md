@@ -51,15 +51,45 @@ pytest tests/ -v
 python src/main.py generate tests/fixtures/vidsearch_py --out out/
 ```
 
-### Docker Quickstart (Non-Root UID 10001)
+### Web Frontend & UI
+
+DevVideo includes a lightweight, modern web frontend allowing users to generate and watch videos directly in their browser:
 
 ```bash
-# Build Docker image
-docker build -t devvideo .
-
-# Run with non-root user and mounted output directory
-docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)/out:/app/out" devvideo generate tests/fixtures/vidsearch_py --out out/
+# Start web server locally on port 10000
+python -m src.cli serve --port 10000
+# Or directly via module
+python -m src.web
 ```
+
+Visit `http://localhost:10000` to:
+- Enter any GitHub repository URL (e.g. `https://github.com/psf/requests`).
+- Track live generation progress.
+- Watch the output video in the embedded HTML5 player with synchronized subtitles and chapter navigation.
+- Download MP4 video, WebVTT subtitles, and evaluation manifests.
+
+---
+
+## Deploying to Render (24/7 Keep-Alive)
+
+DevVideo is fully configured for zero-configuration deployment to [Render](https://render.com) using Docker:
+
+### 1-Click / Blueprint Deployment
+1. Connect your repository to Render.
+2. Select **Blueprint** and Render will automatically detect `render.yaml`.
+3. Or create a **Web Service** with **Docker** runtime:
+   - **Environment**: `Docker`
+   - **Health Check Path**: `/healthz`
+   - **Plan**: Free or Starter
+   - **Port**: `10000`
+
+### Automatic Keep-Alive (Prevent Free-Tier Sleep)
+Render's free tier automatically spins down web services after 15 minutes of inactivity. DevVideo includes a built-in background keep-alive worker that runs **once every 60 seconds**:
+- It automatically detects Render's public URL via `RENDER_EXTERNAL_URL` (e.g., `https://your-service.onrender.com`).
+- It sends an HTTP GET request to `https://your-service.onrender.com/healthz` once per minute.
+- Because the ping originates through Render's public routing ingress, Render registers active incoming web traffic and **keeps the deployment awake 24/7**.
+- You can check monitor status at `/healthz` or `/api/keepalive`.
+
 
 ---
 

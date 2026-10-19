@@ -1,2 +1,4 @@
 # Testing & Development dependencies
 pytest>=8.0.0,<10.0.0
+httpx>=0.25.0
+

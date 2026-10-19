@@ -34,8 +34,14 @@ COPY --chown=devvideo:devvideo . .
 
 # Environment variables
 ENV TMPDIR=/app/tmp
+ENV PORT=10000
+ENV HOST=0.0.0.0
+
+EXPOSE 10000
 
 # Switch to non-root user UID 10001
 USER devvideo
 
 ENTRYPOINT ["python", "-m", "src.cli"]
+CMD ["serve"]
+
