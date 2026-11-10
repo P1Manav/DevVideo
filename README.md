@@ -39,8 +39,8 @@ Run end-to-end locally with default production backends (zero API keys required)
 
 ```bash
 # 1. Clone repository and install dependencies
-git clone https://github.com/P1Manav/aintropy_assignment_part2_task12.git
-cd aintropy_assignment_part2_task12
+git clone https://github.com/P1Manav/DevVideo.git
+cd DevVideo
 pip install -r requirements.txt -r requirements-dev.txt
 playwright install chromium
 

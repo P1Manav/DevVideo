@@ -1,4 +1,4 @@
-# Commands for the AIntropy evaluator to run.
+# Automated setup, demo, and verification commands.
 # These are run exactly as written, in order, from a fresh checkout.
 
 setup_commands:
