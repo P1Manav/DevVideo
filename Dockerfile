@@ -23,7 +23,18 @@ WORKDIR /app
 
 # Install Python dependencies from requirements.txt
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN for attempt in 1 2 3; do \
+        if pip install --no-cache-dir --timeout=120 --retries=10 --upgrade pip && \
+           pip install --no-cache-dir --timeout=120 --retries=10 --prefer-binary -r requirements.txt; then \
+            break; \
+        fi; \
+        if [ "$attempt" -eq 3 ]; then \
+            echo "pip install failed after 3 attempts" >&2; \
+            exit 1; \
+        fi; \
+        echo "pip install attempt $attempt failed; retrying in 5s..." >&2; \
+        sleep 5; \
+    done
 
 # Install Playwright chromium browser and system dependencies, making it readable to all users
 RUN playwright install chromium --with-deps && \
